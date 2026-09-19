@@ -16,6 +16,10 @@
       "type": "patchouli:crafting",
       "recipe": "tamedphantoms:phantom_guide",
       "text": "tamedphantoms.guide.page.welcome.3"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.welcome.4"
     }
   ]
 }

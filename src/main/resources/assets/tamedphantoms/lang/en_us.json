@@ -37,6 +37,7 @@
   "tamedphantoms.guide.page.welcome.1": "Welcome. This guide was written for travelers who want to understand phantoms without guessing. The chapters that follow go through each part of the bond in order, from the first meeting to life in the air.",
   "tamedphantoms.guide.page.welcome.2": "You will find how a wild phantom can be tamed, how it is fed and led, how it is saddled, how it sits, and how it answers a blow. Nothing here is required reading. Open a page when you need it.",
   "tamedphantoms.guide.page.welcome.3": "A new copy can be made at a crafting table from an ordinary book and a phantom membrane.",
+  "tamedphantoms.guide.page.welcome.4": "If you found a bug or just want to share feedback, you can leave it here: $(l:https://github.com/Nergan/tamedphantoms-mod/issues)https://github.com/Nergan/tamedphantoms-mod/issues$(/l)",
 
   "tamedphantoms.guide.entry.wild": "Wild Phantoms",
   "tamedphantoms.guide.page.wild.1": "A wild phantom now watches the world with $(warn)blood-red eyes$(). If you hold the taming item, it will come closer instead of turning away. Night is still dangerous, but the first step is simply to be seen holding something it wants.",
