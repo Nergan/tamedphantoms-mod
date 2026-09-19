@@ -14,6 +14,7 @@ permissions:
 #   1) tamedphantoms-*.jar
 #   2) kotlinforforge-*-all.jar  (обязательный Kotlin for Forge)
 #   3) Patchouli-*-NEOFORGE.jar  (книга, можно не ставить)
+# SHA-256 у каждого файла считает сам GitHub при загрузке (digest рядом с ассетом).
 #
 # Как выпустить:
 #   git tag v1.0.0
@@ -109,4 +110,4 @@ jobs:
             | `kotlinforforge-${{ steps.versions.outputs.kff_version }}-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) (LGPL-2.1) |
             | `Patchouli-*-NEOFORGE.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
 
-            Do not install `*-sources.jar`. Companion jars are official Modrinth builds, rehosted here for a one-page install. Patchouli is redistributed for non-commercial use with attribution to VazkiiMods.
+            Do not install `*-sources.jar`. Companion jars are official Modrinth builds, rehosted here for a one-page install. Patchouli is redistributed for non-commercial use with attribution to VazkiiMods. GitHub shows a SHA-256 digest next to each uploaded file.

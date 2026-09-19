@@ -18,7 +18,7 @@
 | `kotlinforforge-5.8.0-all.jar` | Да | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | Нет | [Patchouli](https://modrinth.com/mod/patchouli), только если нужна книга |
 
-Workflow релиза собирает мод и забирает два чужих jar с Modrinth. Файл `*-sources.jar` в `mods` класть не нужно.
+Workflow релиза собирает мод и забирает два чужих jar с Modrinth. SHA-256 у каждого файла GitHub считает сам и показывает рядом с ним на странице релиза. Файл `*-sources.jar` в `mods` класть не нужно.
 
 ## Возможности
 

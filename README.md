@@ -18,7 +18,7 @@ Download these files and put them in the `mods` folder:
 | `kotlinforforge-5.8.0-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
-The release workflow builds the mod and fetches the two companion jars from Modrinth. Do not install `*-sources.jar`.
+The release workflow builds the mod and fetches the two companion jars from Modrinth. GitHub shows a SHA-256 digest next to each file on the release page. Do not install `*-sources.jar`.
 
 ## Features
 
