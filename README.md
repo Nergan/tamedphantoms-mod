@@ -12,11 +12,11 @@ Jars live on [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/relea
 
 Download these files and put them in the `mods` folder:
 
-| File | Required | What it is |
-| --- | --- | --- |
-| `tamedphantoms-1.0.0.jar` | Yes | this mod |
-| `kotlinforforge-5.8.0-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) |
-| `Patchouli-1.21.1-93-NEOFORGE.jar` | No | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
+| File                               | Required | What it is                                                                      |
+| ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
+| `tamedphantoms-1.0.0.jar`          | Yes      | this mod                                                                        |
+| `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
+| `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
 The release workflow builds the mod and fetches the two companion jars from Modrinth. GitHub shows a SHA-256 digest next to each file on the release page. Do not install `*-sources.jar`.
 
@@ -86,47 +86,6 @@ Dedicated server: `world/serverconfig/tamedphantoms-server.toml`. This is a `SER
 | `defend_time_ticks` | `200`                        | self-defense duration (20 ticks = 1 second) |
 
 An invalid item id falls back to the default and a warning is written to the log.
-
-## Building
-
-You need JDK 21 and access to the NeoForge, Kotlin for Forge, and Minecraft Maven repositories.
-
-This repo does not include `gradle/wrapper/gradle-wrapper.jar`. Generate it once locally:
-
-```bash
-gradle wrapper --gradle-version 8.10
-```
-
-Or open the project in IntelliJ IDEA and let it fetch Gradle.
-
-```bash
-./gradlew build          # Linux and macOS
-gradlew.bat build        # Windows
-
-./gradlew test
-./gradlew runClient
-./gradlew runServer
-```
-
-The playable jar is `build/libs/tamedphantoms-1.0.0.jar`. Do not put the `-sources.jar` in `mods`.
-
-On low-memory machines, build with `CI=true` and JDK 21 so Minecraft is not decompiled again.
-
-## Tests
-
-`./gradlew test` runs JUnit 5 against the pure logic in `util/` (eye recoloring, anger timer, saddle seats, tame chance, and healing). Gameplay itself is not covered.
-
-## Publishing
-
-### GitHub Release
-
-A push to `main` rebuilds the mod and **replaces** the jars on the GitHub Release for the current `mod_version` (today that is `v1.0.0`). You can also run **Actions → Release → Run workflow**.
-
-To start a new release instead of overwriting the old one, bump `mod_version` in `gradle.properties` before you push. Companion versions are `kff_version` and `patchouli_version`.
-
-### Modrinth
-
-On Modrinth, set the loader to NeoForge, the game version to 1.21.1, and list **Kotlin for Forge** as a required dependency. Mark Patchouli as optional.
 
 ## License
 
