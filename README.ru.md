@@ -8,7 +8,7 @@
 
 ## Загрузки
 
-Готовые jar лежат в [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). Вкладка **Releases** появляется после первого тега `v*`.
+Готовые jar лежат в [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). Пуш в `main` обновляет файлы текущего релиза.
 
 Скачайте эти файлы и положите в папку `mods`:
 
@@ -120,14 +120,9 @@ gradlew.bat build        # Windows
 
 ### GitHub Release
 
-Если нужно, поднимите `mod_version` в `gradle.properties`, затем поставьте такой же тег:
+Пуш в `main` пересобирает мод и **заменяет** jar в GitHub Release текущей `mod_version` (сейчас это `v1.0.0`). Можно и вручную: **Actions → Release → Run workflow**.
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-[`.github/workflows/release.yml`](.github/workflows/release.yml) собирает мод, скачивает Kotlin for Forge и Patchouli с Modrinth и публикует все три jar на странице Releases. Можно и вручную: **Actions → Release → Run workflow**. Тег должен быть `v` плюс `mod_version` (для `1.0.0` это `v1.0.0`). Версии чужих модов задаются в `gradle.properties`: `kff_version` и `patchouli_version`.
+Чтобы появился новый релиз, а не перезапись старого, перед пушем поднимите `mod_version` в `gradle.properties`. Версии чужих модов: `kff_version` и `patchouli_version`.
 
 ### Modrinth
 

@@ -2,25 +2,22 @@ name: Release
 
 on:
   push:
+    branches: ["main"]
     tags:
       - "v*"
   workflow_dispatch:
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
-# Раздел Releases на GitHub появляется после первого релиза.
-# Этот workflow собирает мод и прикладывает три jar:
-#   1) tamedphantoms-*.jar
-#   2) kotlinforforge-*-all.jar  (обязательный Kotlin for Forge)
-#   3) Patchouli-*-NEOFORGE.jar  (книга, можно не ставить)
-# SHA-256 у каждого файла считает сам GitHub при загрузке (digest рядом с ассетом).
-#
-# Как выпустить:
-#   git tag v1.0.0
-#   git push origin v1.0.0
-# или Actions → Release → Run workflow
-# Тег должен совпадать с mod_version в gradle.properties (v1.0.0).
+# Пуш в main (и тег / ручной запуск) пересобирает мод и обновляет
+# GitHub Release для текущей mod_version: те же три jar перезаписываются.
+# Новый номер версии в gradle.properties → новый релиз vX.Y.Z.
+# SHA-256 у каждого файла считает сам GitHub при загрузке.
 
 jobs:
   release:
@@ -42,7 +39,7 @@ jobs:
           echo "mod_version=${mod_version}" >> "$GITHUB_ENV"
 
       - name: Check tag matches mod_version
-        if: github.event_name == 'push'
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           set -euo pipefail
           expected="v${{ steps.versions.outputs.mod_version }}"
@@ -51,6 +48,16 @@ jobs:
             echo "Tag ${actual} must be ${expected} (mod_version in gradle.properties)."
             exit 1
           fi
+
+      - name: Point version tag at this commit
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          tag="v${{ steps.versions.outputs.mod_version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "${tag}" "${GITHUB_SHA}"
+          git push -f origin "refs/tags/${tag}"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -95,6 +102,9 @@ jobs:
         with:
           tag_name: v${{ steps.versions.outputs.mod_version }}
           name: Tamed Phantoms ${{ steps.versions.outputs.mod_version }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          overwrite_files: true
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |

@@ -8,7 +8,7 @@ The UI and in-game guidebook are available in English and Russian.
 
 ## Downloads
 
-Jars live on [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). The **Releases** tab appears after the first `v*` tag is pushed.
+Jars live on [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). A push to `main` updates the files on the current version’s release.
 
 Download these files and put them in the `mods` folder:
 
@@ -120,14 +120,9 @@ On low-memory machines, build with `CI=true` and JDK 21 so Minecraft is not deco
 
 ### GitHub Release
 
-Bump `mod_version` in `gradle.properties` if needed, then tag the same number:
+A push to `main` rebuilds the mod and **replaces** the jars on the GitHub Release for the current `mod_version` (today that is `v1.0.0`). You can also run **Actions → Release → Run workflow**.
 
-```bash
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-[`.github/workflows/release.yml`](.github/workflows/release.yml) builds the mod, downloads Kotlin for Forge and Patchouli from Modrinth, and publishes all three jars on the Releases page. You can also run **Actions → Release → Run workflow**. The tag must be `v` plus `mod_version` (for `1.0.0` that is `v1.0.0`). Companion versions are `kff_version` and `patchouli_version` in `gradle.properties`.
+To start a new release instead of overwriting the old one, bump `mod_version` in `gradle.properties` before you push. Companion versions are `kff_version` and `patchouli_version`.
 
 ### Modrinth
 
