@@ -1,0 +1,18 @@
+{
+  "name": "tamedphantoms.guide.entry.wild",
+  "icon": "minecraft:phantom_membrane",
+  "category": "tamedphantoms:intro",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.wild.1"
+    },
+    {
+      "type": "patchouli:entity",
+      "entity": "minecraft:phantom",
+      "scale": 0.65,
+      "text": "tamedphantoms.guide.page.wild.2"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.tame",
+  "icon": "minecraft:cookie",
+  "category": "tamedphantoms:taming",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.tame.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.tame.2"
+    }
+  ]
+}

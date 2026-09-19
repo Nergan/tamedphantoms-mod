@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.release",
+  "icon": "minecraft:poisonous_potato",
+  "category": "tamedphantoms:taming",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.release.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.release.2"
+    }
+  ]
+}

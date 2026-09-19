@@ -1,0 +1,21 @@
+{
+  "name": "tamedphantoms.guide.entry.welcome",
+  "icon": "minecraft:book",
+  "category": "tamedphantoms:intro",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.welcome.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.welcome.2"
+    },
+    {
+      "type": "patchouli:crafting",
+      "recipe": "tamedphantoms:phantom_guide",
+      "text": "tamedphantoms.guide.page.welcome.3"
+    }
+  ]
+}

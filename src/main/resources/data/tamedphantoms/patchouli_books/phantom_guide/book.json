@@ -1,0 +1,23 @@
+{
+  "name": "tamedphantoms.guide.name",
+  "landing_text": "tamedphantoms.guide.landing",
+  "subtitle": "tamedphantoms.guide.subtitle",
+  "version": 1,
+  "creative_tab": "minecraft:tools_and_utilities",
+  "use_resource_pack": true,
+  "i18n": true,
+  "use_blocky_font": true,
+  "text_overflow_mode": "resize",
+  "show_progress": false,
+  "model": "tamedphantoms:phantom_guide",
+  "book_texture": "patchouli:textures/gui/book_purple.png",
+  "nameplate_color": "C9A6FF",
+  "header_color": "4A2C6A",
+  "text_color": "2A1B3D",
+  "link_color": "7B4B9A",
+  "link_hover_color": "C9A6FF",
+  "macros": {
+    "$(pet)": "$(#6A4C93)",
+    "$(warn)": "$(#B33A3A)"
+  }
+}

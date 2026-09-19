@@ -1,0 +1,23 @@
+{
+  "parent": "tamedphantoms:tame_phantom",
+  "display": {
+    "icon": {
+      "id": "minecraft:poisonous_potato"
+    },
+    "title": {
+      "translate": "advancements.tamedphantoms.release_phantom.title"
+    },
+    "description": {
+      "translate": "advancements.tamedphantoms.release_phantom.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "released_phantom": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

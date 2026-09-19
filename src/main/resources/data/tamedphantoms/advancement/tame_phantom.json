@@ -1,0 +1,23 @@
+{
+  "parent": "minecraft:adventure/root",
+  "display": {
+    "icon": {
+      "id": "minecraft:phantom_membrane"
+    },
+    "title": {
+      "translate": "advancements.tamedphantoms.tame_phantom.title"
+    },
+    "description": {
+      "translate": "advancements.tamedphantoms.tame_phantom.description"
+    },
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "tamed_phantom": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

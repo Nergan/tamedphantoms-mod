@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.sit",
+  "icon": "minecraft:red_bed",
+  "category": "tamedphantoms:riding",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.sit.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.sit.2"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "entity.tamedphantoms.tamed_phantom": "Tamed Phantom",
+  "itemGroup.tamedphantoms": "Tamed Phantoms",
+
+  "gui.tamedphantoms.owner": "Owner: %s",
+
+  "key.categories.tamedphantoms": "Tamed Phantoms",
+  "key.tamedphantoms.fly_up": "Fly Up",
+  "key.tamedphantoms.fly_down": "Fly Down",
+
+  "tamedphantoms.configuration.taming": "Taming",
+  "tamedphantoms.configuration.taming.tame_item": "Taming item",
+  "tamedphantoms.configuration.taming.release_item": "Release item",
+  "tamedphantoms.configuration.taming.tame_chance": "Taming chance",
+  "tamedphantoms.configuration.taming.repel_radius": "Repel radius",
+  "tamedphantoms.configuration.taming.defend_time_ticks": "Self-defense duration (ticks)",
+
+  "advancements.tamedphantoms.tame_phantom.title": "Winged Pet",
+  "advancements.tamedphantoms.tame_phantom.description": "Tame a phantom",
+  "advancements.tamedphantoms.release_phantom.title": "No Longer Responsible",
+  "advancements.tamedphantoms.release_phantom.description": "Release a tamed phantom",
+
+  "tamedphantoms.guide.name": "Phantom Taming Guide",
+  "tamedphantoms.guide.subtitle": "A night-sky companion",
+  "tamedphantoms.guide.landing": "This book explains how to live alongside phantoms: how to tame one, how to fly with it, how to let it rest, and what happens if you set it free.$(br2)If you lose the book, you can make another from a $(item)book$() and a $(item)phantom membrane$().",
+
+  "tamedphantoms.guide.cat.intro": "The Night Sky",
+  "tamedphantoms.guide.cat.intro.desc": "A short look at what changed for phantoms, and how this book is meant to be used.",
+  "tamedphantoms.guide.cat.taming": "Taming and Care",
+  "tamedphantoms.guide.cat.taming.desc": "How a wild phantom becomes yours, how to look after it, and how to release it.",
+  "tamedphantoms.guide.cat.riding": "Flight and Commands",
+  "tamedphantoms.guide.cat.riding.desc": "The saddle, sitting still, and flying through the dark.",
+  "tamedphantoms.guide.cat.combat": "When Danger Comes",
+  "tamedphantoms.guide.cat.combat.desc": "How a tamed or released phantom defends itself, and how strong it is.",
+
+  "tamedphantoms.guide.entry.welcome": "This Book",
+  "tamedphantoms.guide.page.welcome.1": "Welcome. This guide was written for travelers who want to understand phantoms without guessing. The chapters that follow go through each part of the bond in order, from the first meeting to life in the air.",
+  "tamedphantoms.guide.page.welcome.2": "You will find how a wild phantom can be tamed, how it is fed and led, how it is saddled, how it sits, and how it answers a blow. Nothing here is required reading. Open a page when you need it.",
+  "tamedphantoms.guide.page.welcome.3": "A new copy can be made at a crafting table from an ordinary book and a phantom membrane.",
+
+  "tamedphantoms.guide.entry.wild": "Wild Phantoms",
+  "tamedphantoms.guide.page.wild.1": "A wild phantom now watches the world with $(warn)blood-red eyes$(). If you hold the taming item, it will come closer instead of turning away. Night is still dangerous, but the first step is simply to be seen holding something it wants.",
+  "tamedphantoms.guide.page.wild.2": "By default that item is a $(item)cookie$(). The item can be changed in the server settings. A tamed phantom also keeps wild phantoms from gathering too close to its owner.",
+
+  "tamedphantoms.guide.entry.tame": "How to Tame",
+  "tamedphantoms.guide.page.tame.1": "Stand near a wild phantom and use the taming item with the right mouse button. If the attempt succeeds, the phantom becomes yours. It grows a little larger and darker, and its eyes turn a bright $(#33cc44)green$(). Hearts appear above it when the bond is made.",
+  "tamedphantoms.guide.page.tame.2": "By default every attempt succeeds. The chance can be changed in the server settings. A phantom that was released can be tamed again in the same way. Free phantoms of that kind have bright $(#e8c400)yellow eyes$().",
+
+  "tamedphantoms.guide.entry.care": "Care and the Lead",
+  "tamedphantoms.guide.page.care.1": "Only the owner can feed a tamed phantom. Any food will restore its health. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line.",
+  "tamedphantoms.guide.page.care.2": "Sunlight will not burn it, and it will not drown. If you travel too far, it will appear beside you again, the way a wolf returns when it has been left behind.",
+
+  "tamedphantoms.guide.entry.release": "Letting Go",
+  "tamedphantoms.guide.page.release.1": "To release a phantom, use the release item with the right mouse button. By default that item is a $(item)poisonous potato$(). The bond ends, the saddle falls to the ground if there was one, and small angry clouds rise above it. Its eyes turn $(#e8c400)yellow$().",
+  "tamedphantoms.guide.page.release.2": "A released phantom still defends itself if it is hurt. Anyone who brings the taming item can try to tame it again. It is no longer a pet, but it is not an ordinary wild hunter either.",
+
+  "tamedphantoms.guide.entry.saddle": "The Saddle",
+  "tamedphantoms.guide.page.saddle.1": "Only the owner can place a $(item)saddle$() on a tamed phantom. Use it with the right mouse button. A thin mark of leather appears along the back. With an empty hand, the same button lets you climb on. $(thing)Shears$() take the saddle off again.",
+  "tamedphantoms.guide.page.saddle.2": "You cannot climb onto a phantom that is sitting. Get down first if you want it to rest. If the owner is already flying, another player may take the place behind them.",
+
+  "tamedphantoms.guide.entry.flight": "In the Air",
+  "tamedphantoms.guide.page.flight.1": "While you are riding, the movement keys send the phantom forward, back, and to the sides. Jump makes it climb. The left Control key makes it descend. It turns with your look. You and anyone sitting behind you receive $(thing)Night Vision$() for as long as you stay in the air.",
+  "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section.",
+
+  "tamedphantoms.guide.entry.sit": "Sitting Still",
+  "tamedphantoms.guide.page.sit.1": "Only the owner can ask a phantom to sit, and only while not riding it. If there is no saddle, use the right mouse button. If there is a saddle, sneak and use the right mouse button. The phantom turns over, falls, and stays where it lands. Falling does not hurt it. A breath of wind marks the command.",
+  "tamedphantoms.guide.page.sit.2": "You cannot ride a sitting phantom. If something strikes it, it will rise and fight back.",
+
+  "tamedphantoms.guide.entry.defense": "Self-Defense",
+  "tamedphantoms.guide.page.defense.1": "If a tamed or released phantom is hurt, it turns on whoever struck it. This lasts about ten seconds and can be changed in the server settings. Even the owner is not spared. While it is ready to attack, its eyes glow $(warn)blood-red$(). When the anger passes, they return to green or yellow.",
+  "tamedphantoms.guide.page.defense.2": "A released phantom defends itself in the same way. A tamed phantom also keeps wild phantoms from crowding its owner.",
+
+  "tamedphantoms.guide.entry.stats": "Strength",
+  "tamedphantoms.guide.page.stats.1": "A tamed or released phantom is stronger than a wild one. It has forty health, its bite deals twelve damage, and it flies twice as fast. Each time it wounds something, it heals itself for the same amount.",
+  "tamedphantoms.guide.page.stats.2": "It is also a little larger than an ordinary phantom, about one and a half times the usual size. The night remains unsafe. A bonded phantom simply shares that danger with you."
+}

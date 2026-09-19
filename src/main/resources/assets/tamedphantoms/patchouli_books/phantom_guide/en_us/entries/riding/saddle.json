@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.saddle",
+  "icon": "minecraft:saddle",
+  "category": "tamedphantoms:riding",
+  "sortnum": 0,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.saddle.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.saddle.2"
+    }
+  ]
+}

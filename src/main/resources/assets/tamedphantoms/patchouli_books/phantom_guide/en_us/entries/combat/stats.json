@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.stats",
+  "icon": "minecraft:golden_apple",
+  "category": "tamedphantoms:combat",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.stats.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.stats.2"
+    }
+  ]
+}

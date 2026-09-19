@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.flight",
+  "icon": "minecraft:feather",
+  "category": "tamedphantoms:riding",
+  "sortnum": 1,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.flight.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.flight.2"
+    }
+  ]
+}

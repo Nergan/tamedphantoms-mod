@@ -1,0 +1,71 @@
+# neoforge.mods.toml
+# Значения вида ${...} подставляются Gradle-задачей generateModMetadata
+# из gradle.properties (см. build.gradle.kts).
+
+# Точка входа мода — обычный Kotlin `class` с конструктором (IEventBus,
+# ModContainer) — это позволяет получить ModContainer для регистрации
+# серверного конфига (см. ServerConfig.kt). Такой класс прекрасно
+# загружается стандартным загрузчиком "javafml", специальный загрузчик
+# Kotlin for Forge для ЭТОГО не требуется (он нужен только чтобы делать
+# точкой входа Kotlin `object`). При этом сам мод Kotlin for Forge —
+# по-прежнему ОБЯЗАТЕЛЬНАЯ зависимость времени выполнения: код мода
+# использует библиотечные классы KFF (делегат `by ...register(...)` для
+# DeferredRegister, см. entity/ModEntities.kt) — см. блок [[dependencies]] ниже.
+modLoader = "javafml" #mandatory
+loaderVersion = "${loader_version_range}" #mandatory
+
+license = "${mod_license}"
+# issueTrackerURL можно раскомментировать и указать свой репозиторий после публикации:
+# issueTrackerURL = "https://github.com/ВАШ_АККАУНТ/tamedphantoms/issues" #optional
+
+[[mods]] #mandatory
+modId = "${mod_id}" #mandatory
+version = "${mod_version}" #mandatory
+displayName = "${mod_name}" #mandatory
+authors = "${mod_authors}"
+description = '''
+${mod_description}
+
+Taming phantoms (the taming item is configurable — cookie by default),
+saddle flight, owner defense, repelling wild phantoms, and more.
+Приручение фантомов (предмет для приручения настраивается — по умолчанию
+печенье), полёт на седле, защита владельца, отпугивание диких фантомов
+и многое другое.
+'''
+
+# Явная зависимость от NeoForge нужной версии.
+[[dependencies.${mod_id}]] #optional
+modId = "neoforge"
+type = "required"
+versionRange = "[${neo_version},)"
+ordering = "NONE"
+side = "BOTH"
+
+# Мод должен грузиться на той же версии Minecraft, под которую собран.
+[[dependencies.${mod_id}]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Обязательная зависимость на библиотеку Kotlin for Forge (модId в её
+# собственном mods.toml — "kotlinforforge"). Без неё классы мода, ссылающиеся
+# на её API (делегаты DeferredRegister), не загрузятся. Заодно эта запись
+# даёт понятное сообщение "нужен ещё вот этот мод" в лаунчерах (Prism
+# Launcher, ATLauncher и т.д.) и модрепозиториях вместо простого краша.
+[[dependencies.${mod_id}]]
+modId = "kotlinforforge"
+type = "required"
+versionRange = "${kff_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+# Необязательная зависимость: если Patchouli есть в сборке, появляется
+# гайд-книга. Если мода нет — Tamed Phantoms запускается как обычно.
+[[dependencies.${mod_id}]]
+modId = "patchouli"
+type = "optional"
+versionRange = "[0,)"
+ordering = "NONE"
+side = "BOTH"

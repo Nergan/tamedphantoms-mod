@@ -1,0 +1,61 @@
+package com.tamedphantoms.mod.entity.ai
+
+import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.util.Mth
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.ai.control.MoveControl
+import net.minecraft.world.phys.Vec3
+import kotlin.math.sqrt
+
+/**
+ * Плавное управление полётом ручного/освобождённого фантома.
+ *
+ * Ванильный `PhantomMoveControl` слушает только внутреннее `moveTargetPoint`
+ * и игнорирует [setWantedPosition]. Здесь точка Goal'ов используется напрямую,
+ * а скорость и поворот сглаживаются, чтобы не было рывков и мгновенных остановок.
+ */
+class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
+
+    private var currentSpeed = 0.12f
+
+    override fun tick() {
+        val sitting = (mob as? TamedPhantomEntity)?.isOrderedToSit() == true
+        if (sitting) {
+            operation = Operation.WAIT
+            return
+        }
+
+        val dx = wantedX - mob.x
+        val dy = wantedY - mob.y
+        val dz = wantedZ - mob.z
+        val horiz = sqrt(dx * dx + dz * dz)
+        val dist = sqrt(dx * dx + dy * dy + dz * dz)
+
+        if (operation != Operation.MOVE_TO) {
+            mob.deltaMovement = mob.deltaMovement.scale(0.94)
+            return
+        }
+
+        if (dist < 0.45) {
+            operation = Operation.WAIT
+            mob.deltaMovement = mob.deltaMovement.scale(0.86)
+            return
+        }
+
+        if (horiz > 1.0E-4) {
+            val targetYaw = (Mth.atan2(dz, dx) * (180.0 / Math.PI)).toFloat() - 90.0f
+            mob.yRot = rotlerp(mob.yRot, targetYaw, 4.0f)
+            mob.yBodyRot = mob.yRot
+        }
+
+        val pitch = (-(Mth.atan2(-dy, horiz.coerceAtLeast(1.0E-4)) * (180.0 / Math.PI))).toFloat()
+        mob.xRot = rotlerp(mob.xRot, pitch.coerceIn(-32.0f, 32.0f), 3.2f)
+
+        val ease = (dist / 4.0).coerceIn(0.28, 1.0)
+        val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f)
+        currentSpeed = Mth.approach(currentSpeed, targetSpeed, 0.022f)
+
+        val desired = Vec3(dx / dist * currentSpeed, dy / dist * currentSpeed, dz / dist * currentSpeed)
+        mob.deltaMovement = mob.deltaMovement.lerp(desired, 0.12)
+    }
+}
