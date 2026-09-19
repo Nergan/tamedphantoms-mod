@@ -46,3 +46,4 @@ desktop.ini
 # ---- Прочее ----
 *.log
 eclipse/
+release-assets/

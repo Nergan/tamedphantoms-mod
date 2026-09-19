@@ -6,6 +6,20 @@
 
 Интерфейс и внутриигровая книга доступны на русском и английском.
 
+## Загрузки
+
+Готовые jar лежат в [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). Вкладка **Releases** появляется после первого тега `v*`.
+
+Скачайте эти файлы и положите в папку `mods`:
+
+| Файл | Обязателен | Что это |
+| --- | --- | --- |
+| `tamedphantoms-1.0.0.jar` | Да | этот мод |
+| `kotlinforforge-5.8.0-all.jar` | Да | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) |
+| `Patchouli-1.21.1-93-NEOFORGE.jar` | Нет | [Patchouli](https://modrinth.com/mod/patchouli), только если нужна книга |
+
+Workflow релиза собирает мод и забирает два чужих jar с Modrinth. Файл `*-sources.jar` в `mods` класть не нужно.
+
 ## Возможности
 
 - **Приручение.** Правая кнопка мыши по дикому фантому предметом приручения (по умолчанию печенье). Фантом становится крупнее и темнее, глаза загораются зелёным. Пока предмет в руке, дикие фантомы подлетают сами и не нападают.
@@ -35,11 +49,11 @@
 ## Установка
 
 1. Установите NeoForge 1.21.1.
-2. Установите [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) для NeoForge.
-3. Положите `tamedphantoms-1.0.0.jar` в папку `mods`.
-4. По желанию добавьте [Patchouli](https://modrinth.com/mod/patchouli).
+2. Скачайте jar из [последнего Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
+3. Положите в `mods` файлы `tamedphantoms-1.0.0.jar` и `kotlinforforge-5.8.0-all.jar`.
+4. По желанию добавьте оттуда же `Patchouli-1.21.1-93-NEOFORGE.jar`.
 
-Мод нужен и на клиенте, и на сервере.
+Мод нужен и на клиенте, и на сервере. Kotlin for Forge и Patchouli можно взять и с [Modrinth](https://modrinth.com/mod/kotlin-for-forge), не из GitHub Release.
 
 ## Управление полётом
 
@@ -103,6 +117,19 @@ gradlew.bat build        # Windows
 `./gradlew test` гоняет JUnit 5 по чистой логике в `util/` (перекраска глаз, таймер гнева, места в седле, шанс приручения и лечение). Игровой процесс этими тестами не покрывается.
 
 ## Публикация
+
+### GitHub Release
+
+Если нужно, поднимите `mod_version` в `gradle.properties`, затем поставьте такой же тег:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) собирает мод, скачивает Kotlin for Forge и Patchouli с Modrinth и публикует все три jar на странице Releases. Можно и вручную: **Actions → Release → Run workflow**. Тег должен быть `v` плюс `mod_version` (для `1.0.0` это `v1.0.0`). Версии чужих модов задаются в `gradle.properties`: `kff_version` и `patchouli_version`.
+
+### Modrinth
 
 На Modrinth укажите загрузчик NeoForge, игру 1.21.1 и обязательную зависимость **Kotlin for Forge**. Patchouli лучше пометить как необязательную.
 

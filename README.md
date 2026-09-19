@@ -6,6 +6,20 @@ A **Minecraft 1.21.1** NeoForge mod: tame phantoms, ride them with a saddle, sit
 
 The UI and in-game guidebook are available in English and Russian.
 
+## Downloads
+
+Jars live on [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). The **Releases** tab appears after the first `v*` tag is pushed.
+
+Download these files and put them in the `mods` folder:
+
+| File | Required | What it is |
+| --- | --- | --- |
+| `tamedphantoms-1.0.0.jar` | Yes | this mod |
+| `kotlinforforge-5.8.0-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) |
+| `Patchouli-1.21.1-93-NEOFORGE.jar` | No | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
+
+The release workflow builds the mod and fetches the two companion jars from Modrinth. Do not install `*-sources.jar`.
+
 ## Features
 
 - **Taming.** Right-click a wild phantom with the tame item (cookie by default). The phantom grows larger and darker, and its eyes glow green. While you hold the tame item, wild phantoms approach you and will not attack.
@@ -35,11 +49,11 @@ The UI and in-game guidebook are available in English and Russian.
 ## Installation
 
 1. Install NeoForge 1.21.1.
-2. Install [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) for NeoForge.
-3. Put `tamedphantoms-1.0.0.jar` in the `mods` folder.
-4. Optionally add [Patchouli](https://modrinth.com/mod/patchouli).
+2. Download the jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
+3. Put `tamedphantoms-1.0.0.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
+4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
-The mod is required on both client and server.
+The mod is required on both client and server. You can also get Kotlin for Forge and Patchouli from [Modrinth](https://modrinth.com/mod/kotlin-for-forge) instead of the GitHub release.
 
 ## Flight controls
 
@@ -103,6 +117,19 @@ On low-memory machines, build with `CI=true` and JDK 21 so Minecraft is not deco
 `./gradlew test` runs JUnit 5 against the pure logic in `util/` (eye recoloring, anger timer, saddle seats, tame chance, and healing). Gameplay itself is not covered.
 
 ## Publishing
+
+### GitHub Release
+
+Bump `mod_version` in `gradle.properties` if needed, then tag the same number:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+[`.github/workflows/release.yml`](.github/workflows/release.yml) builds the mod, downloads Kotlin for Forge and Patchouli from Modrinth, and publishes all three jars on the Releases page. You can also run **Actions → Release → Run workflow**. The tag must be `v` plus `mod_version` (for `1.0.0` that is `v1.0.0`). Companion versions are `kff_version` and `patchouli_version` in `gradle.properties`.
+
+### Modrinth
 
 On Modrinth, set the loader to NeoForge, the game version to 1.21.1, and list **Kotlin for Forge** as a required dependency. Mark Patchouli as optional.
 
