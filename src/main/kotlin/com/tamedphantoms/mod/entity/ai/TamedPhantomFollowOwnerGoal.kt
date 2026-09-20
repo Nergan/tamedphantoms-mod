@@ -1,6 +1,5 @@
 package com.tamedphantoms.mod.entity.ai
 
-import com.tamedphantoms.mod.entity.PhantomOwnerRecall
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomOwnerTeleport
 import net.minecraft.server.level.ServerLevel
@@ -66,9 +65,6 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
 
     override fun tick() {
         val owner = this.owner ?: return
-        if (PhantomOwnerRecall.tryTeleportToOwner(phantom, owner)) {
-            return
-        }
         if (phantom.level() !== owner.level()) {
             return
         }

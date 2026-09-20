@@ -22,7 +22,11 @@ object PhantomOwnerTeleport {
      * Смещения от хозяина: сначала воздух над ним, потом кольца вокруг.
      * Y всегда выше ног, чтобы летающий фантом не попал в пол.
      */
-    fun candidateOffsets(): List<Triple<Int, Int, Int>> {
+    private val CANDIDATE_OFFSETS: List<Triple<Int, Int, Int>> = buildCandidateOffsets()
+
+    fun candidateOffsets(): List<Triple<Int, Int, Int>> = CANDIDATE_OFFSETS
+
+    private fun buildCandidateOffsets(): List<Triple<Int, Int, Int>> {
         val result = ArrayList<Triple<Int, Int, Int>>(80)
         for (dy in 1..4) {
             result += Triple(0, dy, 0)

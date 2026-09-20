@@ -20,7 +20,6 @@ import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
-import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffectInstance
@@ -447,7 +446,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.tamed) {
             this.tickRepelWildPhantoms(level)
             this.tickLookAtNearbyPlayer()
-            this.tickOwnerRecall(level)
+            this.tickOwnerRecall()
 
             if (this.isVehicle() && this.controllingPassenger != null) {
                 this.tickRiderNightVision()
@@ -467,7 +466,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return level.players().firstOrNull { it.uuid == id }
     }
 
-    private fun tickOwnerRecall(level: ServerLevel) {
+    private fun tickOwnerRecall() {
         val owner = this.findOwnerPlayer() ?: return
         if (this.tickCount % 20 == 0) {
             PhantomOwnerRecall.remember(owner, this)

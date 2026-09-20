@@ -31,9 +31,8 @@ object PhantomColorMath {
     private const val EYE_MIN_SATURATION = 0.95f
     private const val EYE_GLOW_BRIGHTNESS = 1.0f
     /**
-     * Кровь для [RenderType.eyes]. Тот же оттенок, что уже одобрен в игре.
-     * Свечение даёт сам шейдер глаз (и второй проход в PhantomEyeLayers),
-     * а не более яркий RGB — иначе аддитив уходит в алый.
+     * Кровь для слоя глаз. Тот же оттенок, что уже одобрен в игре.
+     * Свечение рисуется отдельной более тёмной текстурой, не более ярким RGB.
      */
     private const val BLOOD_R = 0x5C
     private const val BLOOD_G = 0x08

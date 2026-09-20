@@ -9,9 +9,8 @@ import net.neoforged.neoforge.event.PlayLevelSoundEvent
  * Громкость приручённого фантома — клиентская настройка: каждый игрок
  * слышит «своё» значение, сервер звук не ослабляет.
  *
- * Регистрируется вручную через [net.neoforged.neoforge.common.NeoForge.EVENT_BUS],
- * как остальные обработчики мода. `@EventBusSubscriber` на Kotlin `object`
- * не работает: методы объекта не static, а AutomaticEventSubscriber требует static.
+ * Регистрируется через NeoForge.EVENT_BUS, как остальные обработчики:
+ * `@EventBusSubscriber` на Kotlin `object` падает, потому что методы не static.
  */
 object ClientPhantomSoundHandler {
 

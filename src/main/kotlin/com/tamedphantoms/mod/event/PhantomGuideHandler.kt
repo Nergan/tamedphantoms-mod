@@ -4,7 +4,6 @@ import com.tamedphantoms.mod.TamedPhantomsMod
 import net.minecraft.core.component.DataComponentType
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
-import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import net.neoforged.bus.api.SubscribeEvent
@@ -59,16 +58,5 @@ object PhantomGuideHandler {
                 null
             }
         }
-    }
-
-    @Suppress("unused")
-    private fun hasBookAlready(player: Player): Boolean {
-        val book = createBookStack() ?: return false
-        return player.inventory.items.any { matchesGuide(it, book) } ||
-            player.inventory.offhand.any { matchesGuide(it, book) }
-    }
-
-    private fun matchesGuide(stack: ItemStack, template: ItemStack): Boolean {
-        return !stack.isEmpty && ItemStack.isSameItemSameComponents(stack, template)
     }
 }

@@ -17,9 +17,8 @@ import net.minecraft.resources.ResourceLocation
  *    через `EyesLayer`/`RenderType.eyes`) — становится ярче и зеленее.
  *
  * Результат кэшируется в [DynamicTexture] под собственным ResourceLocation
- * мода и используется вместо ванильных путей только для сущности
- * [com.tamedphantoms.mod.entity.TamedPhantomEntity]. Дикие фантомы
- * продолжают использовать оригинальные ванильные текстуры без изменений.
+ * мода. Тело перекрашивается у ручного фантома; глаза — у ручного,
+ * освобождённого и дикого (красные).
  *
  * Всё обёрнуто в try/catch: если по какой-то причине (другой resourcepack,
  * будущее изменение текстуры и т.п.) обработка не удалась — мод просто
@@ -36,12 +35,14 @@ object PhantomTextureProcessor {
     private val YELLOW_EYES = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/released_phantom_eyes")
     private val RED_EYES = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/angry_phantom_eyes")
     private val RED_EYES_GLOW = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/angry_phantom_eyes_glow")
+    private val SADDLE_TEX = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle")
 
     private var bodyReady = false
     private var eyesReady = false
     private var yellowEyesReady = false
     private var redEyesReady = false
     private var redEyesGlowReady = false
+    private var saddleReady = false
 
     /** ResourceLocation основной (перекрашенной) текстуры тела ручного фантома. */
     fun bodyTexture(): ResourceLocation {
@@ -55,6 +56,7 @@ object PhantomTextureProcessor {
         yellowEyesReady = false
         redEyesReady = false
         redEyesGlowReady = false
+        saddleReady = false
     }
 
     fun prepareEyeTextures() {
@@ -109,9 +111,6 @@ object PhantomTextureProcessor {
             if (yellowEyesReady) YELLOW_EYES else VANILLA_EYES
         }
     }
-
-    private val SADDLE_TEX = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle")
-    private var saddleReady = false
 
     fun saddleTexture(): ResourceLocation {
         if (!saddleReady) {
@@ -176,8 +175,13 @@ object PhantomTextureProcessor {
         redEyesGlowReady = tryGenerateFromEyeSource(RED_EYES_GLOW) { argb -> PhantomColorMath.recolorEyePixelRedGlow(argb) }
     }
 
-    private fun tryGenerateFromEyeSource(destination: ResourceLocation, transform: (Int) -> Int): Boolean =
-        tryGenerate(EYE_SOURCE, destination, transform) || tryGenerate(VANILLA_EYES, destination, transform)
+    private fun tryGenerateFromEyeSource(destination: ResourceLocation, transform: (Int) -> Int): Boolean {
+        val custom = Minecraft.getInstance().resourceManager.getResource(EYE_SOURCE)
+        if (custom.isPresent && tryGenerate(EYE_SOURCE, destination, transform)) {
+            return true
+        }
+        return tryGenerate(VANILLA_EYES, destination, transform)
+    }
 
     private fun tryGenerate(
         source: ResourceLocation,
