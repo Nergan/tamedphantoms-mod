@@ -121,3 +121,25 @@ jobs:
             | `Patchouli-*-NEOFORGE.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
 
             Do not install `*-sources.jar`. Companion jars are official Modrinth builds, rehosted here for a one-page install. Patchouli is redistributed for non-commercial use with attribution to VazkiiMods. GitHub shows a SHA-256 digest next to each uploaded file.
+
+      - name: Publish Modrinth
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: tamed-phantoms
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: true
+          name: ${{ steps.versions.outputs.mod_version }}
+          version: ${{ steps.versions.outputs.mod_version }}
+          version-type: release
+          changelog: |
+            Minecraft 1.21.1 / NeoForge. Tamed Phantoms ${{ steps.versions.outputs.mod_version }}.
+          loaders: |
+            neoforge
+          game-versions: |
+            1.21.1
+          java: |
+            21
+          files: release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar
+          dependencies: |
+            kotlin-for-forge(required){modrinth:ordsPcFz}
+            patchouli(optional){modrinth:nU0bVIaL}
