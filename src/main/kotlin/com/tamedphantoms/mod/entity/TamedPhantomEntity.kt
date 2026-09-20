@@ -20,6 +20,7 @@ import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.sounds.SoundEvent
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffectInstance
@@ -229,6 +230,15 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     override fun canDrownInFluidType(type: FluidType): Boolean = false
 
     override fun decreaseAirSupply(currentAir: Int): Int = currentAir
+
+    override fun playSound(sound: SoundEvent, volume: Float, pitch: Float) {
+        super.playSound(sound, volume * this.tamedSoundMultiplier(), pitch)
+    }
+
+    private fun tamedSoundMultiplier(): Float {
+        if (!this.tamed) return 1.0f
+        return ServerConfig.CONFIG.tamedSoundVolume.get().toFloat().coerceIn(0.0f, 1.0f)
+    }
 
     override fun canBeLeashed(): Boolean = this.tamed && this.isAlive
 

@@ -84,6 +84,7 @@ Dedicated server: `world/serverconfig/tamedphantoms-server.toml`. This is a `SER
 | `tame_chance`       | `1.0`                        | chance to tame per attempt                  |
 | `repel_radius`      | `64.0`                       | radius that pushes wild phantoms away       |
 | `defend_time_ticks` | `200`                        | self-defense duration (20 ticks = 1 second) |
+| `tamed_sound_volume` | `0.5`                       | tamed phantom volume (1.0 = vanilla loudness) |
 
 An invalid item id falls back to the default and a warning is written to the log.
 

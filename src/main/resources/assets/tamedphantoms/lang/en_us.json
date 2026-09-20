@@ -1,5 +1,7 @@
 {
   "entity.tamedphantoms.tamed_phantom": "Tamed Phantom",
+  "item.tamedphantoms.released_phantom_spawn_egg": "Released Phantom Spawn Egg",
+  "item.tamedphantoms.tab_icon": "Tamed Phantoms",
   "itemGroup.tamedphantoms": "Tamed Phantoms",
 
   "gui.tamedphantoms.owner": "Owner: %s",
@@ -14,6 +16,8 @@
   "tamedphantoms.configuration.taming.tame_chance": "Taming chance",
   "tamedphantoms.configuration.taming.repel_radius": "Repel radius",
   "tamedphantoms.configuration.taming.defend_time_ticks": "Self-defense duration (ticks)",
+  "tamedphantoms.configuration.sound": "Sound",
+  "tamedphantoms.configuration.sound.tamed_sound_volume": "Tamed phantom volume",
 
   "advancements.tamedphantoms.tame_phantom.title": "Winged Pet",
   "advancements.tamedphantoms.tame_phantom.description": "Tame a phantom",

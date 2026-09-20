@@ -35,11 +35,13 @@ object PhantomTextureProcessor {
     private val RECOLORED_EYES = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_eyes")
     private val YELLOW_EYES = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/released_phantom_eyes")
     private val RED_EYES = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/angry_phantom_eyes")
+    private val RED_EYES_GLOW = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/angry_phantom_eyes_glow")
 
     private var bodyReady = false
     private var eyesReady = false
     private var yellowEyesReady = false
     private var redEyesReady = false
+    private var redGlowReady = false
 
     /** ResourceLocation основной (перекрашенной) текстуры тела ручного фантома. */
     fun bodyTexture(): ResourceLocation {
@@ -52,12 +54,14 @@ object PhantomTextureProcessor {
         eyesReady = false
         yellowEyesReady = false
         redEyesReady = false
+        redGlowReady = false
     }
 
     fun prepareEyeTextures() {
         ensureEyes()
         ensureYellowEyes()
         ensureRedEyes()
+        ensureRedGlow()
         suppressVanillaEyes()
     }
 
@@ -99,6 +103,12 @@ object PhantomTextureProcessor {
             ensureYellowEyes()
             if (yellowEyesReady) YELLOW_EYES else VANILLA_EYES
         }
+    }
+
+    /** Тусклое аддитивное свечение для крови. Нет — если слой не собрался. */
+    fun bloodGlowTexture(): ResourceLocation? {
+        ensureRedGlow()
+        return if (redGlowReady) RED_EYES_GLOW else null
     }
 
     private val SADDLE_TEX = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle")
@@ -160,6 +170,11 @@ object PhantomTextureProcessor {
     private fun ensureRedEyes() {
         if (redEyesReady) return
         redEyesReady = tryGenerateFromEyeSource(RED_EYES) { argb -> PhantomColorMath.recolorEyePixelRed(argb) }
+    }
+
+    private fun ensureRedGlow() {
+        if (redGlowReady) return
+        redGlowReady = tryGenerateFromEyeSource(RED_EYES_GLOW) { argb -> PhantomColorMath.recolorEyePixelRedGlow(argb) }
     }
 
     private fun tryGenerateFromEyeSource(destination: ResourceLocation, transform: (Int) -> Int): Boolean =

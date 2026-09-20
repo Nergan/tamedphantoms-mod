@@ -2,6 +2,7 @@ package com.tamedphantoms.mod
 
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.ModEntities
+import com.tamedphantoms.mod.item.ModItems
 import com.tamedphantoms.mod.event.ModSetup
 import com.tamedphantoms.mod.event.PhantomDamageHandler
 import com.tamedphantoms.mod.event.PhantomGuideHandler
@@ -56,6 +57,7 @@ class TamedPhantomsMod(modEventBus: IEventBus, modContainer: ModContainer) {
 
         // Регистрируем DeferredRegister с типами сущностей на шине мода.
         ModEntities.ENTITY_TYPES.register(modEventBus)
+        ModItems.register(modEventBus)
 
         // Серверный конфиг (предмет приручения, шанс приручения и т.д.).
         // Тип SERVER выбран осознанно: значения синхронизируются с клиентами

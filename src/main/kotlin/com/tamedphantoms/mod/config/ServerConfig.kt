@@ -52,6 +52,7 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
     val tameChance: ModConfigSpec.DoubleValue
     val repelRadius: ModConfigSpec.DoubleValue
     val defendDurationTicks: ModConfigSpec.IntValue
+    val tamedSoundVolume: ModConfigSpec.DoubleValue
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null
@@ -97,6 +98,18 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
             .comment("Сколько тиков длится режим самозащиты после того, как фантома ударили (20 тиков = 1 секунда).")
             .translation("$KEY_PREFIX.taming.defend_time_ticks")
             .defineInRange("defend_time_ticks", 200, 20, 20 * 60 * 30)
+
+        builder.pop()
+        builder.push("sound")
+
+        tamedSoundVolume = builder
+            .comment(
+                "Громкость звуков ПРИРУЧЕННОГО фантома относительно обычной.",
+                "0.5 = в два раза тише (удобно, если фантом живёт дома).",
+                "Дикие и освобождённые фантомы этот параметр не используют.",
+            )
+            .translation("$KEY_PREFIX.sound.tamed_sound_volume")
+            .defineInRange("tamed_sound_volume", 0.5, 0.0, 1.0)
 
         builder.pop()
     }

@@ -1,5 +1,7 @@
 {
   "entity.tamedphantoms.tamed_phantom": "Ручной фантом",
+  "item.tamedphantoms.released_phantom_spawn_egg": "Яйцо призыва освобождённого фантома",
+  "item.tamedphantoms.tab_icon": "Ручные фантомы",
   "itemGroup.tamedphantoms": "Ручные фантомы",
 
   "gui.tamedphantoms.owner": "Владелец: %s",
@@ -14,6 +16,8 @@
   "tamedphantoms.configuration.taming.tame_chance": "Шанс приручения",
   "tamedphantoms.configuration.taming.repel_radius": "Радиус отпугивания",
   "tamedphantoms.configuration.taming.defend_time_ticks": "Длительность самозащиты (тики)",
+  "tamedphantoms.configuration.sound": "Звук",
+  "tamedphantoms.configuration.sound.tamed_sound_volume": "Громкость прирученного фантома",
 
   "advancements.tamedphantoms.tame_phantom.title": "Крылатый питомец",
   "advancements.tamedphantoms.tame_phantom.description": "Приручите фантома",
