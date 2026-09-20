@@ -16,6 +16,7 @@ import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
 import net.neoforged.neoforge.client.gui.ConfigurationScreen
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory
+import net.neoforged.neoforge.common.NeoForge
 
 /**
  * Клиентская настройка. Вызывается условно из [com.tamedphantoms.mod.event.ModSetup]
@@ -31,6 +32,7 @@ object ClientModEvents {
         modBus.addListener(::onClientSetup)
         modBus.addListener(::onRegisterReloadListeners)
         ClientPhantomInputSender.init()
+        NeoForge.EVENT_BUS.register(ClientPhantomSoundHandler)
 
         // Подключаем встроенный экран настроек NeoForge: Mods -> Tamed Phantoms
         // -> кнопка "Config". Он сам строит интерфейс по зарегистрированному

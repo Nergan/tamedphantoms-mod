@@ -2,16 +2,17 @@ package com.tamedphantoms.mod.client
 
 import com.tamedphantoms.mod.config.ClientConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
-import net.neoforged.api.distmarker.Dist
 import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.fml.common.EventBusSubscriber
 import net.neoforged.neoforge.event.PlayLevelSoundEvent
 
 /**
  * Громкость приручённого фантома — клиентская настройка: каждый игрок
  * слышит «своё» значение, сервер звук не ослабляет.
+ *
+ * Регистрируется вручную через [net.neoforged.neoforge.common.NeoForge.EVENT_BUS],
+ * как остальные обработчики мода. `@EventBusSubscriber` на Kotlin `object`
+ * не работает: методы объекта не static, а AutomaticEventSubscriber требует static.
  */
-@EventBusSubscriber(modid = com.tamedphantoms.mod.TamedPhantomsMod.MOD_ID, bus = EventBusSubscriber.Bus.GAME, value = [Dist.CLIENT])
 object ClientPhantomSoundHandler {
 
     @SubscribeEvent
