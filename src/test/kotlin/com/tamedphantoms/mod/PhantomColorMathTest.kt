@@ -91,9 +91,9 @@ class PhantomColorMathTest {
         val hsb = FloatArray(3)
         Color.RGBtoHSB(r, g, b, hsb)
 
-        assertTrue(r > g * 4 && r > b * 3, "Кровь должна быть красной, а не оранжевой: r=$r g=$g b=$b")
-        assertTrue(g < 20 && b < 28, "Зелёный и синий должны остаться почти чёрными, были g=$g b=$b")
-        assertTrue(hsb[2] in 0.20f..0.52f, "Кровавый красный темнее алого, был: ${hsb[2]}")
+        assertTrue(r >= 240 && r > g * 8 && r > b * 6, "Кровь должна быть красной, а не оранжевой: r=$r g=$g b=$b")
+        assertTrue(g < 20, "Зелёный канал даёт алый оттенок на свечении, был g=$g")
+        assertTrue(hsb[2] >= 0.99f, "Кровавые глаза должны светиться так же ярко, как зелёные, было: ${hsb[2]}")
         assertEquals(255, (recolored ushr 24) and 0xFF)
     }
 }

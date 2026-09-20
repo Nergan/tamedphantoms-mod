@@ -31,12 +31,12 @@ object PhantomColorMath {
     private const val EYE_MIN_SATURATION = 0.95f
     private const val EYE_GLOW_BRIGHTNESS = 1.0f
     /**
-     * Кровь, не алый свет: фиксированный RGB, без HSB.
-     * HSB около нуля на светящемся слое легко уезжает в оранжево-алый.
+     * Светящаяся кровь: полный красный, почти без зелёного.
+     * Зелёный канал — то, что делает аддитивное свечение алым/оранжевым.
      */
-    private const val BLOOD_R = 0x72
-    private const val BLOOD_G = 0x07
-    private const val BLOOD_B = 0x10
+    private const val BLOOD_R = 0xFF
+    private const val BLOOD_G = 0x0C
+    private const val BLOOD_B = 0x1C
 
     /**
      * Перекрашивает один пиксель основной текстуры тела: синевато-серые участки
