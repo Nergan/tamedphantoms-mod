@@ -80,16 +80,20 @@ class PhantomColorMathTest {
     }
 
     @Test
-    @DisplayName("Пиксель глаза в режиме самозащиты становится ярко-красным")
-    fun defendingEyePixelBecomesBrightRed() {
+    @DisplayName("Пиксель глаза в режиме самозащиты становится кроваво-красным, не алым")
+    fun defendingEyePixelBecomesBloodRed() {
         val originalEye = argb(255, 210, 210, 120)
         val recolored = PhantomColorMath.recolorEyePixelRed(originalEye)
+        val r = (recolored ushr 16) and 0xFF
+        val g = (recolored ushr 8) and 0xFF
+        val b = recolored and 0xFF
 
         val hsb = FloatArray(3)
-        Color.RGBtoHSB((recolored ushr 16) and 0xFF, (recolored ushr 8) and 0xFF, recolored and 0xFF, hsb)
+        Color.RGBtoHSB(r, g, b, hsb)
 
-        assertTrue(hsb[0] >= 0.96f || hsb[0] <= 0.02f, "Оттенок должен стать кроваво-красным, был: ${hsb[0]}")
-        assertTrue(hsb[2] in 0.40f..0.70f, "Кровавый красный темнее алого, был: ${hsb[2]}")
+        assertTrue(r > g * 4 && r > b * 3, "Кровь должна быть красной, а не оранжевой: r=$r g=$g b=$b")
+        assertTrue(g < 20 && b < 28, "Зелёный и синий должны остаться почти чёрными, были g=$g b=$b")
+        assertTrue(hsb[2] in 0.20f..0.52f, "Кровавый красный темнее алого, был: ${hsb[2]}")
         assertEquals(255, (recolored ushr 24) and 0xFF)
     }
 }

@@ -28,11 +28,15 @@ object PhantomColorMath {
     private const val EYE_TARGET_HUE = 0.34f
     /** Ярко-жёлтый для освобождённого фантома. */
     private const val EYE_YELLOW_HUE = 0.13f
-    /** Кроваво-красный (crimson), не алый. */
-    private const val EYE_RED_HUE = 0.985f
     private const val EYE_MIN_SATURATION = 0.95f
     private const val EYE_GLOW_BRIGHTNESS = 1.0f
-    private const val EYE_BLOOD_BRIGHTNESS = 0.52f
+    /**
+     * Кровь, не алый свет: фиксированный RGB, без HSB.
+     * HSB около нуля на светящемся слое легко уезжает в оранжево-алый.
+     */
+    private const val BLOOD_R = 0x72
+    private const val BLOOD_G = 0x07
+    private const val BLOOD_B = 0x10
 
     /**
      * Перекрашивает один пиксель основной текстуры тела: синевато-серые участки
@@ -76,7 +80,11 @@ object PhantomColorMath {
     fun recolorEyePixelYellow(argb: Int): Int = recolorEye(argb, EYE_YELLOW_HUE, EYE_GLOW_BRIGHTNESS)
 
     /** Кроваво-красные глаза дикого фантома и режима самозащиты. */
-    fun recolorEyePixelRed(argb: Int): Int = recolorEye(argb, EYE_RED_HUE, EYE_BLOOD_BRIGHTNESS)
+    fun recolorEyePixelRed(argb: Int): Int {
+        val alpha = (argb ushr 24) and 0xFF
+        if (alpha == 0) return argb
+        return (alpha shl 24) or (BLOOD_R shl 16) or (BLOOD_G shl 8) or BLOOD_B
+    }
 
     private fun recolorEye(argb: Int, hue: Float, brightness: Float): Int {
         val alpha = (argb ushr 24) and 0xFF

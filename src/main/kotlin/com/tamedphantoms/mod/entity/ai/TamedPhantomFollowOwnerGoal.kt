@@ -1,6 +1,9 @@
 package com.tamedphantoms.mod.entity.ai
 
+import com.tamedphantoms.mod.entity.PhantomOwnerRecall
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomOwnerTeleport
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.player.Player
 import java.util.EnumSet
@@ -15,7 +18,6 @@ import kotlin.math.sqrt
 class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goal() {
 
     companion object {
-        private const val TELEPORT_DISTANCE = 16.0
         private const val CATCH_UP_DISTANCE = 8.0
     }
 
@@ -35,7 +37,7 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
     override fun canUse(): Boolean {
         if (!phantom.tamed || phantom.isOrderedToSit() || phantom.isVehicle() || phantom.isLeashed) return false
         val owner = findOwner() ?: return false
-        if (owner.level() !== phantom.level()) return false
+        if (!owner.isAlive) return false
         this.owner = owner
         return true
     }
@@ -43,7 +45,7 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
     override fun canContinueToUse(): Boolean {
         if (!phantom.tamed || phantom.isOrderedToSit() || phantom.isVehicle() || phantom.isLeashed) return false
         val owner = this.owner ?: return false
-        return owner.isAlive && owner.level() === phantom.level()
+        return owner.isAlive
     }
 
     override fun requiresUpdateEveryTick(): Boolean = true
@@ -64,10 +66,14 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
 
     override fun tick() {
         val owner = this.owner ?: return
+        if (PhantomOwnerRecall.tryTeleportToOwner(phantom, owner)) {
+            return
+        }
+        if (phantom.level() !== owner.level()) {
+            return
+        }
         val dist = sqrt(phantom.distanceToSqr(owner))
-
-        if (dist > TELEPORT_DISTANCE) {
-            phantom.moveTo(owner.x, owner.y + 2.0, owner.z, phantom.yRot, phantom.xRot)
+        if (dist > PhantomOwnerTeleport.DISTANCE) {
             return
         }
 
@@ -113,6 +119,10 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
 
     private fun findOwner(): Player? {
         val id = phantom.ownerUUID ?: return null
-        return phantom.level().players().firstOrNull { it.uuid == id }
+        val level = phantom.level()
+        if (level is ServerLevel) {
+            return level.server.playerList.getPlayer(id)
+        }
+        return level.players().firstOrNull { it.uuid == id }
     }
 }

@@ -289,16 +289,21 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.setOrderedToSit(false, playEffects = false)
         this.angerState = PhantomAngerState.NONE
         this.setDefending(false)
+        PhantomOwnerRecall.remember(player, this)
         this.playTameSound()
         this.spawnHeartParticles()
     }
 
     fun release() {
+        val previousOwner = this.findOwnerPlayer()
         this.tamed = false
         this.ownerUUID = null
         this.setOrderedToSit(false, playEffects = false)
         this.angerState = PhantomAngerState.NONE
         this.setDefending(false)
+        if (previousOwner != null) {
+            PhantomOwnerRecall.forget(previousOwner, this.uuid)
+        }
         this.dropSaddleIfPresent()
         this.playTameSound()
         this.spawnAngryParticles()
@@ -441,6 +446,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.tamed) {
             this.tickRepelWildPhantoms(level)
             this.tickLookAtNearbyPlayer()
+            this.tickOwnerRecall(level)
 
             if (this.isVehicle() && this.controllingPassenger != null) {
                 this.tickRiderNightVision()
@@ -449,6 +455,23 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 this.pilotDescending = false
             }
         }
+    }
+
+    private fun findOwnerPlayer(): Player? {
+        val id = this.ownerUUID ?: return null
+        val level = this.level()
+        if (level is ServerLevel) {
+            return level.getServer()?.playerList?.getPlayer(id)
+        }
+        return level.players().firstOrNull { it.uuid == id }
+    }
+
+    private fun tickOwnerRecall(level: ServerLevel) {
+        val owner = this.findOwnerPlayer() ?: return
+        if (this.tickCount % 20 == 0) {
+            PhantomOwnerRecall.remember(owner, this)
+        }
+        PhantomOwnerRecall.tryTeleportToOwner(this, owner)
     }
 
     private fun tickAngerTimer() {

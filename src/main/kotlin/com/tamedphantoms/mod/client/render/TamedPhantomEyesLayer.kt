@@ -5,16 +5,15 @@ import com.tamedphantoms.mod.client.texture.PhantomTextureProcessor
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import net.minecraft.client.model.PhantomModel
 import net.minecraft.client.renderer.MultiBufferSource
-import net.minecraft.client.renderer.RenderType
 import net.minecraft.client.renderer.entity.RenderLayerParent
 import net.minecraft.client.renderer.entity.layers.RenderLayer
 import net.minecraft.client.renderer.texture.OverlayTexture
 import net.minecraft.world.entity.monster.Phantom
 
 /**
- * Светящиеся глаза ручного и освобождённого фантома.
- * Ванильный слой глаз отключён прозрачной текстурой, поэтому здесь
- * используется тот же [RenderType.eyes], что и у диких, во всех цветах.
+ * Глаза ручного и освобождённого фантома.
+ * Зелёные и жёлтые — аддитивное свечение, кровь — отдельный тип,
+ * чтобы не смешиваться с ванильным жёлтым слоем в алый.
  */
 class TamedPhantomEyesLayer(parent: RenderLayerParent<Phantom, PhantomModel<Phantom>>) :
     RenderLayer<Phantom, PhantomModel<Phantom>>(parent) {
@@ -37,8 +36,9 @@ class TamedPhantomEyesLayer(parent: RenderLayerParent<Phantom, PhantomModel<Phan
         headPitch: Float,
     ) {
         val tamedPhantom = entity as? TamedPhantomEntity ?: return
-        val texture = PhantomTextureProcessor.eyesTexture(tamedPhantom.tamed, tamedPhantom.isDefending())
-        val consumer = buffer.getBuffer(RenderType.eyes(texture))
+        val defending = tamedPhantom.isDefending()
+        val texture = PhantomTextureProcessor.eyesTexture(tamedPhantom.tamed, defending)
+        val consumer = buffer.getBuffer(PhantomEyeRenderTypes.of(texture, blood = defending))
         this.parentModel.root().render(poseStack, consumer, FULL_BRIGHT_LIGHT, OverlayTexture.NO_OVERLAY, NO_TINT)
     }
 }

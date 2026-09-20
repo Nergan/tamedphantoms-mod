@@ -58,6 +58,32 @@ object PhantomTextureProcessor {
         ensureEyes()
         ensureYellowEyes()
         ensureRedEyes()
+        suppressVanillaEyes()
+    }
+
+    /**
+     * Ванильный EyesLayer рисует `minecraft:textures/entity/phantom_eyes.png`
+     * аддитивно (жёлто-зелёный). Поверх наших красных глаз это даёт алый
+     * и переход через оранжевый. Подменяем текстуру пустой, слой ничего не добавляет.
+     */
+    private fun suppressVanillaEyes() {
+        try {
+            val minecraft = Minecraft.getInstance()
+            val sizeSource = minecraft.resourceManager.getResource(EYE_SOURCE).let { first ->
+                if (first.isPresent) first else minecraft.resourceManager.getResource(VANILLA_EYES)
+            }
+            val (width, height) = if (sizeSource.isPresent) {
+                sizeSource.get().open().use { stream ->
+                    NativeImage.read(stream).use { image -> image.width to image.height }
+                }
+            } else {
+                64 to 64
+            }
+            val blank = NativeImage(NativeImage.Format.RGBA, width, height, true)
+            minecraft.textureManager.register(VANILLA_EYES, DynamicTexture(blank))
+        } catch (t: Throwable) {
+            TamedPhantomsMod.LOGGER.warn("Не удалось отключить ванильный слой глаз фантома.", t)
+        }
     }
 
     /** Зелёные / жёлтые глаза или красные, пока фантом обороняется. */
@@ -123,18 +149,21 @@ object PhantomTextureProcessor {
 
     private fun ensureEyes() {
         if (eyesReady) return
-        eyesReady = tryGenerate(EYE_SOURCE, RECOLORED_EYES) { argb -> PhantomColorMath.recolorEyePixel(argb) }
+        eyesReady = tryGenerateFromEyeSource(RECOLORED_EYES) { argb -> PhantomColorMath.recolorEyePixel(argb) }
     }
 
     private fun ensureYellowEyes() {
         if (yellowEyesReady) return
-        yellowEyesReady = tryGenerate(EYE_SOURCE, YELLOW_EYES) { argb -> PhantomColorMath.recolorEyePixelYellow(argb) }
+        yellowEyesReady = tryGenerateFromEyeSource(YELLOW_EYES) { argb -> PhantomColorMath.recolorEyePixelYellow(argb) }
     }
 
     private fun ensureRedEyes() {
         if (redEyesReady) return
-        redEyesReady = tryGenerate(EYE_SOURCE, RED_EYES) { argb -> PhantomColorMath.recolorEyePixelRed(argb) }
+        redEyesReady = tryGenerateFromEyeSource(RED_EYES) { argb -> PhantomColorMath.recolorEyePixelRed(argb) }
     }
+
+    private fun tryGenerateFromEyeSource(destination: ResourceLocation, transform: (Int) -> Int): Boolean =
+        tryGenerate(EYE_SOURCE, destination, transform) || tryGenerate(VANILLA_EYES, destination, transform)
 
     private fun tryGenerate(
         source: ResourceLocation,
