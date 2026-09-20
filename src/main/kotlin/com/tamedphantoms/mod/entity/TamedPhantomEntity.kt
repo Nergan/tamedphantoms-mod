@@ -231,15 +231,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     override fun decreaseAirSupply(currentAir: Int): Int = currentAir
 
-    override fun playSound(sound: SoundEvent, volume: Float, pitch: Float) {
-        super.playSound(sound, volume * this.tamedSoundMultiplier(), pitch)
-    }
-
-    private fun tamedSoundMultiplier(): Float {
-        if (!this.tamed) return 1.0f
-        return ServerConfig.CONFIG.tamedSoundVolume.get().toFloat().coerceIn(0.0f, 1.0f)
-    }
-
     override fun canBeLeashed(): Boolean = this.tamed && this.isAlive
 
     override fun handleLeashAtDistance(leashHolder: Entity, distance: Float): Boolean {

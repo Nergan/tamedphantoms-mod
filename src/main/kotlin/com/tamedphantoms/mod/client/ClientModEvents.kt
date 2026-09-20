@@ -34,8 +34,9 @@ object ClientModEvents {
 
         // Подключаем встроенный экран настроек NeoForge: Mods -> Tamed Phantoms
         // -> кнопка "Config". Он сам строит интерфейс по зарегистрированному
-        // ServerConfig.SPEC и переводам ключей вида "tamedphantoms.configuration.*"
-        // (см. ServerConfig.kt про формат ключей). Для конфигов типа SERVER,
+        // ServerConfig.SPEC, ClientConfig.SPEC и переводам ключей вида
+        // "tamedphantoms.configuration.*" (см. ServerConfig.kt / ClientConfig.kt).
+        // Для конфигов типа SERVER,
         // если игрок подключён к чужому серверу (не хостит локально сам),
         // экран показывает значения как read-only — это поведение самого
         // NeoForge, не мода.

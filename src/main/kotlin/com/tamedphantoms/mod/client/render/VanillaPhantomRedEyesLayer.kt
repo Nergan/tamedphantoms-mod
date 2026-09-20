@@ -30,6 +30,13 @@ class VanillaPhantomRedEyesLayer(parent: RenderLayerParent<Phantom, PhantomModel
     ) {
         if (entity is TamedPhantomEntity) return
         val texture = PhantomTextureProcessor.eyesTexture(tamed = false, defending = true)
-        PhantomEyeLayers.render(poseStack, buffer, this.parentModel, texture, blood = true)
+        PhantomEyeLayers.render(
+            poseStack,
+            buffer,
+            this.parentModel,
+            texture,
+            blood = true,
+            glowTexture = PhantomTextureProcessor.redEyesGlowTexture(),
+        )
     }
 }

@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod
 
+import com.tamedphantoms.mod.config.ClientConfig
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.ModEntities
 import com.tamedphantoms.mod.item.ModItems
@@ -64,6 +65,7 @@ class TamedPhantomsMod(modEventBus: IEventBus, modContainer: ModContainer) {
         // при подключении к серверу (см. README, раздел "Конфиг и мультиплеер"),
         // так что все игроки на одном сервере всегда видят одинаковые правила.
         modContainer.registerConfig(ModConfig.Type.SERVER, ServerConfig.SPEC)
+        modContainer.registerConfig(ModConfig.Type.CLIENT, ClientConfig.SPEC)
 
         // Остальная инициализация (клиентская настройка — рендереры, экран
         // конфига и т.п.) — в отдельном объекте, вызывается условно только

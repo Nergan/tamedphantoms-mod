@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "tamedphantoms:icon"
+    "layer0": "tamedphantoms:item/tab_icon"
   }
 }

@@ -31,14 +31,16 @@ object PhantomColorMath {
     private const val EYE_MIN_SATURATION = 0.95f
     private const val EYE_GLOW_BRIGHTNESS = 1.0f
     /**
-     * Сама кровь (неаддитивный слой) и тусклое свечение поверх.
-     * Яркий красный в [RenderType.eyes] вымывается в алый.
+     * Кровь для [RenderType.eyes]. Тот же оттенок, что уже одобрен в игре.
+     * Свечение даёт сам шейдер глаз (и второй проход в PhantomEyeLayers),
+     * а не более яркий RGB — иначе аддитив уходит в алый.
      */
     private const val BLOOD_R = 0x5C
     private const val BLOOD_G = 0x08
     private const val BLOOD_B = 0x10
-    private const val BLOOD_GLOW_R = 0x2A
-    private const val BLOOD_GLOW_G = 0x03
+    /** Темнее крови: несколько аддитивных проходов дают «неон», не уходя в алый. */
+    private const val BLOOD_GLOW_R = 0x28
+    private const val BLOOD_GLOW_G = 0x04
     private const val BLOOD_GLOW_B = 0x08
 
     /**
@@ -85,7 +87,7 @@ object PhantomColorMath {
     /** Кроваво-красные глаза дикого фантома и режима самозащиты. */
     fun recolorEyePixelRed(argb: Int): Int = recolorEyeRgb(argb, BLOOD_R, BLOOD_G, BLOOD_B)
 
-    /** Тусклое аддитивное свечение — не должно перебивать цвет крови. */
+    /** Внешнее свечение крови — темнее [recolorEyePixelRed], для многослойного RenderType.eyes. */
     fun recolorEyePixelRedGlow(argb: Int): Int = recolorEyeRgb(argb, BLOOD_GLOW_R, BLOOD_GLOW_G, BLOOD_GLOW_B)
 
     private fun recolorEyeRgb(argb: Int, red: Int, green: Int, blue: Int): Int {

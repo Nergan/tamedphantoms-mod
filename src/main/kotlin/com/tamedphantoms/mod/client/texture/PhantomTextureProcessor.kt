@@ -41,7 +41,7 @@ object PhantomTextureProcessor {
     private var eyesReady = false
     private var yellowEyesReady = false
     private var redEyesReady = false
-    private var redGlowReady = false
+    private var redEyesGlowReady = false
 
     /** ResourceLocation основной (перекрашенной) текстуры тела ручного фантома. */
     fun bodyTexture(): ResourceLocation {
@@ -54,15 +54,20 @@ object PhantomTextureProcessor {
         eyesReady = false
         yellowEyesReady = false
         redEyesReady = false
-        redGlowReady = false
+        redEyesGlowReady = false
     }
 
     fun prepareEyeTextures() {
         ensureEyes()
         ensureYellowEyes()
         ensureRedEyes()
-        ensureRedGlow()
+        ensureRedEyesGlow()
         suppressVanillaEyes()
+    }
+
+    fun redEyesGlowTexture(): ResourceLocation? {
+        ensureRedEyesGlow()
+        return if (redEyesGlowReady) RED_EYES_GLOW else null
     }
 
     /**
@@ -103,12 +108,6 @@ object PhantomTextureProcessor {
             ensureYellowEyes()
             if (yellowEyesReady) YELLOW_EYES else VANILLA_EYES
         }
-    }
-
-    /** Тусклое аддитивное свечение для крови. Нет — если слой не собрался. */
-    fun bloodGlowTexture(): ResourceLocation? {
-        ensureRedGlow()
-        return if (redGlowReady) RED_EYES_GLOW else null
     }
 
     private val SADDLE_TEX = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle")
@@ -172,9 +171,9 @@ object PhantomTextureProcessor {
         redEyesReady = tryGenerateFromEyeSource(RED_EYES) { argb -> PhantomColorMath.recolorEyePixelRed(argb) }
     }
 
-    private fun ensureRedGlow() {
-        if (redGlowReady) return
-        redGlowReady = tryGenerateFromEyeSource(RED_EYES_GLOW) { argb -> PhantomColorMath.recolorEyePixelRedGlow(argb) }
+    private fun ensureRedEyesGlow() {
+        if (redEyesGlowReady) return
+        redEyesGlowReady = tryGenerateFromEyeSource(RED_EYES_GLOW) { argb -> PhantomColorMath.recolorEyePixelRedGlow(argb) }
     }
 
     private fun tryGenerateFromEyeSource(destination: ResourceLocation, transform: (Int) -> Int): Boolean =
