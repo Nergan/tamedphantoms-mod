@@ -1,42 +1,33 @@
 package com.tamedphantoms.mod.util
 
 /**
- * Двойное нажатие Shift за [WINDOW_TICKS] тиков, пока фантом высоко над землёй.
- * Удержание первого нажатия вторым не считается.
+ * Два отдельных нажатия Shift за [WINDOW_TICKS] тиков.
+ * Повтор вызова в том же удержании (каждый тик, пока клавиша зажата) вторым нажатием не считается:
+ * между попытками должна быть пауза хотя бы в [GAP_TICKS] тиков.
+ * Состояние клавиши здесь не используется: в момент снятия с ездового оно уже бывает ложным.
  */
 object PhantomDismountLogic {
 
     const val WINDOW_TICKS = 20L
+    const val GAP_TICKS = 4L
 
-    data class Tap(val startedAt: Long, val released: Boolean, val confirmed: Boolean = false)
+    data class Window(val startedAt: Long, val lastAttempt: Long)
 
-    data class Step(val keepMounted: Boolean, val tap: Tap?, val warn: Boolean)
+    data class Step(val keepMounted: Boolean, val window: Window?, val warn: Boolean)
 
-    fun onAttempt(high: Boolean, shiftDown: Boolean, rising: Boolean, tap: Tap?, now: Long): Step {
-        if (!high || !shiftDown) return Step(keepMounted = false, tap = null, warn = false)
-        if (tap != null && tap.confirmed) {
-            return Step(keepMounted = false, tap = if (shiftDown) tap else null, warn = false)
+    fun onAttempt(high: Boolean, now: Long, window: Window?): Step {
+        if (!high) return Step(keepMounted = false, window = null, warn = false)
+        if (window == null) {
+            return Step(keepMounted = true, window = Window(now, now), warn = true)
         }
-        val live = if (tap != null && tap.released && now - tap.startedAt > WINDOW_TICKS) null else tap
-        if (rising && live != null && live.released && now - live.startedAt <= WINDOW_TICKS) {
-            return Step(
-                keepMounted = false,
-                tap = Tap(live.startedAt, released = false, confirmed = true),
-                warn = false,
-            )
+        val age = now - window.startedAt
+        val gap = now - window.lastAttempt
+        if (gap >= GAP_TICKS) {
+            if (age <= WINDOW_TICKS) {
+                return Step(keepMounted = false, window = null, warn = false)
+            }
+            return Step(keepMounted = true, window = Window(now, now), warn = true)
         }
-        if (live == null) {
-            return Step(keepMounted = true, tap = Tap(now, released = false), warn = true)
-        }
-        return Step(keepMounted = true, tap = live, warn = false)
-    }
-
-    /** Отпускание открывает окно второго нажатия. После окна попытка забывается. */
-    fun afterShift(tap: Tap?, shiftDown: Boolean, now: Long): Tap? {
-        if (tap == null) return null
-        if (tap.confirmed) return if (shiftDown) tap else null
-        val released = tap.released || !shiftDown
-        if (released && now - tap.startedAt > WINDOW_TICKS) return null
-        return if (released == tap.released) tap else tap.copy(released = released)
+        return Step(keepMounted = true, window = window.copy(lastAttempt = now), warn = false)
     }
 }

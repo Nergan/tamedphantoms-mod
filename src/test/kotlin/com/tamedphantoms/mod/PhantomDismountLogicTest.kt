@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod
 
 import com.tamedphantoms.mod.util.PhantomDismountLogic
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -10,68 +11,64 @@ import org.junit.jupiter.api.Test
 class PhantomDismountLogicTest {
 
     @Test
-    @DisplayName("Первое нажатие высоко над землёй только предупреждает")
-    fun firstPressWarns() {
-        val step = PhantomDismountLogic.onAttempt(
-            high = true,
-            shiftDown = true,
-            rising = true,
-            tap = null,
-            now = 100,
-        )
+    @DisplayName("Первая попытка высоко над землёй только предупреждает")
+    fun firstAttemptWarns() {
+        val step = PhantomDismountLogic.onAttempt(high = true, now = 100, window = null)
         assertTrue(step.keepMounted)
         assertTrue(step.warn)
-        assertFalse(step.tap!!.released)
+        assertEquals(100L, step.window!!.startedAt)
     }
 
     @Test
-    @DisplayName("Удержание первого Shift не слезает и не считается вторым нажатием")
-    fun holdingFirstPressStaysMounted() {
-        val first = PhantomDismountLogic.onAttempt(true, true, true, null, 100).tap
-        val held = PhantomDismountLogic.onAttempt(true, true, rising = false, first, 110)
-        assertTrue(held.keepMounted)
-        assertFalse(held.warn)
-        assertTrue(held.tap!!.startedAt == 100L)
+    @DisplayName("Повтор на следующем тике — то же удержание, не слезает")
+    fun holdingDoesNotConfirm() {
+        val first = PhantomDismountLogic.onAttempt(true, 100, null).window
+        val next = PhantomDismountLogic.onAttempt(true, 101, first)
+        assertTrue(next.keepMounted)
+        assertFalse(next.warn)
+        assertEquals(100L, next.window!!.startedAt)
     }
 
     @Test
-    @DisplayName("Второе нажатие в ту же секунду слезает")
-    fun secondPressInsideWindowDismounts() {
-        var tap = PhantomDismountLogic.onAttempt(true, true, true, null, 100).tap
-        tap = PhantomDismountLogic.afterShift(tap, shiftDown = false, now = 105)
-        val second = PhantomDismountLogic.onAttempt(true, true, rising = true, tap, 115)
+    @DisplayName("Вторая попытка в ту же секунду после паузы слезает")
+    fun secondAttemptInsideWindowDismounts() {
+        val first = PhantomDismountLogic.onAttempt(true, 100, null).window
+        val second = PhantomDismountLogic.onAttempt(true, 110, first)
         assertFalse(second.keepMounted)
-        assertTrue(second.tap!!.confirmed)
-        val stillHeld = PhantomDismountLogic.onAttempt(true, true, rising = false, second.tap, 116)
-        assertFalse(stillHeld.keepMounted)
+        assertNull(second.window)
+        assertFalse(second.warn)
     }
 
     @Test
-    @DisplayName("Второе нажатие позже секунды снова только предупреждает")
-    fun secondPressAfterWindowDoesNotDismount() {
-        var tap = PhantomDismountLogic.onAttempt(true, true, true, null, 100).tap
-        tap = PhantomDismountLogic.afterShift(tap, shiftDown = false, now = 105)
-        assertNull(PhantomDismountLogic.afterShift(tap, shiftDown = false, now = 121))
-        val late = PhantomDismountLogic.onAttempt(true, true, rising = true, tap = null, now = 200)
+    @DisplayName("Вторая попытка позже секунды снова только предупреждает")
+    fun secondAttemptAfterWindowDoesNotDismount() {
+        val first = PhantomDismountLogic.onAttempt(true, 100, null).window
+        val late = PhantomDismountLogic.onAttempt(true, 130, first)
         assertTrue(late.keepMounted)
         assertTrue(late.warn)
+        assertEquals(130L, late.window!!.startedAt)
     }
 
     @Test
-    @DisplayName("Просроченное окно не подтверждается, даже если тик отпускания его не стёр")
-    fun expiredTapIsNotAConfirm() {
-        val stale = PhantomDismountLogic.Tap(startedAt = 100, released = true)
-        val late = PhantomDismountLogic.onAttempt(true, true, rising = true, stale, now = 200)
-        assertTrue(late.keepMounted)
-        assertTrue(late.warn)
-        assertFalse(late.tap!!.confirmed)
+    @DisplayName("Долгое удержание не продлевает окно и само не слезает")
+    fun longHoldDoesNotBecomeSecondPress() {
+        var window = PhantomDismountLogic.onAttempt(true, 0, null).window
+        for (tick in 1L..40L) {
+            val step = PhantomDismountLogic.onAttempt(true, tick, window)
+            assertTrue(step.keepMounted)
+            window = step.window
+        }
+        assertEquals(0L, window!!.startedAt)
+        val after = PhantomDismountLogic.onAttempt(true, 50, window)
+        assertTrue(after.keepMounted)
+        assertTrue(after.warn)
     }
 
     @Test
-    @DisplayName("Ниже порога высоты Shift слезает сразу")
+    @DisplayName("Ниже порога высоты попытка слезает сразу")
     fun lowAltitudeDismountsImmediately() {
-        val step = PhantomDismountLogic.onAttempt(high = false, shiftDown = true, rising = true, tap = null, now = 50)
+        val step = PhantomDismountLogic.onAttempt(high = false, now = 50, window = null)
         assertFalse(step.keepMounted)
-        assertNull(step.tap)
+        assertNull(step.window)
     }
 }
