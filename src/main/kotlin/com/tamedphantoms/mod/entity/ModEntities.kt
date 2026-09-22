@@ -42,8 +42,8 @@ object ModEntities {
                 .fireImmune()
                 .passengerAttachments(
                     *arrayOf(
-                        Vec3(0.0, 0.46, 0.08),
-                        Vec3(0.0, 0.46, -0.38),
+                        Vec3(0.0, 0.46, -0.17),
+                        Vec3(0.0, 0.46, -0.63),
                     ),
                 )
                 .build("tamed_phantom")

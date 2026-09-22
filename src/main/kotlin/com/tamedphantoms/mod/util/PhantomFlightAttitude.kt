@@ -42,9 +42,15 @@ object PhantomFlightAttitude {
         val side = (strafeSpeed / STRAFE_FULL).coerceIn(-1.0, 1.0).toFloat()
         return Pose(
             pitch = pitch,
-            bank = side * BANK,
-            headYaw = side * HEAD_YAW,
+            bank = -side * BANK,
+            headYaw = -side * HEAD_YAW,
         )
+    }
+
+    /** Градусы кости хвоста. Положительная скорость вверх опускает хвост на модели со знаком минус. */
+    fun tailPitchDegrees(vertical: Double): Float {
+        if (abs(vertical) < 0.03) return 0f
+        return (-vertical * 64.0).coerceIn(-26.0, 26.0).toFloat()
     }
 
     /** Продольная скорость вперёд и боковая влево, блоки/тик. */

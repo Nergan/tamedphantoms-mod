@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.client
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.network.PhantomInputPayload
+import com.tamedphantoms.mod.network.PhantomScreamPayload
 import net.minecraft.client.Minecraft
 import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.common.NeoForge
@@ -17,6 +18,8 @@ import net.neoforged.neoforge.network.PacketDistributor
  */
 object ClientPhantomInputSender {
 
+    private var screamWasDown = false
+
     fun init() {
         PilotInputAccess.clientReader = {
             ModKeyMappings.FLY_UP.isDown to ModKeyMappings.FLY_DOWN.isDown
@@ -25,9 +28,14 @@ object ClientPhantomInputSender {
     }
 
     private fun onClientTick(event: ClientTickEvent.Post) {
-        val minecraft = Minecraft.getInstance()
-        val player = minecraft.player ?: return
-        if (player.vehicle !is TamedPhantomEntity) return
+        val player = Minecraft.getInstance().player ?: return
+        val screamDown = ModKeyMappings.SCREAM.isDown
+        val phantom = player.vehicle as? TamedPhantomEntity
+        if (phantom != null && screamDown && !screamWasDown && phantom.isOwnedBy(player)) {
+            PacketDistributor.sendToServer(PhantomScreamPayload)
+        }
+        screamWasDown = screamDown
+        if (phantom == null) return
 
         PacketDistributor.sendToServer(
             PhantomInputPayload(

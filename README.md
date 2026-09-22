@@ -29,11 +29,12 @@ The release workflow builds the mod and fetches the two companion jars from Modr
 - **Saddle and flight.** The owner equips a saddle and mounts. Movement uses the usual walk keys; jump climbs; Left Control descends. Keys can be remapped. Night vision is granted while flying. A second player can sit behind. Remove the saddle with shears.
 - **Leash.** A tamed phantom can be leashed and unleashed with an empty hand.
 - **Healing.** The owner can feed it any food.
-- **Self-defense.** If the phantom is hit, it attacks the attacker for about ten seconds — including the owner. Duration is configurable. Each hit heals the phantom for the damage it dealt.
+- **Self-defense.** If the phantom is hit, it attacks the attacker for about ten seconds — including the owner. Duration is configurable. Each hit heals the phantom for the damage it dealt. While it is defending, it can scream once the scream is ready.
+- **Scream.** The owner, while riding, presses R (remap under Tamed Phantoms). The phantom plays a louder, deeper ambient cry. For one second its eyes turn red, its body glows, and mobs in range flee and are blinded. The owner is not blinded. Cooldown is 30 seconds; if it is not ready, a red action-bar line says how many seconds remain. The first use grants the advancement Winged Beast. Radius and cooldown are server settings. The client volume slider does not quiet this cry. On a full moon, a released phantom may cry on its own even when it is not attacking: the eyes stay yellow, the glow still appears, mobs still flee, and blindness is not applied. Anyone who has that chunk loaded can hear it.
 - **Stats.** Tamed and released phantoms have 40 health, 12 attack damage, and fly twice as fast as a vanilla phantom. They do not burn in sunlight and do not drown.
 - **Repel.** A tamed phantom pushes wild phantoms away (64 blocks by default).
 - **Release.** Right-click with the release item (poisonous potato by default). Ownership ends, the saddle drops, and the eyes turn yellow. A released phantom can be tamed again.
-- **Advancements.** “Winged Companion” for taming and “No Longer Responsible” for releasing.
+- **Advancements.** “Winged Companion” for taming, “No Longer Responsible” for releasing, and “Winged Beast” the first time the owner makes a phantom scream.
 - **Guidebook (optional).** With [Patchouli](https://modrinth.com/mod/patchouli) installed, the first join into a world gives *Phantom Taming Guide*. Craft it with a book and a phantom membrane. Without Patchouli the rest of the mod works as usual.
 
 ## Requirements
@@ -64,6 +65,7 @@ Options → Controls → Tamed Phantoms.
 | Forward, back, strafe | movement keys |
 | Ascend                | Space         |
 | Descend               | Left Control  |
+| Scream                | R             |
 
 Descend is not bound to Shift on purpose: while riding, Shift dismounts.
 
@@ -83,7 +85,9 @@ Dedicated server: `world/serverconfig/tamedphantoms-server.toml`. This is a `SER
 | `release_item`      | `minecraft:poisonous_potato` | release item                                |
 | `tame_chance`       | `1.0`                        | chance to tame per attempt                  |
 | `repel_radius`      | `64.0`                       | radius that pushes wild phantoms away       |
-| `defend_time_ticks` | `200`                        | self-defense duration (20 ticks = 1 second) |
+| `defend_time_ticks`      | `200`                        | self-defense duration (20 ticks = 1 second) |
+| `scream_radius`          | `32.0`                       | blocks; mobs in range flee from the scream |
+| `scream_cooldown_seconds`| `30`                         | seconds before the scream can be used again |
 
 Client config: `config/tamedphantoms-client.toml` (or Mods → Config in single-player).
 

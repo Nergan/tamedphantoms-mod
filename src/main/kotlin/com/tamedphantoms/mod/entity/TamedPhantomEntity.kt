@@ -14,7 +14,10 @@ import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.util.PhantomAngerLogic
 import com.tamedphantoms.mod.util.PhantomFlightPace
+import com.tamedphantoms.mod.event.ModAdvancements
+import com.tamedphantoms.mod.util.PhantomCrawl
 import com.tamedphantoms.mod.util.PhantomFlightAttitude
+import com.tamedphantoms.mod.util.PhantomScream
 import com.tamedphantoms.mod.util.PhantomGroundSkim
 import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomHover
@@ -31,9 +34,13 @@ import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.network.chat.Component
+import net.minecraft.ChatFormatting
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.util.Mth
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.damagesource.DamageSource
@@ -90,6 +97,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
         private val DATA_TRACKING: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_SCREAM_EYES: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
 
         private const val TAG_TAMED = "Tamed"
         private const val TAG_OWNER = "Owner"
@@ -98,6 +107,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private const val TAG_WET_TRACKED = "WetTracked"
         private const val TAG_IN_WATER = "InWater"
         private const val TAG_IN_RAIN = "InRain"
+        private const val TAG_SCREAM_COOLDOWN = "ScreamCooldown"
 
         /**
          * Phantom НЕ предоставляет собственный публичный статический
@@ -161,6 +171,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         builder.define(DATA_RIDE_HEAD, 0f)
         builder.define(DATA_SHAKE, 0)
         builder.define(DATA_TRACKING, false)
+        builder.define(DATA_SCREAM_EYES, 0)
     }
 
     /**
@@ -188,7 +199,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         get() = this.entityData.get(DATA_SHAKE)
         set(value) = this.entityData.set(DATA_SHAKE, value)
 
-    /** Сервер выставляет, когда голова целится в кого-то, а не просто лежит в покое. */
+    /** Сколько тиков глаза ещё горят красным от крика. 0 — обычный цвет. */
+    var screamEyeTicks: Int
+        get() = this.entityData.get(DATA_SCREAM_EYES)
+        set(value) = this.entityData.set(DATA_SCREAM_EYES, value)
+
+    private var screamCooldown: Int = 0
+    private var screamTicks: Int = 0
+    private var screamFears: Boolean = false
     var trackingLook: Boolean
         get() = this.entityData.get(DATA_TRACKING)
         set(value) = this.entityData.set(DATA_TRACKING, value)
@@ -239,10 +257,23 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var wingTipHang: Float = 0f
     var wingTipHangO: Float = 0f
 
+    /** 1 — ползёт у земли: без крена и тангажа, крылья шагают. */
+    var wingCrawl: Float = 0f
+    var wingCrawlO: Float = 0f
+    var crawlPhase: Float = 0f
+    var crawlPhaseO: Float = 0f
+
     private var wingGroundBlend: Float = 0f
     private var wingTakeoffBlend: Float = 0f
     private var wingGlideBlend: Float = 0f
     private var wingTouchedGround: Boolean = false
+    private var crawlLock: Boolean = false
+
+    fun crawlVisual(partial: Float): Float =
+        Mth.lerp(partial, this.wingCrawlO, this.wingCrawl).coerceIn(0f, 1f)
+
+    fun bankVisual(partial: Float): Float =
+        Mth.lerp(partial, this.bankO, this.bank) * (1f - this.crawlVisual(partial))
 
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
@@ -307,6 +338,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         tag.putBoolean(TAG_WET_TRACKED, this.wetMemory.tracked)
         tag.putBoolean(TAG_IN_WATER, this.wetMemory.inWater)
         tag.putBoolean(TAG_IN_RAIN, this.wetMemory.inRain)
+        tag.putInt(TAG_SCREAM_COOLDOWN, this.screamCooldown)
     }
 
     override fun readAdditionalSaveData(tag: CompoundTag) {
@@ -325,6 +357,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 inRain = tag.getBoolean(TAG_IN_RAIN),
             )
         }
+        this.screamCooldown = tag.getInt(TAG_SCREAM_COOLDOWN).coerceAtLeast(0)
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
@@ -570,6 +603,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.headBankYawO = this.headBankYaw
             this.tailPitchO = this.tailPitch
             this.swimBlendO = this.swimBlend
+            this.wingCrawlO = this.wingCrawl
+            this.crawlPhaseO = this.crawlPhase
         }
         val yawBefore = this.yRot
         if (this.isOrderedToSit()) {
@@ -599,6 +634,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.tickWetExit()
         this.tickRideHead()
         this.tickAngerTimer()
+        this.tickScream(level)
 
         if (this.tamed) {
             this.tickRepelWildPhantoms(level)
@@ -698,8 +734,66 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    fun tryOwnerScream(player: Player) {
+        if (player.vehicle !== this || !this.isOwnedBy(player)) return
+        val serverPlayer = player as? ServerPlayer ?: return
+        if (this.screamCooldown > 0) {
+            val seconds = (this.screamCooldown + 19) / 20
+            serverPlayer.displayClientMessage(
+                Component.translatable("tamedphantoms.scream.cooldown", seconds).withStyle(ChatFormatting.RED),
+                true,
+            )
+            return
+        }
+        val level = this.level()
+        if (level is ServerLevel) {
+            this.beginScream(level, redEyes = true, blindness = true, awardOwner = serverPlayer)
+        }
+    }
+
+    private fun tickScream(level: ServerLevel) {
+        if (this.screamCooldown > 0) {
+            this.screamCooldown--
+        }
+        if (this.screamTicks > 0) {
+            PhantomScream.frighten(level, this, this.screamFears)
+            this.screamTicks--
+            if (this.screamTicks <= 0) {
+                this.screamEyeTicks = 0
+                this.screamFears = false
+            }
+            return
+        }
+        if (this.screamCooldown > 0 || !this.isAlive) return
+        if (this.isDefending()) {
+            this.beginScream(level, redEyes = true, blindness = true, awardOwner = null)
+            return
+        }
+        if (!this.tamed && this.tickCount % 20 == 0 &&
+            PhantomScream.isFullMoonNight(level) &&
+            this.random.nextFloat() < 0.12f
+        ) {
+            this.beginScream(level, redEyes = false, blindness = false, awardOwner = null)
+        }
+    }
+
+    private fun beginScream(level: ServerLevel, redEyes: Boolean, blindness: Boolean, awardOwner: ServerPlayer?) {
+        val seconds = ServerConfig.CONFIG.screamCooldownSeconds.get().coerceAtLeast(1)
+        this.screamCooldown = seconds * 20
+        this.screamTicks = PhantomScream.EFFECT_TICKS
+        this.screamFears = blindness
+        this.screamEyeTicks = if (redEyes) PhantomScream.EFFECT_TICKS else 0
+        this.addEffect(MobEffectInstance(MobEffects.GLOWING, PhantomScream.EFFECT_TICKS, 0, false, false, false))
+        PhantomScream.play(level, this)
+        PhantomScream.frighten(level, this, blindness)
+        if (awardOwner != null) {
+            ModAdvancements.grantWingedBeast(awardOwner)
+        }
+    }
+
     private fun tickFlightVisuals() {
-        if (this.isOrderedToSit()) {
+        this.crawlLock = PhantomGroundSkim.pressed(this)
+        if (this.isOrderedToSit() || this.crawlLock) {
             this.bankTarget = 0f
             this.headYawTarget = 0f
         }
@@ -713,19 +807,26 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.bankTarget = pose.bank
             this.headYawTarget = pose.headYaw
         }
-        if (!this.isVehicle) {
+        if (!this.isVehicle || this.crawlLock) {
             this.headYawTarget = 0f
+        }
+        if (this.crawlLock) {
+            this.bankTarget = 0f
+            if (localRide) {
+                val flatten = this.wingGroundBlend.coerceIn(0f, 1f)
+                this.xRot *= 1f - flatten
+                this.setRot(this.yRot, this.xRot)
+            }
         }
         this.bank = PhantomHeadLook.approachDegrees(this.bank, this.bankTarget, 6f)
         val yawTarget = this.headYawTarget.coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
         this.headBankYaw = PhantomHeadLook.approachDegrees(this.headBankYaw, yawTarget, 3.5f)
             .coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
-        val tailTarget = if (kotlin.math.abs(vertical) < 0.03) {
-            0f
-        } else {
-            (vertical * 40.0).coerceIn(-16.0, 16.0).toFloat()
-        }
-        this.tailPitch = PhantomHeadLook.approachDegrees(this.tailPitch, tailTarget, 2.5f)
+        this.tailPitch = PhantomHeadLook.approachDegrees(
+            this.tailPitch,
+            PhantomFlightAttitude.tailPitchDegrees(vertical),
+            4.5f,
+        )
         this.swimBlend = if (this.isUnderWater) {
             (this.swimBlend + 0.07f).coerceAtMost(1f)
         } else {
@@ -736,7 +837,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private fun advanceWingPhase() {
         val vertical = this.y - this.yo
         val horizontal = hypot(this.x - this.xo, this.z - this.zo)
-        val skimming = PhantomGroundSkim.pressed(this)
+        val skimming = this.crawlLock
         val launch = this.wingTouchedGround && !skimming && this.wingGroundBlend > 0.4f
         this.wingTouchedGround = skimming
         this.wingTakeoffBlend = PhantomWingbeat.stepTakeoff(this.wingTakeoffBlend, launch)
@@ -761,6 +862,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.wingPhase = (this.tickCount - 1).toFloat()
         }
         this.wingPhase += pose.rate
+        this.wingCrawl = this.wingGroundBlend * (1f - this.wingTakeoffBlend)
+        if (skimming) {
+            val multiple = PhantomFlightPace.pace(this) * PhantomFlightPace.BASELINE
+            this.crawlPhase += PhantomCrawl.advance(horizontal, multiple)
+        }
     }
 
     private fun tickRiderNightVision() {

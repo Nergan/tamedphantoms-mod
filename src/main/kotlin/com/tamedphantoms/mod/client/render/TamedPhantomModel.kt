@@ -1,12 +1,12 @@
 package com.tamedphantoms.mod.client.render
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomCrawl
 import com.tamedphantoms.mod.util.PhantomFlightAttitude
 import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomShake
 import com.tamedphantoms.mod.util.PhantomSitFlutter
 import com.tamedphantoms.mod.util.PhantomTailBend
-import com.tamedphantoms.mod.util.PhantomWingbeat
 import net.minecraft.client.model.PhantomModel
 import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.util.Mth
@@ -92,16 +92,18 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
         val rate = Mth.lerp(partial, pet.wingFlapRateO, pet.wingFlapRate)
         val amplitude = Mth.lerp(partial, pet.wingFlapAmpO, pet.wingFlapAmp)
-        val droop = Mth.lerp(partial, pet.wingDroopO, pet.wingDroop)
-        val hang = Mth.lerp(partial, pet.wingTipHangO, pet.wingTipHang).coerceIn(0f, 1f)
         val time = phase + partial * rate
         val angle = (pet.getUniqueFlapTickOffset() + time) * WING_SPEED_DEG * Mth.DEG_TO_RAD
         val roll = Mth.cos(angle) * WING_AMPLITUDE_DEG * Mth.DEG_TO_RAD * amplitude
-        val tipFollow = Mth.lerp(hang, PhantomWingbeat.TIP_CANCEL, -PhantomWingbeat.TIP_DRAG)
-        leftWingBase.zRot = roll - droop
-        leftWingTip.zRot = roll + droop * tipFollow
-        rightWingBase.zRot = -leftWingBase.zRot
-        rightWingTip.zRot = -leftWingTip.zRot
+        val flightLeft = roll
+        val flightRight = -roll
+        val crawl = Mth.lerp(partial, pet.wingCrawlO, pet.wingCrawl).coerceIn(0f, 1f)
+        val step = Mth.sin(Mth.lerp(partial, pet.crawlPhaseO, pet.crawlPhase)) * PhantomCrawl.STEP
+        val droop = PhantomCrawl.DROOP
+        leftWingBase.zRot = Mth.lerp(crawl, flightLeft, droop + step)
+        leftWingTip.zRot = Mth.lerp(crawl, flightLeft, droop * PhantomCrawl.TIP + step)
+        rightWingBase.zRot = Mth.lerp(crawl, flightRight, -droop + step)
+        rightWingTip.zRot = Mth.lerp(crawl, flightRight, -droop * PhantomCrawl.TIP + step)
     }
 
     private fun foldWings() {

@@ -53,6 +53,8 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
     val repelRadius: ModConfigSpec.DoubleValue
     val defendDurationTicks: ModConfigSpec.IntValue
     val flightSpeed: ModConfigSpec.DoubleValue
+    val screamRadius: ModConfigSpec.DoubleValue
+    val screamCooldownSeconds: ModConfigSpec.IntValue
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null
@@ -114,6 +116,20 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
             )
             .translation("$KEY_PREFIX.flight.flight_speed")
             .defineInRange("flight_speed", 1.25, 0.25, 4.0)
+
+        builder.pop()
+
+        builder.push("scream")
+
+        screamRadius = builder
+            .comment("Радиус крика в блоках: мобы в этом радиусе разбегаются.")
+            .translation("$KEY_PREFIX.scream.scream_radius")
+            .defineInRange("scream_radius", 32.0, 4.0, 128.0)
+
+        screamCooldownSeconds = builder
+            .comment("Перезарядка крика в секундах. Общая для хозяина, самозащиты и полнолуния.")
+            .translation("$KEY_PREFIX.scream.scream_cooldown_seconds")
+            .defineInRange("scream_cooldown_seconds", 30, 1, 600)
 
         builder.pop()
     }

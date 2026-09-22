@@ -7,6 +7,7 @@
   "key.categories.tamedphantoms": "Ручные фантомы",
   "key.tamedphantoms.fly_up": "Взлёт",
   "key.tamedphantoms.fly_down": "Снижение",
+  "key.tamedphantoms.scream": "Крик фантома",
 
   "tamedphantoms.configuration.taming": "Приручение",
   "tamedphantoms.configuration.taming.tame_item": "Предмет приручения",
@@ -21,11 +22,18 @@
   "tamedphantoms.configuration.flight.owned_flight_speed": "Скорость своих фантомов",
   "tamedphantoms.configuration.flight.owned_flight_speed.value": "%s (макс. %s)",
   "tamedphantoms.configuration.flight.owned_flight_speed.tooltip": "Скорость только ваших прирученных фантомов. На этом сервере максимум — %s. Ползунок выше не пускает: если поставить больше, применится серверный максимум.",
+  "tamedphantoms.configuration.scream": "Крик",
+  "tamedphantoms.configuration.scream.scream_radius": "Радиус крика",
+  "tamedphantoms.configuration.scream.scream_cooldown_seconds": "Перезарядка крика (секунды)",
+
+  "tamedphantoms.scream.cooldown": "Крик фантома будет готов через %s секунд",
 
   "advancements.tamedphantoms.tame_phantom.title": "Крылатый питомец",
   "advancements.tamedphantoms.tame_phantom.description": "Приручите фантома",
   "advancements.tamedphantoms.release_phantom.title": "Больше не в ответе",
   "advancements.tamedphantoms.release_phantom.description": "Освободите прирученного фантома",
+  "advancements.tamedphantoms.winged_beast.title": "Крылатая тварь",
+  "advancements.tamedphantoms.winged_beast.description": "Заставьте своего фантома закричать",
 
   "tamedphantoms.guide.name": "Руководство по приручению фантома",
   "tamedphantoms.guide.subtitle": "Спутник ночного неба",
@@ -77,6 +85,10 @@
   "tamedphantoms.guide.entry.defense": "Самозащита",
   "tamedphantoms.guide.page.defense.1": "Если прирученного или освобождённого фантома ранят, он оборачивается против того, кто ударил. Это длится около десяти секунд и настраивается на сервере. Хозяин здесь не исключение. Пока фантом готов атаковать, глаза горят $(warn)кроваво-красным$(). Когда гнев проходит, они снова зелёные или жёлтые.",
   "tamedphantoms.guide.page.defense.2": "Освобождённый фантом защищается так же. Прирученный ещё и не даёт диким фантомам тесниться вокруг хозяина.",
+
+  "tamedphantoms.guide.entry.scream": "Крик",
+  "tamedphantoms.guide.page.scream.1": "Пока хозяин летит верхом, нажмите $(k:key.tamedphantoms.scream)$() (по умолчанию R). Фантом издаёт низкий крик, в несколько раз громче обычного. На секунду глаза вспыхивают красным, а тело очерчивается свечением. Мобы в радиусе разбегаются и на секунду слепнут. Хозяина это не трогает. В первый раз за это даётся достижение $(thing)Крылатая тварь$().",
+  "tamedphantoms.guide.page.scream.2": "Потом крику нужно около тридцати секунд. Если он ещё не готов, красная надпись скажет, сколько ждать. Радиус и перезарядку задаёт сервер. Фантом в самозащите кричит так же и с той же перезарядкой. В полнолуние освобождённый фантом иногда кричит и без драки: глаза остаются жёлтыми, свечение всё равно вспыхивает, мобы рядом разбегаются, слепоты нет. Слышат все, у кого загружен чанк с фантомом.",
 
   "tamedphantoms.guide.entry.stats": "Сила",
   "tamedphantoms.guide.page.stats.1": "Прирученный и освобождённый фантом сильнее дикого. У него сорок единиц здоровья, укус наносит двенадцать урона, а летит он вдвое быстрее. Каждый раз, когда он ранит кого-то, он восстанавливает себе столько же здоровья.",

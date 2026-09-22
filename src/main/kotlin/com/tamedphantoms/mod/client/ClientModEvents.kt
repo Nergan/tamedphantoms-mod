@@ -61,6 +61,7 @@ object ClientModEvents {
     private fun onRegisterKeyMappings(event: RegisterKeyMappingsEvent) {
         event.register(ModKeyMappings.FLY_UP)
         event.register(ModKeyMappings.FLY_DOWN)
+        event.register(ModKeyMappings.SCREAM)
     }
 
     private fun onClientSetup(event: FMLClientSetupEvent) {

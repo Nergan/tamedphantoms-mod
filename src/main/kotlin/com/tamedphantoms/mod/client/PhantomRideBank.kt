@@ -1,7 +1,6 @@
 package com.tamedphantoms.mod.client
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
-import net.minecraft.util.Mth
 import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ViewportEvent
@@ -15,7 +14,6 @@ object PhantomRideBank {
         val phantom = rider.vehicle as? TamedPhantomEntity ?: return
         if (phantom.isOrderedToSit()) return
         val partial = event.partialTick.toFloat()
-        val bank = Mth.lerp(partial, phantom.bankO, phantom.bank)
-        event.roll = event.roll - bank
+        event.roll = event.roll - phantom.bankVisual(partial)
     }
 }

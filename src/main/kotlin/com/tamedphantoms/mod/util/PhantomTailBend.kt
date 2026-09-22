@@ -11,7 +11,7 @@ import net.minecraft.world.entity.monster.Phantom
  */
 object PhantomTailBend {
 
-    const val MAX_RADIANS = 0.2f
+    const val MAX_RADIANS = 0.3f
 
     /** Кончик повторяет основание, с совсем небольшим запасом. */
     const val TIP_FOLLOW = 1.12f
@@ -26,7 +26,7 @@ object PhantomTailBend {
     private val bendById = HashMap<Int, State>()
 
     fun targetRadians(yawDeltaDegrees: Float): Float =
-        (-yawDeltaDegrees * 0.01f).coerceIn(-MAX_RADIANS, MAX_RADIANS)
+        (-yawDeltaDegrees * 0.015f).coerceIn(-MAX_RADIANS, MAX_RADIANS)
 
     fun visual(phantom: Phantom, partial: Float): Float {
         val state = bendById.getOrPut(phantom.id) { State() }

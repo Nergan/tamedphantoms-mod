@@ -27,6 +27,7 @@ object ClientPhantomSoundHandler {
     fun onPlaySound(event: PlaySoundEvent) {
         val sound = event.sound ?: return
         if (sound.source != SoundSource.HOSTILE) return
+        if (sound.volume >= 2.0f && sound.pitch <= 0.7f) return
         if (!isFromTamedPhantom(sound)) return
 
         val mul = ClientConfig.CONFIG.tamedSoundVolume.get().toFloat().coerceIn(0.0f, 1.0f)

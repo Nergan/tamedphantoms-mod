@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod
 
+import com.tamedphantoms.mod.util.PhantomCrawl
 import com.tamedphantoms.mod.util.PhantomFlightAttitude
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import com.tamedphantoms.mod.util.PhantomHeadLook
@@ -168,9 +169,27 @@ class PhantomFlightAttitudeTest {
         assertTrue(climb.pitch < PhantomHover.PITCH_DEGREES)
 
         val bank = PhantomFlightAttitude.pose(0.4, 0.4, 0.0, hoverBlend = 0f)
-        assertEquals(PhantomFlightAttitude.BANK, bank.bank, 0.001f)
-        assertEquals(PhantomFlightAttitude.HEAD_YAW, bank.headYaw, 0.001f)
-        assertTrue(bank.headYaw <= PhantomFlightAttitude.HEAD_YAW)
+        assertEquals(-PhantomFlightAttitude.BANK, bank.bank, 0.001f)
+        assertEquals(-PhantomFlightAttitude.HEAD_YAW, bank.headYaw, 0.001f)
+        assertTrue(kotlin.math.abs(bank.headYaw) <= PhantomFlightAttitude.HEAD_YAW)
+
+        assertTrue(PhantomFlightAttitude.tailPitchDegrees(0.3) < -8f)
+        assertTrue(PhantomFlightAttitude.tailPitchDegrees(-0.3) > 8f)
+        assertEquals(0f, PhantomFlightAttitude.tailPitchDegrees(0.0), 0.001f)
+    }
+}
+
+class PhantomCrawlTest {
+
+    @Test
+    @DisplayName("Шаг лап чаще при большей скорости из настроек и стоит на месте")
+    fun stepFollowsConfiguredSpeed() {
+        val slow = PhantomCrawl.advance(0.4, 0.5)
+        val normal = PhantomCrawl.advance(0.4, 1.25)
+        val fast = PhantomCrawl.advance(0.4, 2.5)
+        assertTrue(normal > slow)
+        assertTrue(fast > normal)
+        assertEquals(0f, PhantomCrawl.advance(0.0, 2.5), 0.0001f)
     }
 }
 

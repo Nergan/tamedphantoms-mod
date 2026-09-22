@@ -5,7 +5,6 @@ import com.mojang.math.Axis;
 import com.tamedphantoms.mod.entity.TamedPhantomEntity;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.player.PlayerRenderer;
-import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -28,7 +27,7 @@ public class PlayerRideBankMixin {
         if (!(player.getVehicle() instanceof TamedPhantomEntity phantom) || phantom.isOrderedToSit()) {
             return;
         }
-        float bank = Mth.lerp(partialTick, phantom.getBankO(), phantom.getBank());
+        float bank = phantom.bankVisual(partialTick);
         poseStack.mulPose(Axis.ZP.rotationDegrees(-bank));
     }
 }

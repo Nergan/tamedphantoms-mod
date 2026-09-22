@@ -8,7 +8,8 @@ package com.tamedphantoms.mod.util
  *
  * Набор и взлёт — чаще и глубже, быстрый прямой полёт — чуть реже,
  * долгое снижение — крылья почти неподвижны и раскрыты,
- * у земли взмах почти пропадает, крыло висит и кончик опущен ещё ниже.
+ * у земли взмах гаснет: шаг лапами считает [com.tamedphantoms.mod.util.PhantomCrawl],
+ * отрыв от поверхности сразу берёт частый взлётный взмах.
  */
 object PhantomWingbeat {
 
@@ -19,8 +20,8 @@ object PhantomWingbeat {
     const val GLIDE_RATE = 0.12f
     const val GLIDE_AMPLITUDE = 0.08f
     const val HOVER_AMPLITUDE = 1.18f
-    const val TAKEOFF_RATE = 1.42f
-    const val TAKEOFF_AMPLITUDE = 1.48f
+    const val TAKEOFF_RATE = 2.2f
+    const val TAKEOFF_AMPLITUDE = 1.65f
     const val TAKEOFF_TICKS = 64f
     const val GROUND_RATE = 0.12f
     const val GROUND_AMPLITUDE = 0.02f
@@ -28,7 +29,7 @@ object PhantomWingbeat {
     const val SWIM_AMPLITUDE = 0.05f
 
     /** Основание крыла вниз, радианы. Положительное число — вниз. */
-    const val GROUND_DROOP = 0.72f
+    const val GROUND_DROOP = 0f
 
     /** Доля опускания, которую кончик отыгрывает обратно к горизонту. */
     const val TIP_CANCEL = 0.72f

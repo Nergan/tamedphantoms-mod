@@ -36,6 +36,12 @@ object ModKeyMappings {
         "key.categories.tamedphantoms",
     )
 
+    val SCREAM: KeyMapping = KeyMapping(
+        "key.tamedphantoms.scream",
+        InputConstants.KEY_R,
+        "key.categories.tamedphantoms",
+    )
+
     fun init() {
         TamedPhantomsMod.LOGGER.debug("Регистрирую клавиши управления полётом Tamed Phantoms")
     }

@@ -17,7 +17,7 @@ object ModNetworking {
     }
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
-        val registrar = event.registrar("1")
+        val registrar = event.registrar("2")
 
         registrar.playToServer(
             PhantomInputPayload.TYPE,
@@ -36,6 +36,17 @@ object ModNetworking {
             PhantomFlightSpeedPayload.STREAM_CODEC,
         ) { payload, context ->
             OwnerFlightSpeed.set(context.player().uuid, payload.speed.toDouble())
+        }
+
+        registrar.playToServer(
+            PhantomScreamPayload.TYPE,
+            PhantomScreamPayload.STREAM_CODEC,
+        ) { _, context ->
+            val player = context.player()
+            val vehicle = player.vehicle
+            if (vehicle is TamedPhantomEntity) {
+                vehicle.tryOwnerScream(player)
+            }
         }
     }
 }
