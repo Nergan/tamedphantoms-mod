@@ -34,6 +34,7 @@ The release workflow builds the mod and fetches the two companion jars from Modr
 - **Leash.** A tamed phantom can be leashed and unleashed with an empty hand. A released phantom drifts aside and snaps the lead.
 - **Stats.** Tamed and released phantoms have 40 health, 12 attack damage, and fly twice as fast as a vanilla phantom. They do not burn in sunlight and do not drown. On death they drop 1–12 phantom membranes.
 - **Repel.** A tamed phantom pushes wild phantoms away (64 blocks by default).
+- **Obstacles.** Wild, tamed, and released phantoms steer around trunks, cacti, and other narrow obstacles, and they climb away from lava, fire, magma, campfires, cobwebs, berry bushes, and wither roses. A ridden phantom still follows the rider.
 - **Release.** Right-click with the release item (poisonous potato by default). Ownership ends, the saddle drops, and the eyes turn yellow. A released phantom can be tamed again.
 - **Advancements.** “Winged Companion” for taming, “No Longer Responsible” for releasing, “Winged Beast” the first time the owner makes a phantom scream, the secret “Dead Loop!” for a full loop, and the secret “Sick Moon” for hearing a released phantom’s full-moon cry.
 - **Guidebook (optional).** With [Patchouli](https://modrinth.com/mod/patchouli) installed, the first join into a world gives *Phantom Taming Guide*. Craft it with a book and a phantom membrane. Without Patchouli the rest of the mod works as usual.

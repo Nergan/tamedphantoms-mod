@@ -2,11 +2,13 @@ package com.tamedphantoms.mod.entity.ai
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomEffectSpeed
+import com.tamedphantoms.mod.util.PhantomFlightAvoidance
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.ai.control.MoveControl
 import net.minecraft.world.phys.Vec3
+import kotlin.math.hypot
 import kotlin.math.sqrt
 
 /**
@@ -80,6 +82,17 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         currentSpeed = Mth.approach(currentSpeed, targetSpeed * ramp, step)
 
         val desired = Vec3(dx / dist * currentSpeed, dy / dist * currentSpeed, dz / dist * currentSpeed)
-        mob.deltaMovement = mob.deltaMovement.lerp(desired, 0.12)
+        val steered = PhantomFlightAvoidance.steer(phantom, desired)
+        val steeredHorizontal = hypot(steered.x, steered.z)
+        val desiredHorizontal = hypot(desired.x, desired.z)
+        if (steeredHorizontal > 1.0E-4 && desiredHorizontal > 1.0E-4) {
+            val alignment = (steered.x * desired.x + steered.z * desired.z) / (steeredHorizontal * desiredHorizontal)
+            if (alignment < 0.96) {
+                val dodgeYaw = (Mth.atan2(steered.z, steered.x) * (180.0 / Math.PI)).toFloat() - 90.0f
+                mob.yRot = rotlerp(mob.yRot, dodgeYaw, YAW_STEP)
+                mob.yBodyRot = mob.yRot
+            }
+        }
+        mob.deltaMovement = mob.deltaMovement.lerp(steered, 0.12)
     }
 }

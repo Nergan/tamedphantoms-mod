@@ -32,8 +32,9 @@ object PhantomPerch {
         val groundPos = BlockPos(bx, surface - 1, bz)
         val ground = level.getBlockState(groundPos)
         if (!ground.fluidState.isEmpty || ground.getCollisionShape(level, groundPos).isEmpty) return null
+        if (PhantomFlightAvoidance.isHazard(ground)) return null
         val above = level.getBlockState(BlockPos(bx, surface, bz))
-        if (!above.fluidState.isEmpty) return null
+        if (!above.fluidState.isEmpty || PhantomFlightAvoidance.isHazard(above)) return null
         return Vec3(bx + 0.5, surface.toDouble(), bz + 0.5)
     }
 }
