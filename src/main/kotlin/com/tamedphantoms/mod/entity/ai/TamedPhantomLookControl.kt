@@ -1,0 +1,54 @@
+package com.tamedphantoms.mod.entity.ai
+
+import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomHeadLook
+import net.minecraft.world.entity.ai.control.LookControl
+
+/**
+ * Поворачивает только голову. Тангаж тела (xRot) — это наклон полёта,
+ * ванильный LookControl затирал бы его взглядом на игрока.
+ */
+class TamedPhantomLookControl(private val phantom: TamedPhantomEntity) : LookControl(phantom) {
+
+    override fun tick() {
+        val target = phantom.glanceTarget
+        if (phantom.isVehicle || target == null || !target.isAlive) {
+            easeTowardBody()
+            return
+        }
+
+        val desiredYaw = PhantomHeadLook.clampRelative(
+            phantom.yBodyRot,
+            PhantomHeadLook.yawDegrees(phantom.x, phantom.z, target.x, target.z),
+            PhantomHeadLook.MAX_YAW_DEGREES,
+        )
+        val desiredPitch = PhantomHeadLook.clampRelative(
+            phantom.xRot,
+            PhantomHeadLook.pitchDegrees(phantom.x, phantom.eyeY, phantom.z, target.x, target.eyeY, target.z),
+            PhantomHeadLook.MAX_PITCH_DEGREES,
+        )
+        phantom.yHeadRot = PhantomHeadLook.approachDegrees(
+            phantom.yHeadRot,
+            desiredYaw,
+            PhantomHeadLook.YAW_SPEED_DEGREES,
+        )
+        phantom.headLookPitch = PhantomHeadLook.approachDegrees(
+            phantom.headLookPitch,
+            desiredPitch,
+            PhantomHeadLook.PITCH_SPEED_DEGREES,
+        )
+    }
+
+    private fun easeTowardBody() {
+        phantom.yHeadRot = PhantomHeadLook.approachDegrees(
+            phantom.yHeadRot,
+            phantom.yBodyRot,
+            PhantomHeadLook.YAW_SPEED_DEGREES,
+        )
+        phantom.headLookPitch = PhantomHeadLook.approachDegrees(
+            phantom.headLookPitch,
+            phantom.xRot,
+            PhantomHeadLook.PITCH_SPEED_DEGREES,
+        )
+    }
+}
