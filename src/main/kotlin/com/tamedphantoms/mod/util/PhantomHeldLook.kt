@@ -64,7 +64,12 @@ object PhantomHeldLook {
      * Ближайший игрок с отказом или обычной едой.
      * Седок этого фантома не считается. На отказ хозяин важнее ближайшего.
      */
-    fun nearestOffer(phantom: Phantom, ownerId: UUID?, range: Double = OFFER_RANGE): OfferTarget? {
+    fun nearestOffer(
+        phantom: Phantom,
+        ownerId: UUID?,
+        canNod: Boolean,
+        range: Double = OFFER_RANGE,
+    ): OfferTarget? {
         val reach = range * range
         val box = phantom.boundingBox.inflate(range)
         var shake: Player? = null
@@ -78,7 +83,9 @@ object PhantomHeldLook {
         for (player in players) {
             val dist = phantom.distanceToSqr(player)
             if (dist > reach) continue
-            when (offering(player)) {
+            val kind = offering(player)
+            val shown = if (kind == Offering.NOD && !canNod) null else kind
+            when (shown) {
                 Offering.SHAKE -> {
                     if (ownerId != null && player.uuid == ownerId) ownerShake = player
                     if (dist < shakeDist) {

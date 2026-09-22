@@ -195,10 +195,18 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
             return
         }
         val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
-        val lookPitch = Mth.lerp(partial, pet.clientHeadPitchO, pet.clientHeadPitch)
+        val offering = pet.refuseVisual > 0 || pet.nodVisual > 0
+        val lookPitch = if (offering) pet.offerAimPitch else Mth.lerp(partial, pet.clientHeadPitchO, pet.clientHeadPitch)
+        val relativeYaw = if (offering) {
+            val bodyYaw = Mth.rotLerp(partial, pet.yBodyRotO, pet.yBodyRot)
+            PhantomHeadLook.wrapDegrees(pet.offerAimYaw - bodyYaw)
+                .coerceIn(-PhantomHeadLook.MAX_YAW_DEGREES, PhantomHeadLook.MAX_YAW_DEGREES)
+        } else {
+            netHeadYaw
+        }
         val relativePitch = lookPitch - bodyPitch
-        head.yRot = PhantomHeadLook.modelYawDegrees(netHeadYaw, upsideDown) * Mth.DEG_TO_RAD
-        head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, pet.trackingLook)
+        head.yRot = PhantomHeadLook.modelYawDegrees(relativeYaw, upsideDown) * Mth.DEG_TO_RAD
+        head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, offering || pet.trackingLook)
         head.zRot = 0f
         if (pet.refuseVisual > 0) {
             head.yRot += Mth.sin(ageInTicks * 0.85f) * 0.42f

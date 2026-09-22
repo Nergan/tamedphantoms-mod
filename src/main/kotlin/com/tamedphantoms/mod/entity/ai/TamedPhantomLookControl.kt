@@ -24,6 +24,15 @@ class TamedPhantomLookControl(private val phantom: TamedPhantomEntity) : LookCon
         }
         phantom.trackingLook = true
 
+        if (phantom.offeringLock) {
+            val yaw = PhantomHeadLook.yawDegrees(phantom.x, phantom.z, target.x, target.z)
+            phantom.yHeadRot = yaw
+            phantom.headLookPitch = PhantomHeadLook.pitchDegrees(
+                phantom.x, phantom.eyeY, phantom.z, target.x, target.eyeY, target.z,
+            )
+            return
+        }
+
         val desiredYaw = PhantomHeadLook.clampRelative(
             phantom.yBodyRot,
             PhantomHeadLook.yawDegrees(phantom.x, phantom.z, target.x, target.z),

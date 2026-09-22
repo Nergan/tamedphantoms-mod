@@ -18,6 +18,7 @@ import com.tamedphantoms.mod.util.PhantomAcrobatics
 import com.tamedphantoms.mod.util.PhantomAngerLogic
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import com.tamedphantoms.mod.event.ModAdvancements
+import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.util.PhantomCrawl
 import com.tamedphantoms.mod.util.PhantomEffectSpeed
 import com.tamedphantoms.mod.util.PhantomFlightAttitude
@@ -66,8 +67,11 @@ import net.minecraft.world.level.ServerLevelAccessor
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Phantom
 import net.minecraft.world.entity.player.Player
+import net.minecraft.resources.ResourceKey
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
+import net.minecraft.world.level.storage.loot.BuiltInLootTables
+import net.minecraft.world.level.storage.loot.LootTable
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
@@ -312,6 +316,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var cameraRollO: Float = 0f
     var refuseVisual: Int = 0
     var nodVisual: Int = 0
+
+    /** Куда смотреть головой, пока идёт мотание или кивок. Считает клиентский тик. */
+    var offerAimYaw: Float = 0f
+    var offerAimPitch: Float = 0f
 
     var takeoffHoldTicks: Int
         get() = this.entityData.get(DATA_TAKEOFF)
@@ -1018,22 +1026,33 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun tickRefuseVisual() {
         if (!this.tamed || this.isVehicle) {
-            if (this.refuseVisual > 0) this.refuseVisual--
-            if (this.nodVisual > 0) this.nodVisual--
+            this.refuseVisual = 0
+            this.nodVisual = 0
             return
         }
-        when (PhantomHeldLook.nearestOffer(this, this.ownerUUID)?.offering) {
+        val found = PhantomHeldLook.nearestOffer(
+            this,
+            this.ownerUUID,
+            PhantomTamingLogic.canHeal(this.health, this.maxHealth),
+        )
+        val player = found?.player
+        if (found == null || player == null) {
+            this.refuseVisual = 0
+            this.nodVisual = 0
+            return
+        }
+        this.offerAimYaw = PhantomHeadLook.yawDegrees(this.x, this.z, player.x, player.z)
+        this.offerAimPitch = PhantomHeadLook.pitchDegrees(
+            this.x, this.eyeY, this.z, player.x, player.eyeY, player.z,
+        )
+        when (found.offering) {
             PhantomHeldLook.Offering.SHAKE -> {
-                this.refuseVisual = 28
-                if (this.nodVisual > 0) this.nodVisual--
+                this.refuseVisual = 1
+                this.nodVisual = 0
             }
             PhantomHeldLook.Offering.NOD -> {
-                this.nodVisual = 28
-                if (this.refuseVisual > 0) this.refuseVisual--
-            }
-            null -> {
-                if (this.refuseVisual > 0) this.refuseVisual--
-                if (this.nodVisual > 0) this.nodVisual--
+                this.nodVisual = 1
+                this.refuseVisual = 0
             }
         }
     }
@@ -1337,8 +1356,21 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    override fun getDefaultLootTable(): ResourceKey<LootTable> = BuiltInLootTables.EMPTY
+
+    override fun dropCustomDeathLoot(level: ServerLevel, damageSource: DamageSource, recentlyHit: Boolean) {
+        super.dropCustomDeathLoot(level, damageSource, recentlyHit)
+        val count = 1 + this.random.nextInt(12)
+        this.spawnAtLocation(ItemStack(Items.PHANTOM_MEMBRANE, count), 0.5f)
+    }
+
     override fun removePassenger(passenger: Entity) {
+        val keepMounted = passenger is Player && PhantomDismount.shouldKeepMounted(passenger, this)
         super.removePassenger(passenger)
+        if (keepMounted) {
+            PhantomDismount.restore(passenger, this)
+            return
+        }
         if (passenger is LivingEntity) {
             val effect = passenger.getEffect(MobEffects.NIGHT_VISION)
             if (effect != null && effect.duration <= NIGHT_VISION_DURATION_TICKS && effect.amplifier == 0) {
