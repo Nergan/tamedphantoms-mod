@@ -200,8 +200,10 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         head.yRot = PhantomHeadLook.modelYawDegrees(netHeadYaw, upsideDown) * Mth.DEG_TO_RAD
         head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, pet.trackingLook)
         head.zRot = 0f
-        if (pet.refuseVisual > 0 && !upsideDown) {
+        if (pet.refuseVisual > 0) {
             head.yRot += Mth.sin(ageInTicks * 0.85f) * 0.42f
+        } else if (pet.nodVisual > 0) {
+            head.xRot += Mth.sin(ageInTicks * 0.85f) * 0.42f
         }
     }
 

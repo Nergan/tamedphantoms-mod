@@ -23,13 +23,14 @@ class TamedPhantomLookAtPlayerGoal(private val phantom: TamedPhantomEntity) : Go
     }
 
     override fun canUse(): Boolean {
-        if (phantom.isVehicle || phantom.isDefending()) return false
+        if (phantom.offeringLock || phantom.isVehicle || phantom.isDefending()) return false
         if (phantom.random.nextFloat() >= CHANCE) return false
         lookAt = phantom.level().getNearestPlayer(phantom, ModConfig.LOOK_AT_PLAYER_RANGE)
         return lookAt != null
     }
 
     override fun canContinueToUse(): Boolean {
+        if (phantom.offeringLock) return true
         val target = lookAt ?: return false
         if (phantom.isVehicle || phantom.isDefending() || !target.isAlive) return false
         if (phantom.distanceToSqr(target) > RANGE_SQR) return false
@@ -48,6 +49,7 @@ class TamedPhantomLookAtPlayerGoal(private val phantom: TamedPhantomEntity) : Go
     }
 
     override fun tick() {
+        if (phantom.offeringLock) return
         phantom.glanceTarget = lookAt
         lookTime--
     }

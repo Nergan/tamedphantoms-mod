@@ -6,6 +6,7 @@ import com.tamedphantoms.mod.entity.ModEntities
 import com.tamedphantoms.mod.item.ModItems
 import com.tamedphantoms.mod.event.ModSetup
 import com.tamedphantoms.mod.event.PhantomDamageHandler
+import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomGuideHandler
 import com.tamedphantoms.mod.event.PhantomInteractionHandler
 import com.tamedphantoms.mod.event.PhantomOwnerRecallHandler
@@ -86,6 +87,7 @@ class TamedPhantomsMod(modEventBus: IEventBus, modContainer: ModContainer) {
         NeoForge.EVENT_BUS.register(PhantomGuideHandler)
         NeoForge.EVENT_BUS.register(PhantomOwnerRecallHandler)
         NeoForge.EVENT_BUS.register(PhantomSpawnScaler)
+        NeoForge.EVENT_BUS.register(PhantomDismount)
         OwnerFlightSpeed.init()
     }
 }

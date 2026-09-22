@@ -1,7 +1,9 @@
 package com.tamedphantoms.mod
 
 import com.tamedphantoms.mod.util.PhantomHeldLook
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -24,5 +26,14 @@ class PhantomHeldLookTest {
         assertTrue(PhantomHeldLook.shouldStare(tamed = false, holdsFood = true, holdsTameItem = true))
         assertFalse(PhantomHeldLook.shouldStare(tamed = false, holdsFood = true, holdsTameItem = false))
         assertFalse(PhantomHeldLook.shouldStare(tamed = false, holdsFood = false, holdsTameItem = false))
+    }
+
+    @Test
+    @DisplayName("Обычная еда — кивок, ядовитая картошка и предмет освобождения — мотание")
+    fun foodNodsAndRefusalShakes() {
+        assertEquals(PhantomHeldLook.Offering.NOD, PhantomHeldLook.classify(refusal = false, food = true))
+        assertEquals(PhantomHeldLook.Offering.SHAKE, PhantomHeldLook.classify(refusal = true, food = true))
+        assertEquals(PhantomHeldLook.Offering.SHAKE, PhantomHeldLook.classify(refusal = true, food = false))
+        assertNull(PhantomHeldLook.classify(refusal = false, food = false))
     }
 }

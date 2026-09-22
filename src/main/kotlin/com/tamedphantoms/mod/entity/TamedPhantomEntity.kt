@@ -24,6 +24,7 @@ import com.tamedphantoms.mod.util.PhantomFlightAttitude
 import com.tamedphantoms.mod.util.PhantomScream
 import com.tamedphantoms.mod.util.PhantomGroundSkim
 import com.tamedphantoms.mod.util.PhantomHeadLook
+import com.tamedphantoms.mod.util.PhantomHeldLook
 import com.tamedphantoms.mod.util.PhantomHover
 import com.tamedphantoms.mod.util.PhantomShake
 import com.tamedphantoms.mod.util.PhantomWetness
@@ -310,6 +311,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var cameraRoll: Float = 0f
     var cameraRollO: Float = 0f
     var refuseVisual: Int = 0
+    var nodVisual: Int = 0
 
     var takeoffHoldTicks: Int
         get() = this.entityData.get(DATA_TAKEOFF)
@@ -355,6 +357,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
+
+    /** Пока фантом замер на еду или отказ, другие цели взгляда не перебивают [glanceTarget]. */
+    var offeringLock: Boolean = false
 
     var tamed: Boolean
         get() = this.entityData.get(DATA_TAMED)
@@ -428,7 +433,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.setOrderedToSit(tag.getBoolean(TAG_SITTING), playEffects = false)
         this.saddled = tag.getBoolean(TAG_SADDLED)
         this.ownerUUID = if (tag.hasUUID(TAG_OWNER)) tag.getUUID(TAG_OWNER) else null
-        this.setPhantomSize(PET_PHANTOM_SIZE)
+        this.applyConfiguredSize()
         this.applyPetStats()
         this.setNoGravity(!this.isOrderedToSit())
         if (tag.getBoolean(TAG_WET_TRACKED)) {
@@ -454,9 +459,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         spawnGroupData: SpawnGroupData?,
     ): SpawnGroupData? {
         val data = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData)
-        this.setPhantomSize(PET_PHANTOM_SIZE)
+        this.applyConfiguredSize()
         this.applyPetStats()
         return data
+    }
+
+    private fun applyConfiguredSize() {
+        val size = ServerConfig.CONFIG.phantomSize.get().coerceIn(0, 64)
+        if (this.phantomSize != size) {
+            this.setPhantomSize(size)
+        }
     }
 
     private fun applyPetStats() {
@@ -637,6 +649,17 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    fun rejectOffering(from: Player) {
+        if (!this.isVehicle) {
+            this.glanceTarget = from
+            val yaw = PhantomHeadLook.yawDegrees(this.x, this.z, from.x, from.z)
+            this.yRot = yaw
+            this.yBodyRot = yaw
+            this.yHeadRot = yaw
+        }
+        this.spawnAngryParticles()
+    }
+
     private fun spawnAngryParticles() {
         val level = this.level()
         if (level !is ServerLevel) return
@@ -756,6 +779,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             return
         }
 
+        this.applyConfiguredSize()
         this.tickWetExit()
         this.tickRideHead()
         this.tickAngerTimer()
@@ -839,11 +863,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun spawnSwimTrail() {
         if (!this.isInWater) return
-        val yaw = this.yRot * Mth.DEG_TO_RAD
-        val forwardX = -Mth.sin(yaw).toDouble()
-        val forwardZ = Mth.cos(yaw).toDouble()
-        val ahead = (this.x - this.xo) * forwardX + (this.z - this.zo) * forwardZ
-        if (ahead < 0.02) return
+        val moved = hypot(this.x - this.xo, hypot(this.y - this.yo, this.z - this.zo))
+        val turned = kotlin.math.abs(Mth.wrapDegrees(this.yRot - this.yRotO)) +
+            kotlin.math.abs(this.xRot - this.xRotO)
+        if (moved < 0.006 && turned < 0.4f) return
         val level = this.level()
         val motion = this.deltaMovement
         for (side in doubleArrayOf(-1.0, 1.0)) {
@@ -994,23 +1017,25 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun tickRefuseVisual() {
-        if (!this.tamed || this.isVehicle || this.isOrderedToSit()) {
+        if (!this.tamed || this.isVehicle) {
             if (this.refuseVisual > 0) this.refuseVisual--
+            if (this.nodVisual > 0) this.nodVisual--
             return
         }
-        val box = this.boundingBox.inflate(8.0)
-        val refusing = this.level().getEntitiesOfClass(Player::class.java, box) { player ->
-            player.isAlive && holdsRefusal(player)
-        }.isNotEmpty()
-        if (refusing) this.refuseVisual = 28 else if (this.refuseVisual > 0) this.refuseVisual--
-    }
-
-    private fun holdsRefusal(player: Player): Boolean {
-        val release = ServerConfig.CONFIG.resolveReleaseItem()
-        val main = player.mainHandItem
-        val off = player.offhandItem
-        return main.`is`(Items.POISONOUS_POTATO) || off.`is`(Items.POISONOUS_POTATO) ||
-            main.`is`(release) || off.`is`(release)
+        when (PhantomHeldLook.nearestOffer(this, this.ownerUUID)?.offering) {
+            PhantomHeldLook.Offering.SHAKE -> {
+                this.refuseVisual = 28
+                if (this.nodVisual > 0) this.nodVisual--
+            }
+            PhantomHeldLook.Offering.NOD -> {
+                this.nodVisual = 28
+                if (this.refuseVisual > 0) this.refuseVisual--
+            }
+            null -> {
+                if (this.refuseVisual > 0) this.refuseVisual--
+                if (this.nodVisual > 0) this.nodVisual--
+            }
+        }
     }
 
     private fun findOwnerPlayer(): Player? {
@@ -1108,6 +1133,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         PhantomScream.frighten(level, this, blindness)
         if (moonPulse) {
             PacketDistributor.sendToPlayersInDimension(level, PhantomMoonPulsePayload)
+            for (listener in PhantomScream.listeners(level, this)) {
+                ModAdvancements.grantSickMoon(listener)
+            }
         }
         if (awardOwner != null) {
             ModAdvancements.grantWingedBeast(awardOwner)

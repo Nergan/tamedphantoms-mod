@@ -58,6 +58,7 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
     val screamCooldownSeconds: ModConfigSpec.IntValue
     val insomniaDays: ModConfigSpec.IntValue
     val phantomGroupMultiplier: ModConfigSpec.DoubleValue
+    val phantomSize: ModConfigSpec.IntValue
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null
@@ -103,6 +104,15 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
             .comment("Сколько тиков длится режим самозащиты после того, как фантома ударили (20 тиков = 1 секунда).")
             .translation("$KEY_PREFIX.taming.defend_time_ticks")
             .defineInRange("defend_time_ticks", 200, 20, 20 * 60 * 30)
+
+        phantomSize = builder
+            .comment(
+                "Ванильный размер прирученных и освобождённых фантомов.",
+                "Модель и хитбокс считаются как 1.0 + 0.15 × размер. 3 — текущий вид, примерно в 1.45 раза крупнее дикого.",
+                "0 — как дикий фантом.",
+            )
+            .translation("$KEY_PREFIX.taming.phantom_size")
+            .defineInRange("phantom_size", 3, 0, 64)
 
         builder.pop()
 

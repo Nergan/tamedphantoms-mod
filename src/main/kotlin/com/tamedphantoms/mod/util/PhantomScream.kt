@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.util
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffectInstance
@@ -20,11 +21,23 @@ object PhantomScream {
 
     const val EFFECT_TICKS = 20
 
+    /** Громкость слоя, по которой ваниль считает дистанцию слышимости: 16 × громкость. */
+    private const val HEAR_VOLUME = 14f
+
     fun isFullMoonNight(level: ServerLevel): Boolean = level.moonPhase == 0 && level.isNight
+
+    fun hearDistance(): Double = 16.0 * HEAR_VOLUME
+
+    fun listeners(level: ServerLevel, phantom: TamedPhantomEntity): List<ServerPlayer> {
+        val reachSq = hearDistance() * hearDistance()
+        return level.players().filter { player ->
+            !player.isSpectator && player.distanceToSqr(phantom) <= reachSq
+        }
+    }
 
     fun play(level: ServerLevel, phantom: TamedPhantomEntity) {
         val pos = phantom.blockPosition()
-        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 14f, 0.46f)
+        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, HEAR_VOLUME, 0.46f)
         level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 11f, 0.34f)
     }
 

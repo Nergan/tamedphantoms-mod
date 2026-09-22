@@ -15,6 +15,7 @@
   "tamedphantoms.configuration.taming.tame_chance": "Taming chance",
   "tamedphantoms.configuration.taming.repel_radius": "Repel radius",
   "tamedphantoms.configuration.taming.defend_time_ticks": "Self-defense duration (ticks)",
+  "tamedphantoms.configuration.taming.phantom_size": "Phantom size",
   "tamedphantoms.configuration.sound": "Sound",
   "tamedphantoms.configuration.sound.tamed_sound_volume": "Tamed phantom volume",
   "tamedphantoms.configuration.flight": "Flight",
@@ -31,6 +32,7 @@
   "tamedphantoms.configuration.spawning.phantom_group_multiplier": "Phantom group size",
 
   "tamedphantoms.scream.cooldown": "The phantom's scream will be ready in %s s.",
+  "tamedphantoms.dismount.high": "A bit high, isn't it?",
 
   "advancements.tamedphantoms.tame_phantom.title": "Winged Pet",
   "advancements.tamedphantoms.tame_phantom.description": "Tame a phantom",
@@ -40,6 +42,8 @@
   "advancements.tamedphantoms.winged_beast.description": "Make your phantom scream",
   "advancements.tamedphantoms.dead_loop.title": "Dead Loop!",
   "advancements.tamedphantoms.dead_loop.description": "Pull a loop on a phantom. That phantom will glow, and it will not die",
+  "advancements.tamedphantoms.sick_moon.title": "Sick Moon",
+  "advancements.tamedphantoms.sick_moon.description": "Hear a released phantom cry under a full moon",
 
   "tamedphantoms.guide.name": "Phantom Taming Guide",
   "tamedphantoms.guide.subtitle": "A night-sky companion",
@@ -69,7 +73,7 @@
   "tamedphantoms.guide.page.tame.2": "By default every attempt succeeds. The chance can be changed in the server settings. A phantom that was released can be tamed again in the same way. Free phantoms of that kind have bright $(#e8c400)yellow eyes$().",
 
   "tamedphantoms.guide.entry.care": "Care and the Lead",
-  "tamedphantoms.guide.page.care.1": "Only the owner can feed a tamed phantom. Any food will restore its health. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. A released phantom will not abide a lead: it drifts aside and snaps free, without shoving off the player.",
+  "tamedphantoms.guide.page.care.1": "Anyone can feed a tamed phantom ordinary food, and it restores health. If the owner or another player holds that food nearby, the phantom stops, turns, and nods. Only the owner can offer a poisonous potato or the release item: the phantom still stops and turns, but shakes its head from side to side, and someone else's click sends up angry clouds. Food held by a rider of that phantom does not count, and a phantom that already has a rider does not stop. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. A released phantom will not abide a lead: it drifts aside and snaps free, without shoving off the player.",
   "tamedphantoms.guide.page.care.2": "Sunlight will not burn it, and it will not drown. If you travel too far, it will appear beside you again, the way a wolf returns when it has been left behind.",
 
   "tamedphantoms.guide.entry.release": "Letting Go",
@@ -81,7 +85,7 @@
   "tamedphantoms.guide.page.saddle.2": "You cannot climb onto a phantom that is sitting. Get down first if you want it to rest. If the owner is already flying, another player may take the place behind them.",
 
   "tamedphantoms.guide.entry.flight": "In the Air",
-  "tamedphantoms.guide.page.flight.1": "While you are riding, the movement keys send the phantom forward, back, and to the sides. Jump makes it climb. The left Control key makes it descend. It turns with your look. You and anyone sitting behind you receive $(thing)Night Vision$() for as long as you stay in the air.",
+  "tamedphantoms.guide.page.flight.1": "While you are riding, the movement keys send the phantom forward, back, and to the sides. Jump makes it climb. The left Control key makes it descend. It turns with your look. You and anyone sitting behind you receive $(thing)Night Vision$() for as long as you stay in the air. More than eight blocks above the surface, the first Shift only asks if that is a bit high. A second press within a second lets either the owner or the rider behind get down.",
   "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section. While the phantom flies forward, the camera follows its climb and dive. Hold climb, dive, or a turn and the lean keeps going, far enough for a loop or a barrel roll. Hovering and flying backward keep the usual tilt, and the camera does not follow it. A full loop grants a secret advancement. That phantom glows from then on, and it will not die.",
 
   "tamedphantoms.guide.entry.sit": "Sitting Still",
@@ -94,9 +98,9 @@
 
   "tamedphantoms.guide.entry.scream": "The Scream",
   "tamedphantoms.guide.page.scream.1": "While the owner is riding, press $(k:key.tamedphantoms.scream)$() (R by default). The phantom lets out a deep, much louder cry. For one second its eyes burn red, and a glow outlines its body. Mobs within range flee and go blind for that second. Anyone sitting on this phantom is spared. The owner on the ground is not, if the phantom screams while defending itself. The first time you do this, you earn the advancement $(thing)Winged Beast$().",
-  "tamedphantoms.guide.page.scream.2": "The cry then needs about four seconds to return. If it is not ready, a red line tells you how long is left. Radius and cooldown are server settings. A phantom that is defending itself cries the same way, on the same cooldown. On a full moon a released phantom may cry even when it is not fighting: the eyes stay yellow, the glow still flashes, nearby mobs still flee, nobody is blinded, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it.",
+  "tamedphantoms.guide.page.scream.2": "The cry then needs about four seconds to return. If it is not ready, a red line tells you how long is left. Radius and cooldown are server settings. A phantom that is defending itself cries the same way, on the same cooldown. On a full moon a released phantom may cry even when it is not fighting: the eyes stay yellow, the glow still flashes, nearby mobs still flee, nobody is blinded, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it. Hearing that cry grants the secret advancement $(thing)Sick Moon$().",
 
   "tamedphantoms.guide.entry.stats": "Strength",
   "tamedphantoms.guide.page.stats.1": "A tamed or released phantom is stronger than a wild one. It has forty health, its bite deals twelve damage, and it flies twice as fast. Each time it wounds something, it heals itself for the same amount.",
-  "tamedphantoms.guide.page.stats.2": "It is also a little larger than an ordinary phantom, about one and a half times the usual size. The night remains unsafe. A bonded phantom simply shares that danger with you."
+  "tamedphantoms.guide.page.stats.2": "By default it is about one and a half times an ordinary phantom. The server sets the size of tamed and released phantoms. The night remains unsafe. A bonded phantom simply shares that danger with you."
 }

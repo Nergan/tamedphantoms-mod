@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.event
 import com.tamedphantoms.mod.TamedPhantomsMod
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomHeldLook
 import com.tamedphantoms.mod.util.PhantomTamingLogic
 import net.minecraft.core.component.DataComponents
 import net.minecraft.server.level.ServerPlayer
@@ -48,10 +49,16 @@ object PhantomInteractionHandler {
     fun onUseWhileRiding(event: PlayerInteractEvent.RightClickItem) {
         val player = event.entity
         val phantom = player.vehicle as? TamedPhantomEntity ?: return
+        if (!phantom.tamed) return
         val stack = player.getItemInHand(event.hand)
-        if (stack.`is`(Items.POISONOUS_POTATO) && !phantom.isOwnedBy(player)) return
-        if (!phantom.tamed || !phantom.isOwnedBy(player)) return
-        if (stack.`is`(ServerConfig.CONFIG.resolveReleaseItem()) && !stack.`is`(Items.POISONOUS_POTATO)) return
+        if (PhantomHeldLook.isRefusal(stack) && !phantom.isOwnedBy(player)) {
+            event.isCanceled = true
+            event.cancellationResult = InteractionResult.CONSUME
+            if (!player.level().isClientSide) phantom.rejectOffering(player)
+            return
+        }
+        val releaseItem = ServerConfig.CONFIG.resolveReleaseItem()
+        if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return
         val food = stack.get(DataComponents.FOOD) ?: return
         if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return
         if (player.level().isClientSide) {
@@ -59,7 +66,7 @@ object PhantomInteractionHandler {
             event.isCanceled = true
             return
         }
-        if (feedIfOwner(player, phantom, stack)) {
+        if (tryHeal(player, phantom, stack)) {
             event.cancellationResult = InteractionResult.CONSUME
             event.isCanceled = true
         }
@@ -166,9 +173,14 @@ object PhantomInteractionHandler {
             return
         }
 
+        if (PhantomHeldLook.isRefusal(stack) && !isOwner) {
+            phantom.rejectOffering(player)
+            return
+        }
+
         val food = stack.get(DataComponents.FOOD)
-        if (isOwner && food != null) {
-            feedIfOwner(player, phantom, stack)
+        if (food != null) {
+            tryHeal(player, phantom, stack)
             return
         }
 
@@ -195,9 +207,10 @@ object PhantomInteractionHandler {
         }
     }
 
-    /** Лечит только хозяин. Ядовитая картошка проходит той же проверкой. */
-    private fun feedIfOwner(player: Player, phantom: TamedPhantomEntity, stack: ItemStack): Boolean {
-        if (!phantom.tamed || !phantom.isOwnedBy(player)) return false
+    /** Обычную еду принимает кто угодно. Картошку и предмет освобождения — только хозяин. */
+    private fun tryHeal(player: Player, phantom: TamedPhantomEntity, stack: ItemStack): Boolean {
+        if (!phantom.tamed) return false
+        if (PhantomHeldLook.isRefusal(stack) && !phantom.isOwnedBy(player)) return false
         val food = stack.get(DataComponents.FOOD) ?: return false
         if (!phantom.healWithFood(food.nutrition())) return false
         if (!player.abilities.instabuild) stack.shrink(1)

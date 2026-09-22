@@ -19,18 +19,17 @@ class TamedPhantomHeldItemLookGoal(private val phantom: TamedPhantomEntity) : Go
     }
 
     override fun canUse(): Boolean {
-        if (phantom.isVehicle || phantom.isDefending()) return false
+        if (phantom.offeringLock || phantom.isVehicle || phantom.isDefending()) return false
         lookAt = find()
         return lookAt != null
     }
 
     override fun canContinueToUse(): Boolean {
+        if (phantom.offeringLock) return true
         if (phantom.isVehicle || phantom.isDefending()) return false
         lookAt = find()
         return lookAt != null
     }
-
-    override fun start() {}
 
     override fun stop() {
         if (phantom.glanceTarget === lookAt) {
@@ -40,6 +39,7 @@ class TamedPhantomHeldItemLookGoal(private val phantom: TamedPhantomEntity) : Go
     }
 
     override fun tick() {
+        if (phantom.offeringLock) return
         phantom.glanceTarget = lookAt
     }
 
