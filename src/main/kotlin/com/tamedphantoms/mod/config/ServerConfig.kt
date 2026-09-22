@@ -123,10 +123,10 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
         acrobaticsStep = builder
             .comment(
                 "Насколько быстро в прямом полёте набираются бочка и мёртвая петля, в градусах за тик.",
-                "Меньше — фигуры медленнее. 0.7 — около 25 секунд на полный оборот при зажатой клавише.",
+                "Меньше — фигуры медленнее. 0.3 — около минуты на полный оборот при зажатой клавише.",
             )
             .translation("$KEY_PREFIX.flight.acrobatics_step")
-            .defineInRange("acrobatics_step", 0.7, 0.05, 12.0)
+            .defineInRange("acrobatics_step", 0.3, 0.05, 12.0)
 
         builder.pop()
 
@@ -140,7 +140,7 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
         screamCooldownSeconds = builder
             .comment("Перезарядка крика в секундах. Общая для хозяина, самозащиты и полнолуния.")
             .translation("$KEY_PREFIX.scream.scream_cooldown_seconds")
-            .defineInRange("scream_cooldown_seconds", 30, 1, 600)
+            .defineInRange("scream_cooldown_seconds", 4, 1, 600)
 
         builder.pop()
 

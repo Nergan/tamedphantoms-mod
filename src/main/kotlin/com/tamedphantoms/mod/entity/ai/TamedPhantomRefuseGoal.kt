@@ -2,6 +2,7 @@ package com.tamedphantoms.mod.entity.ai
 
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomHeadLook
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.Items
@@ -50,12 +51,28 @@ class TamedPhantomRefuseGoal(private val phantom: TamedPhantomEntity) : Goal() {
         } else if (linger > 0) {
             linger--
         }
-        val look = player
+        val owner = ownerHolding()
+        val look = owner ?: player
         if (look != null && look.isAlive) {
             phantom.glanceTarget = look
         }
+        if (owner != null) {
+            val yaw = PhantomHeadLook.yawDegrees(phantom.x, phantom.z, owner.x, owner.z)
+            phantom.yRot = PhantomHeadLook.approachDegrees(phantom.yRot, yaw, 10f)
+            phantom.yBodyRot = phantom.yRot
+            phantom.yHeadRot = phantom.yRot
+        }
         phantom.moveControl.setWantedPosition(phantom.x, phantom.y, phantom.z, 0.0)
         phantom.deltaMovement = phantom.deltaMovement.scale(0.7)
+    }
+
+    private fun ownerHolding(): Player? {
+        val id = phantom.ownerUUID ?: return null
+        val owner = phantom.level().players().firstOrNull { it.uuid == id } ?: return null
+        if (!owner.isAlive || owner.isSpectator) return null
+        if (phantom.distanceToSqr(owner) > 8.0 * 8.0) return null
+        if (!holdsRefusal(owner)) return null
+        return owner
     }
 
     private fun find(): Player? {

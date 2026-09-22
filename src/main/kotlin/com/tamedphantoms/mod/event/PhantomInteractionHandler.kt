@@ -48,9 +48,10 @@ object PhantomInteractionHandler {
     fun onUseWhileRiding(event: PlayerInteractEvent.RightClickItem) {
         val player = event.entity
         val phantom = player.vehicle as? TamedPhantomEntity ?: return
-        if (!phantom.tamed || !phantom.isOwnedBy(player)) return
         val stack = player.getItemInHand(event.hand)
-        if (stack.`is`(Items.POISONOUS_POTATO) || stack.`is`(ServerConfig.CONFIG.resolveReleaseItem())) return
+        if (stack.`is`(Items.POISONOUS_POTATO) && !phantom.isOwnedBy(player)) return
+        if (!phantom.tamed || !phantom.isOwnedBy(player)) return
+        if (stack.`is`(ServerConfig.CONFIG.resolveReleaseItem()) && !stack.`is`(Items.POISONOUS_POTATO)) return
         val food = stack.get(DataComponents.FOOD) ?: return
         if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return
         if (player.level().isClientSide) {
@@ -58,8 +59,7 @@ object PhantomInteractionHandler {
             event.isCanceled = true
             return
         }
-        if (phantom.healWithFood(food.nutrition())) {
-            if (!player.abilities.instabuild) stack.shrink(1)
+        if (feedIfOwner(player, phantom, stack)) {
             event.cancellationResult = InteractionResult.CONSUME
             event.isCanceled = true
         }
@@ -168,10 +168,7 @@ object PhantomInteractionHandler {
 
         val food = stack.get(DataComponents.FOOD)
         if (isOwner && food != null) {
-            val healed = phantom.healWithFood(food.nutrition())
-            if (healed && !player.abilities.instabuild) {
-                stack.shrink(1)
-            }
+            feedIfOwner(player, phantom, stack)
             return
         }
 
@@ -196,5 +193,14 @@ object PhantomInteractionHandler {
                 player.name.string, mounted, phantom.id, phantom.tamed, phantom.isSaddled, isOwner,
             )
         }
+    }
+
+    /** Лечит только хозяин. Ядовитая картошка проходит той же проверкой. */
+    private fun feedIfOwner(player: Player, phantom: TamedPhantomEntity, stack: ItemStack): Boolean {
+        if (!phantom.tamed || !phantom.isOwnedBy(player)) return false
+        val food = stack.get(DataComponents.FOOD) ?: return false
+        if (!phantom.healWithFood(food.nutrition())) return false
+        if (!player.abilities.instabuild) stack.shrink(1)
+        return true
     }
 }

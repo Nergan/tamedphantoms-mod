@@ -30,7 +30,7 @@ The release workflow builds the mod and fetches the two companion jars from Modr
 - **Leash.** A tamed phantom can be leashed and unleashed with an empty hand.
 - **Healing.** The owner can feed it any food.
 - **Self-defense.** If the phantom is hit, it attacks the attacker for about ten seconds — including the owner. Duration is configurable. Each hit heals the phantom for the damage it dealt. While it is defending, it can scream once the scream is ready.
-- **Scream.** The owner, while riding, presses R (remap under Tamed Phantoms). The phantom plays a louder, deeper ambient cry. For one second its eyes turn red, its body glows, and mobs in range flee and are blinded. Players sitting on that phantom are spared; the owner on the ground is blinded if the phantom screams in self-defense. Cooldown is 30 seconds; if it is not ready, a red action-bar line says how many seconds remain. The first use grants the advancement Winged Beast. Radius and cooldown are server settings. The client volume slider does not quiet this cry. On a full moon, a released phantom may cry on its own even when it is not attacking: the eyes stay yellow, the glow still appears, mobs still flee, blindness is not applied, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it.
+- **Scream.** The owner, while riding, presses R (remap under Tamed Phantoms). The phantom plays a louder, deeper ambient cry. For one second its eyes turn red, its body glows, and mobs in range flee and are blinded. Players sitting on that phantom are spared; the owner on the ground is blinded if the phantom screams in self-defense. Cooldown is 4 seconds; if it is not ready, a red action-bar line says how many seconds remain. The first use grants the advancement Winged Beast. Radius and cooldown are server settings. The client volume slider does not quiet this cry. On a full moon, a released phantom may cry on its own even when it is not attacking: the eyes stay yellow, the glow still appears, mobs still flee, blindness is not applied, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it.
 - **Aerobatics.** While flying forward, climb, dive, and turns keep tilting instead of stopping at a fixed angle, so a loop or a barrel roll is possible. The camera follows that pitch. Hovering and flying backward do not. A full loop grants the secret advancement “Dead Loop!”: that phantom glows permanently and cannot die.
 - **Lead.** A tamed phantom can be leashed. A released phantom drifts aside and snaps the lead.
 - **Stats.** Tamed and released phantoms have 40 health, 12 attack damage, and fly twice as fast as a vanilla phantom. They do not burn in sunlight and do not drown.
@@ -89,8 +89,8 @@ Dedicated server: `world/serverconfig/tamedphantoms-server.toml`. This is a `SER
 | `repel_radius`      | `64.0`                       | radius that pushes wild phantoms away       |
 | `defend_time_ticks`      | `200`                        | self-defense duration (20 ticks = 1 second) |
 | `scream_radius`          | `32.0`                       | blocks; mobs in range flee from the scream |
-| `scream_cooldown_seconds`| `30`                         | seconds before the scream can be used again |
-| `acrobatics_step`        | `0.7`                        | degrees per tick for a barrel roll or loop  |
+| `scream_cooldown_seconds`| `4`                          | seconds before the scream can be used again |
+| `acrobatics_step`        | `0.3`                        | degrees per tick for a barrel roll or loop  |
 | `insomnia_days`          | `1`                          | days awake before vanilla phantoms can spawn |
 | `phantom_group_multiplier` | `2.0`                      | how many times a vanilla phantom group is multiplied |
 

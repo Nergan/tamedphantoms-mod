@@ -9,7 +9,7 @@ import kotlin.math.abs
  */
 object PhantomAcrobatics {
 
-    const val DEFAULT_STEP = 0.7f
+    const val DEFAULT_STEP = 0.3f
     const val FULL_TURN = 360f
     private const val FORWARD_EPS = 0.045
 

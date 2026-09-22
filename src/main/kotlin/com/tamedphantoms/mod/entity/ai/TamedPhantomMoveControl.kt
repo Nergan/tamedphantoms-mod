@@ -40,11 +40,8 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         }
 
         val dx = wantedX - mob.x
-        var dy = wantedY - mob.y
+        val dy = wantedY - mob.y
         val dz = wantedZ - mob.z
-        if (phantom.takeoffHoldTicks > 0 && dy > 0.0) {
-            dy = 0.0
-        }
         val horiz = sqrt(dx * dx + dz * dz)
         val dist = sqrt(dx * dx + dy * dy + dz * dz)
 
@@ -73,7 +70,14 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f) *
             pace * PhantomFlightPace.waterScale(phantom.isUnderWater).toFloat() *
             PhantomEffectSpeed.scale(phantom).toFloat()
-        currentSpeed = Mth.approach(currentSpeed, targetSpeed, 0.022f)
+        val takeoff = phantom.takeoffHoldTicks
+        val ramp = if (takeoff > 0) {
+            (0.28f + (6 - takeoff) * 0.12f).coerceIn(0.28f, 1f)
+        } else {
+            1f
+        }
+        val step = if (takeoff > 0) 0.16f else 0.022f
+        currentSpeed = Mth.approach(currentSpeed, targetSpeed * ramp, step)
 
         val desired = Vec3(dx / dist * currentSpeed, dy / dist * currentSpeed, dz / dist * currentSpeed)
         mob.deltaMovement = mob.deltaMovement.lerp(desired, 0.12)

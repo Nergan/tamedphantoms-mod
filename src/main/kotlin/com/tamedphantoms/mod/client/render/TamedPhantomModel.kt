@@ -138,10 +138,11 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         rightWingBase.zRot = Mth.lerp(crawl, rightBaseZ, lift)
         leftWingTip.zRot = Mth.lerp(crawl, leftTipZ, 0f)
         rightWingTip.zRot = Mth.lerp(crawl, rightTipZ, 0f)
+        // Правое крыло смотрит в −X. Тот же yRot уводит его кончик в другую сторону, чем левый.
         leftWingBase.yRot = Mth.lerp(crawl, leftBaseY, sweep)
-        rightWingBase.yRot = Mth.lerp(crawl, rightBaseY, -sweep)
+        rightWingBase.yRot = Mth.lerp(crawl, rightBaseY, sweep)
         leftWingTip.yRot = Mth.lerp(crawl, 0f, tipSweep)
-        rightWingTip.yRot = Mth.lerp(crawl, 0f, -tipSweep)
+        rightWingTip.yRot = Mth.lerp(crawl, 0f, tipSweep)
         if (crawl > 0f) {
             val flat = 1f - crawl
             leftWingBase.xRot *= flat

@@ -32,6 +32,7 @@ import com.tamedphantoms.mod.util.PhantomAngerState
 import com.tamedphantoms.mod.util.PhantomSeatAssignment
 import com.tamedphantoms.mod.util.PhantomTamingLogic
 import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.BlockParticleOption
 import net.minecraft.core.particles.ParticleTypes
 import net.neoforged.neoforge.fluids.FluidType
 import net.minecraft.nbt.CompoundTag
@@ -300,7 +301,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private var takeoffQueued: Boolean = false
     private var diveEnergy: Double = 0.0
     private var riderTakeoffHold: Int = 0
+    private var takeoffRamp: Double = 1.0
     private var takeoffArmed: Boolean = false
+    private var crawlPlant: Int = 0
     private var lastFeedTick: Int = -100
     var cameraPitch: Float = 0f
     var cameraPitchO: Float = 0f
@@ -736,6 +739,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.advanceWingPhase()
             this.spawnShakeDroplets()
             this.spawnSwimTrail()
+            this.spawnCrawlFootprints()
             this.tickCameraFollow()
             this.tickRefuseVisual()
             clientAfterTick?.invoke(this)
@@ -835,25 +839,84 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun spawnSwimTrail() {
         if (!this.isInWater) return
-        val level = this.level()
         val yaw = this.yRot * Mth.DEG_TO_RAD
-        val rightX = Mth.cos(yaw).toDouble()
-        val rightZ = Mth.sin(yaw).toDouble()
-        val backX = Mth.sin(yaw).toDouble()
-        val backZ = -Mth.cos(yaw).toDouble()
+        val forwardX = -Mth.sin(yaw).toDouble()
+        val forwardZ = Mth.cos(yaw).toDouble()
+        val ahead = (this.x - this.xo) * forwardX + (this.z - this.zo) * forwardZ
+        if (ahead < 0.02) return
+        val level = this.level()
         val motion = this.deltaMovement
-        for (side in doubleArrayOf(-0.9, 0.9)) {
-            val px = this.x + rightX * side + backX * 0.4
-            val py = this.y + 0.28
-            val pz = this.z + rightZ * side + backZ * 0.4
-            level.addParticle(ParticleTypes.BUBBLE, px, py, pz, -motion.x * 0.25, 0.03, -motion.z * 0.25)
-            if (this.random.nextFloat() < 0.4f) {
-                level.addParticle(ParticleTypes.BUBBLE_POP, px, py + 0.1, pz, 0.0, 0.02, 0.0)
-            }
-            if (this.tickCount % 3 == 0 && this.random.nextBoolean()) {
-                level.addParticle(ParticleTypes.SPLASH, px, py, pz, -motion.x * 0.04, 0.01, -motion.z * 0.04)
+        for (side in doubleArrayOf(-1.0, 1.0)) {
+            val tip = this.wingTip(side, onGround = false)
+            level.addParticle(
+                ParticleTypes.BUBBLE,
+                tip.x,
+                tip.y,
+                tip.z,
+                -motion.x * 0.2,
+                0.03,
+                -motion.z * 0.2,
+            )
+            if (this.random.nextFloat() < 0.35f) {
+                level.addParticle(ParticleTypes.BUBBLE_POP, tip.x, tip.y + 0.08, tip.z, 0.0, 0.02, 0.0)
             }
         }
+    }
+
+    private fun spawnCrawlFootprints() {
+        if (this.wingCrawl < 0.55f || this.isInWater) return
+        if (hypot(this.x - this.xo, this.z - this.zo) < 0.01) return
+        val step = Mth.sin(this.crawlPhase)
+        val plant = when {
+            step > 0.78f -> 1
+            step < -0.78f -> -1
+            else -> 0
+        }
+        if (plant == 0) {
+            this.crawlPlant = 0
+            return
+        }
+        if (plant == this.crawlPlant) return
+        this.crawlPlant = plant
+        val tip = this.wingTip(if (plant > 0) -1.0 else 1.0, onGround = true)
+        val level = this.level()
+        var at = BlockPos.containing(tip.x, this.y - 0.02, tip.z)
+        var state = level.getBlockState(at)
+        if (state.getCollisionShape(level, at).isEmpty) {
+            at = at.below()
+            state = level.getBlockState(at)
+        }
+        if (state.getCollisionShape(level, at).isEmpty) return
+        val particle = BlockParticleOption(ParticleTypes.BLOCK, state)
+        repeat(4) {
+            level.addParticle(
+                particle,
+                tip.x + (this.random.nextDouble() - 0.5) * 0.16,
+                this.y + 0.08,
+                tip.z + (this.random.nextDouble() - 0.5) * 0.16,
+                (this.random.nextDouble() - 0.5) * 0.02,
+                0.012,
+                (this.random.nextDouble() - 0.5) * 0.02,
+            )
+        }
+    }
+
+    /** Кончик крыла: side −1 левый, +1 правый. */
+    private fun wingTip(side: Double, onGround: Boolean): Vec3 {
+        val yaw = this.yRot * Mth.DEG_TO_RAD
+        val scale = 1.0 + 0.15 * this.phantomSize
+        val reach = 1.35 * scale
+        val rightX = Mth.cos(yaw).toDouble()
+        val rightZ = Mth.sin(yaw).toDouble()
+        val forwardX = -Mth.sin(yaw).toDouble()
+        val forwardZ = Mth.cos(yaw).toDouble()
+        val along = if (onGround) 0.15 * scale else 0.35 * scale
+        val py = if (onGround) this.y + 0.06 else this.y + 0.34 * scale
+        return Vec3(
+            this.x + rightX * side * reach + forwardX * along,
+            py,
+            this.z + rightZ * side * reach + forwardZ * along,
+        )
     }
 
     private fun updateSkim(pressed: Boolean): Boolean {
@@ -885,21 +948,30 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.diveEnergy = 0.0
     }
 
-    private fun holdSurfaceTakeoff(wantedY: Double): Boolean {
-        val skimming = this.crawlLock || this.wingGroundBlend > 0.45f
-        if (!skimming || this.isInWater) {
-            this.takeoffArmed = false
-        } else if (wantedY > 0.0 && !this.takeoffArmed && this.riderTakeoffHold <= 0) {
-            this.riderTakeoffHold = 12
-            this.takeoffQueued = true
+    /**
+     * Разгон с земли примерно за 6 тиков: сразу отрыв, скорость до полной.
+     * Возвращает долю целевой скорости, 1 — обычный полёт.
+     */
+    private fun surfaceTakeoffScale(wantedY: Double): Double {
+        val skimming = (this.crawlLock || this.wingGroundBlend > 0.45f) && !this.isInWater
+        val justArmed = wantedY > 0.0 && skimming && !this.takeoffArmed && this.riderTakeoffHold <= 0
+        if (justArmed) {
             this.takeoffArmed = true
+            this.takeoffRamp = 0.28
+            this.riderTakeoffHold = 6
+            this.takeoffQueued = true
         }
         if (wantedY <= 0.0) this.takeoffArmed = false
+        val lifting = this.riderTakeoffHold > 0 && wantedY > 0.0
         if (this.riderTakeoffHold > 0) {
             this.riderTakeoffHold--
-            return true
+            if (lifting && !justArmed) {
+                this.takeoffRamp = (this.takeoffRamp + 0.12).coerceAtMost(1.0)
+            }
+        } else {
+            this.takeoffRamp = 1.0
         }
-        return false
+        return if (lifting) this.takeoffRamp else 1.0
     }
 
     fun diveWindActive(): Boolean {
@@ -911,7 +983,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     fun beginSurfaceTakeoff() {
         if (this.takeoffHoldTicks > 0) return
-        this.takeoffHoldTicks = 12
+        this.takeoffHoldTicks = 6
     }
 
     private fun tickCameraFollow() {
@@ -1325,7 +1397,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             descending && !ascending -> -1.0
             else -> 0.0
         }
-        val climbY = if (this.holdSurfaceTakeoff(wantedY)) 0.0 else wantedY
+        val climbY = wantedY
+        val lift = this.surfaceTakeoffScale(wantedY)
         val reversing = forwardInput < -1.0E-4f
         val flyingForward = forwardInput > 1.0E-4f
         this.hoverBlend = PhantomHover.step(this.hoverBlend, flyingForward)
@@ -1377,9 +1450,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val dive = 1.0 + this.diveEnergy * 0.9
         val diveVertical = 1.0 + this.diveEnergy * 0.45
         val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR * diveVertical
-        val targetVelocity = Vec3(wantedX * speed * dive, climbY * vSpeed, wantedZ * speed * dive)
+        val targetVelocity = Vec3(wantedX * speed * dive, climbY * vSpeed * lift, wantedZ * speed * dive)
+        val accel = if (lift < 0.999) 0.55 else ModConfig.FLIGHT_ACCELERATION
 
-        this.deltaMovement = this.deltaMovement.lerp(targetVelocity, ModConfig.FLIGHT_ACCELERATION)
+        this.deltaMovement = this.deltaMovement.lerp(targetVelocity, accel)
         this.move(MoverType.SELF, this.deltaMovement)
     }
 }
