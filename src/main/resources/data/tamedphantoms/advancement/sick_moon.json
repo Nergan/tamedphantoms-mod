@@ -1,0 +1,23 @@
+{
+  "parent": "tamedphantoms:release_phantom",
+  "display": {
+    "icon": {
+      "id": "minecraft:glowstone"
+    },
+    "title": {
+      "translate": "advancements.tamedphantoms.sick_moon.title"
+    },
+    "description": {
+      "translate": "advancements.tamedphantoms.sick_moon.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": true
+  },
+  "criteria": {
+    "heard_moon": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}
