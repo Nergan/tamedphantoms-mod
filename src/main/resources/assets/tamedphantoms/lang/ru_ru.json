@@ -19,6 +19,8 @@
   "tamedphantoms.configuration.flight": "Полёт",
   "tamedphantoms.configuration.flight.flight_speed": "Скорость полёта",
   "tamedphantoms.configuration.flight.owned_flight_speed": "Скорость своих фантомов",
+  "tamedphantoms.configuration.flight.owned_flight_speed.value": "%s (макс. %s)",
+  "tamedphantoms.configuration.flight.owned_flight_speed.tooltip": "Скорость только ваших прирученных фантомов. На этом сервере максимум — %s. Ползунок выше не пускает: если поставить больше, применится серверный максимум.",
 
   "advancements.tamedphantoms.tame_phantom.title": "Крылатый питомец",
   "advancements.tamedphantoms.tame_phantom.description": "Приручите фантома",

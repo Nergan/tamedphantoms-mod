@@ -19,6 +19,8 @@
   "tamedphantoms.configuration.flight": "Flight",
   "tamedphantoms.configuration.flight.flight_speed": "Flight speed",
   "tamedphantoms.configuration.flight.owned_flight_speed": "Speed of your phantoms",
+  "tamedphantoms.configuration.flight.owned_flight_speed.value": "%s (max %s)",
+  "tamedphantoms.configuration.flight.owned_flight_speed.tooltip": "Speed of your own tamed phantoms only. This server's maximum is %s. The slider stops there: a higher value is cut down to the server maximum.",
 
   "advancements.tamedphantoms.tame_phantom.title": "Winged Pet",
   "advancements.tamedphantoms.tame_phantom.description": "Tame a phantom",
