@@ -189,19 +189,19 @@ class PhantomAcrobaticsTest {
         var roll = 0f
         var loop = 0f
         var done = false
-        val steps = (PhantomAcrobatics.FULL_TURN / PhantomAcrobatics.STEP).toInt()
-        repeat(steps - 1) {
-            val step = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f)
+        val stepDeg = PhantomAcrobatics.DEFAULT_STEP
+        var guard = 0
+        while (!done && guard < 4000) {
+            val step = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f, step = stepDeg)
             pitch = step.pitch
             roll = step.roll
             loop = step.loop
             done = step.completedLoop
+            guard++
         }
-        assertTrue(!done)
+        assertTrue(done)
+        assertTrue(guard >= (PhantomAcrobatics.FULL_TURN / stepDeg).toInt())
         assertTrue(pitch > PhantomFlightAttitude.MOVE_PITCH)
-
-        val finished = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f)
-        assertTrue(finished.completedLoop)
 
         val hover = PhantomAcrobatics.step(40f, 30f, 40f, acrobatic = false, climb = 1f, strafe = 1f)
         assertTrue(!hover.completedLoop)
@@ -214,8 +214,8 @@ class PhantomAcrobaticsTest {
         assertTrue(!PhantomAcrobatics.allows(-0.4, 0.8, crawling = false, sitting = false, ridden = true))
 
         var barrelRoll = 0f
-        repeat(20) {
-            barrelRoll = PhantomAcrobatics.step(0f, barrelRoll, 0f, acrobatic = true, climb = 0f, strafe = 1f).roll
+        repeat((PhantomFlightAttitude.BANK / stepDeg).toInt() + 3) {
+            barrelRoll = PhantomAcrobatics.step(0f, barrelRoll, 0f, acrobatic = true, climb = 0f, strafe = 1f, step = stepDeg).roll
         }
         assertTrue(barrelRoll < -PhantomFlightAttitude.BANK)
     }

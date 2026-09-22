@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.network
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
@@ -17,7 +18,7 @@ object ModNetworking {
     }
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
-        val registrar = event.registrar("3")
+        val registrar = event.registrar("4")
 
         registrar.playToServer(
             PhantomInputPayload.TYPE,
@@ -58,6 +59,13 @@ object ModNetworking {
             if (vehicle is TamedPhantomEntity) {
                 vehicle.tryOwnerLoop(player)
             }
+        }
+
+        registrar.playToClient(
+            PhantomMoonPulsePayload.TYPE,
+            PhantomMoonPulsePayload.STREAM_CODEC,
+        ) { _, context ->
+            context.enqueueWork { MoonSickness.trigger() }
         }
     }
 }

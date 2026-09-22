@@ -102,6 +102,7 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val swim = Mth.lerp(partial, pet.swimBlendO, pet.swimBlend).coerceIn(0f, 1f)
         val step = Mth.sin(Mth.lerp(partial, pet.crawlPhaseO, pet.crawlPhase))
         val sweep = step * PhantomCrawl.SWEEP
+        val tipSweep = step * PhantomCrawl.TIP_SWEEP
         val lift = PhantomCrawl.LIFT
 
         var leftBaseZ = flightLeft
@@ -112,9 +113,10 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         var rightBaseY = 0f
 
         if (takeoff > 0.01f) {
-            val stroke = Mth.sin(angle)
-            val base = stroke * 0.95f
-            val tipWorld = Mth.sin(angle - 0.9f) * 1.15f
+            val strokePhase = angle * 2.5f
+            val stroke = Mth.sin(strokePhase)
+            val base = stroke * 1.05f
+            val tipWorld = Mth.sin(strokePhase - 1.05f) * 1.25f
             val tipLocal = tipWorld - base
             leftBaseZ = Mth.lerp(takeoff, leftBaseZ, base)
             rightBaseZ = Mth.lerp(takeoff, rightBaseZ, -base)
@@ -123,9 +125,9 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         }
 
         if (swim > 0.01f) {
-            val ripple = ageInTicks * 0.16f
-            val baseWave = Mth.sin(ripple) * 0.2f
-            val tipWave = Mth.sin(ripple - 1.05f) * 0.34f
+            val ripple = ageInTicks * 0.09f
+            val baseWave = Mth.sin(ripple) * 0.08f
+            val tipWave = Mth.sin(ripple - 1.05f) * 0.13f
             leftBaseZ = Mth.lerp(swim, leftBaseZ, baseWave)
             rightBaseZ = Mth.lerp(swim, rightBaseZ, -baseWave)
             leftTipZ = Mth.lerp(swim, leftTipZ, tipWave - baseWave)
@@ -138,8 +140,8 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         rightWingTip.zRot = Mth.lerp(crawl, rightTipZ, 0f)
         leftWingBase.yRot = Mth.lerp(crawl, leftBaseY, sweep)
         rightWingBase.yRot = Mth.lerp(crawl, rightBaseY, -sweep)
-        leftWingTip.yRot = Mth.lerp(crawl, leftWingTip.yRot, 0f)
-        rightWingTip.yRot = Mth.lerp(crawl, rightWingTip.yRot, 0f)
+        leftWingTip.yRot = Mth.lerp(crawl, 0f, tipSweep)
+        rightWingTip.yRot = Mth.lerp(crawl, 0f, -tipSweep)
         if (crawl > 0f) {
             val flat = 1f - crawl
             leftWingBase.xRot *= flat
@@ -197,6 +199,9 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         head.yRot = PhantomHeadLook.modelYawDegrees(netHeadYaw, upsideDown) * Mth.DEG_TO_RAD
         head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, pet.trackingLook)
         head.zRot = 0f
+        if (pet.refuseVisual > 0 && !upsideDown) {
+            head.yRot += Mth.sin(ageInTicks * 0.85f) * 0.42f
+        }
     }
 
     private fun poseShake(pet: TamedPhantomEntity, ageInTicks: Float) {

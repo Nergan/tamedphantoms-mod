@@ -44,6 +44,27 @@ object PhantomInteractionHandler {
         }
     }
 
+    @SubscribeEvent
+    fun onUseWhileRiding(event: PlayerInteractEvent.RightClickItem) {
+        val player = event.entity
+        val phantom = player.vehicle as? TamedPhantomEntity ?: return
+        if (!phantom.tamed || !phantom.isOwnedBy(player)) return
+        val stack = player.getItemInHand(event.hand)
+        if (stack.`is`(Items.POISONOUS_POTATO) || stack.`is`(ServerConfig.CONFIG.resolveReleaseItem())) return
+        val food = stack.get(DataComponents.FOOD) ?: return
+        if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return
+        if (player.level().isClientSide) {
+            event.cancellationResult = InteractionResult.CONSUME
+            event.isCanceled = true
+            return
+        }
+        if (phantom.healWithFood(food.nutrition())) {
+            if (!player.abilities.instabuild) stack.shrink(1)
+            event.cancellationResult = InteractionResult.CONSUME
+            event.isCanceled = true
+        }
+    }
+
     private fun handleWildPhantom(player: Player, phantom: Phantom, stack: ItemStack) {
         val level = phantom.level()
         if (level.isClientSide) return

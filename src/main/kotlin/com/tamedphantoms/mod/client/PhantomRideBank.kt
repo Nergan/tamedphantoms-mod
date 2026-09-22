@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.client
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.util.Mth
 import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ViewportEvent
@@ -15,7 +16,9 @@ object PhantomRideBank {
         if (phantom.isOrderedToSit()) return
         val partial = event.partialTick.toFloat()
         if (phantom.crawlVisual(partial) > 0.45f) return
-        event.pitch = event.pitch - phantom.ridePitchVisual(partial)
-        event.roll = event.roll + phantom.bankVisual(partial)
+        val pitch = Mth.lerp(partial, phantom.cameraPitchO, phantom.cameraPitch)
+        val roll = Mth.lerp(partial, phantom.cameraRollO, phantom.cameraRoll)
+        event.pitch = event.pitch - pitch
+        event.roll = event.roll + roll
     }
 }

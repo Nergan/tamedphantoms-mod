@@ -9,12 +9,16 @@ object PhantomCrawl {
     /** Небольшой подъём всего крыла, радианы. Кончик не загибается отдельно. */
     const val LIFT = 0.08f
 
-    /** Размах шага вперёд-назад, радианы. */
-    const val SWEEP = 0.42f
+    /** Размах основания: короткий ход кончика вперёд-назад, без складывания к телу. */
+    const val SWEEP = 0.14f
+
+    /** Дополнительный ход кончика по той же дуге. */
+    const val TIP_SWEEP = 0.1f
 
     fun advance(horizontal: Double, speedMultiple: Double): Float {
+        if (horizontal <= 0.0) return 0f
         val config = (speedMultiple / 1.25).coerceIn(0.25, 4.0)
-        val move = (horizontal / 0.05).coerceIn(0.0, 1.5)
-        return (0.22 * config * move).toFloat()
+        val move = (horizontal / 0.08).coerceIn(0.7, 1.25)
+        return (0.62f * config * move).toFloat()
     }
 }

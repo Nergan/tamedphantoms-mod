@@ -8,8 +8,10 @@ import net.minecraft.sounds.SoundSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.FlyingMob
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.PathfinderMob
+import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import kotlin.math.hypot
 
@@ -22,8 +24,8 @@ object PhantomScream {
 
     fun play(level: ServerLevel, phantom: TamedPhantomEntity) {
         val pos = phantom.blockPosition()
-        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 8f, 0.46f)
-        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 6.2f, 0.34f)
+        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 14f, 0.46f)
+        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 11f, 0.34f)
     }
 
     fun frighten(level: ServerLevel, phantom: TamedPhantomEntity, blindness: Boolean) {
@@ -34,14 +36,25 @@ object PhantomScream {
             mob !== phantom && mob.isAlive && mob.distanceToSqr(phantom) <= reach
         }
         for (mob in mobs) {
-            if (blindness) {
-                val current = mob.getEffect(MobEffects.BLINDNESS)
-                if (current == null) {
-                    mob.addEffect(MobEffectInstance(MobEffects.BLINDNESS, EFFECT_TICKS, 0, false, false, false))
-                }
+            if (blindness && mob !is Player) {
+                blindOnce(mob)
             }
             shoveAway(phantom, mob)
         }
+        if (blindness) {
+            val riding = phantom.passengers.filterIsInstance<Player>().toSet()
+            val players = level.getEntitiesOfClass(Player::class.java, box) { player ->
+                player.isAlive && player !in riding && player.distanceToSqr(phantom) <= reach
+            }
+            for (player in players) {
+                blindOnce(player)
+            }
+        }
+    }
+
+    private fun blindOnce(target: LivingEntity) {
+        if (target.getEffect(MobEffects.BLINDNESS) != null) return
+        target.addEffect(MobEffectInstance(MobEffects.BLINDNESS, EFFECT_TICKS, 0, false, false, false))
     }
 
     private fun shoveAway(phantom: TamedPhantomEntity, mob: Mob) {

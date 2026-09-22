@@ -53,8 +53,11 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
     val repelRadius: ModConfigSpec.DoubleValue
     val defendDurationTicks: ModConfigSpec.IntValue
     val flightSpeed: ModConfigSpec.DoubleValue
+    val acrobaticsStep: ModConfigSpec.DoubleValue
     val screamRadius: ModConfigSpec.DoubleValue
     val screamCooldownSeconds: ModConfigSpec.IntValue
+    val insomniaDays: ModConfigSpec.IntValue
+    val phantomGroupMultiplier: ModConfigSpec.DoubleValue
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null
@@ -117,6 +120,14 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
             .translation("$KEY_PREFIX.flight.flight_speed")
             .defineInRange("flight_speed", 1.25, 0.25, 4.0)
 
+        acrobaticsStep = builder
+            .comment(
+                "Насколько быстро в прямом полёте набираются бочка и мёртвая петля, в градусах за тик.",
+                "Меньше — фигуры медленнее. 0.7 — около 25 секунд на полный оборот при зажатой клавише.",
+            )
+            .translation("$KEY_PREFIX.flight.acrobatics_step")
+            .defineInRange("acrobatics_step", 0.7, 0.05, 12.0)
+
         builder.pop()
 
         builder.push("scream")
@@ -130,6 +141,27 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
             .comment("Перезарядка крика в секундах. Общая для хозяина, самозащиты и полнолуния.")
             .translation("$KEY_PREFIX.scream.scream_cooldown_seconds")
             .defineInRange("scream_cooldown_seconds", 30, 1, 600)
+
+        builder.pop()
+
+        builder.push("spawning")
+
+        insomniaDays = builder
+            .comment(
+                "Сколько суток игроку нужно не спать, чтобы ванильные фантомы могли появиться.",
+                "В ванили это 3. Проверка та же: чем дольше не спать после порога, тем выше шанс.",
+                "0 — порога нет, фантомы могут появляться в первую же ночь.",
+            )
+            .translation("$KEY_PREFIX.spawning.insomnia_days")
+            .defineInRange("insomnia_days", 1, 0, 30)
+
+        phantomGroupMultiplier = builder
+            .comment(
+                "Во сколько раз больше ванильных фантомов появляется в одной группе.",
+                "2.0 — вдвое больше, чем решила бы ваниль. 1.0 — как в ванили.",
+            )
+            .translation("$KEY_PREFIX.spawning.phantom_group_multiplier")
+            .defineInRange("phantom_group_multiplier", 2.0, 0.0, 16.0)
 
         builder.pop()
     }

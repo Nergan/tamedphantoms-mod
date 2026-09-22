@@ -22,7 +22,7 @@ object PhantomWingbeat {
     const val HOVER_AMPLITUDE = 1.18f
     const val TAKEOFF_RATE = 2.2f
     const val TAKEOFF_AMPLITUDE = 1.65f
-    const val TAKEOFF_TICKS = 64f
+        const val TAKEOFF_TICKS = 22f
     const val GROUND_RATE = 0.12f
     const val GROUND_AMPLITUDE = 0.02f
     const val SWIM_RATE = 0.16f

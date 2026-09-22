@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.util
 
+import com.tamedphantoms.mod.config.ServerConfig
 import kotlin.math.abs
 
 /**
@@ -8,8 +9,7 @@ import kotlin.math.abs
  */
 object PhantomAcrobatics {
 
-    const val STEP = 2f
-    const val EASE = 2.4f
+    const val DEFAULT_STEP = 0.7f
     const val FULL_TURN = 360f
     private const val FORWARD_EPS = 0.045
 
@@ -38,26 +38,32 @@ object PhantomAcrobatics {
         acrobatic: Boolean,
         climb: Float,
         strafe: Float,
+        step: Float = DEFAULT_STEP,
     ): State {
+        val rate = step.coerceIn(0.05f, 12f)
         if (!acrobatic) {
-            return State(ease(pitch), ease(roll), ease(loop), completedLoop = false)
+            return State(ease(pitch, rate), ease(roll, rate), ease(loop, rate), completedLoop = false)
         }
         val climbDir = when {
             climb > 0.15f -> 1f
             climb < -0.15f -> -1f
             else -> 0f
         }
-        val nextPitch = if (climbDir != 0f) pitch + climbDir * STEP else ease(pitch)
-        val nextLoop = if (climbDir != 0f) loop + climbDir * STEP else ease(loop)
+        val nextPitch = if (climbDir != 0f) pitch + climbDir * rate else ease(pitch, rate)
+        val nextLoop = if (climbDir != 0f) loop + climbDir * rate else ease(loop, rate)
         val turn = when {
             strafe > 0.15f -> -1f
             strafe < -0.15f -> 1f
             else -> 0f
         }
-        val nextRoll = if (turn != 0f) roll + turn * STEP else ease(roll)
+        val nextRoll = if (turn != 0f) roll + turn * rate else ease(roll, rate)
         val done = abs(nextLoop) >= FULL_TURN
         return State(nextPitch, nextRoll, if (done) 0f else nextLoop, done)
     }
 
-    private fun ease(value: Float): Float = PhantomHeadLook.approachDegrees(value, 0f, EASE)
+    fun configuredStep(): Float =
+        ServerConfig.CONFIG.acrobaticsStep.get().toFloat().coerceIn(0.05f, 12f)
+
+    private fun ease(value: Float, step: Float): Float =
+        PhantomHeadLook.approachDegrees(value, 0f, step * 1.2f)
 }

@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.entity.ai
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomEffectSpeed
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Mob
@@ -39,8 +40,11 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         }
 
         val dx = wantedX - mob.x
-        val dy = wantedY - mob.y
+        var dy = wantedY - mob.y
         val dz = wantedZ - mob.z
+        if (phantom.takeoffHoldTicks > 0 && dy > 0.0) {
+            dy = 0.0
+        }
         val horiz = sqrt(dx * dx + dz * dz)
         val dist = sqrt(dx * dx + dy * dy + dz * dz)
 
@@ -67,7 +71,8 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         val ease = (dist / 4.0).coerceIn(0.28, 1.0)
         val pace = PhantomFlightPace.pace(phantom)
         val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f) *
-            pace * PhantomFlightPace.waterScale(phantom.isUnderWater).toFloat()
+            pace * PhantomFlightPace.waterScale(phantom.isUnderWater).toFloat() *
+            PhantomEffectSpeed.scale(phantom).toFloat()
         currentSpeed = Mth.approach(currentSpeed, targetSpeed, 0.022f)
 
         val desired = Vec3(dx / dist * currentSpeed, dy / dist * currentSpeed, dz / dist * currentSpeed)

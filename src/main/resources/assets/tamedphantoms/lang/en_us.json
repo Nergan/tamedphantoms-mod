@@ -19,12 +19,16 @@
   "tamedphantoms.configuration.sound.tamed_sound_volume": "Tamed phantom volume",
   "tamedphantoms.configuration.flight": "Flight",
   "tamedphantoms.configuration.flight.flight_speed": "Flight speed",
+  "tamedphantoms.configuration.flight.acrobatics_step": "Barrel and loop speed",
   "tamedphantoms.configuration.flight.owned_flight_speed": "Speed of your phantoms",
   "tamedphantoms.configuration.flight.owned_flight_speed.value": "%s (max %s)",
   "tamedphantoms.configuration.flight.owned_flight_speed.tooltip": "Speed of your own tamed phantoms only. This server's maximum is %s. The slider stops there: a higher value is cut down to the server maximum.",
   "tamedphantoms.configuration.scream": "Scream",
   "tamedphantoms.configuration.scream.scream_radius": "Scream radius",
   "tamedphantoms.configuration.scream.scream_cooldown_seconds": "Scream cooldown (seconds)",
+  "tamedphantoms.configuration.spawning": "Spawning",
+  "tamedphantoms.configuration.spawning.insomnia_days": "Days awake before phantoms",
+  "tamedphantoms.configuration.spawning.phantom_group_multiplier": "Phantom group size",
 
   "tamedphantoms.scream.cooldown": "The phantom's scream will be ready in %s s.",
 
@@ -89,8 +93,8 @@
   "tamedphantoms.guide.page.defense.2": "A released phantom defends itself in the same way. A tamed phantom also keeps wild phantoms from crowding its owner.",
 
   "tamedphantoms.guide.entry.scream": "The Scream",
-  "tamedphantoms.guide.page.scream.1": "While the owner is riding, press $(k:key.tamedphantoms.scream)$() (R by default). The phantom lets out a deep, much louder cry. For one second its eyes burn red, and a glow outlines its body. Mobs within range flee and go blind for that second. The owner is spared. The first time you do this, you earn the advancement $(thing)Winged Beast$().",
-  "tamedphantoms.guide.page.scream.2": "The cry then needs about thirty seconds to return. If it is not ready, a red line tells you how long is left. Radius and cooldown are server settings. A phantom that is defending itself cries the same way, on the same cooldown. On a full moon a released phantom may cry even when it is not fighting: the eyes stay yellow, the glow still flashes, nearby mobs still flee, and nobody is blinded. Anyone who has that chunk loaded can hear it.",
+  "tamedphantoms.guide.page.scream.1": "While the owner is riding, press $(k:key.tamedphantoms.scream)$() (R by default). The phantom lets out a deep, much louder cry. For one second its eyes burn red, and a glow outlines its body. Mobs within range flee and go blind for that second. Anyone sitting on this phantom is spared. The owner on the ground is not, if the phantom screams while defending itself. The first time you do this, you earn the advancement $(thing)Winged Beast$().",
+  "tamedphantoms.guide.page.scream.2": "The cry then needs about thirty seconds to return. If it is not ready, a red line tells you how long is left. Radius and cooldown are server settings. A phantom that is defending itself cries the same way, on the same cooldown. On a full moon a released phantom may cry even when it is not fighting: the eyes stay yellow, the glow still flashes, nearby mobs still flee, nobody is blinded, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it.",
 
   "tamedphantoms.guide.entry.stats": "Strength",
   "tamedphantoms.guide.page.stats.1": "A tamed or released phantom is stronger than a wild one. It has forty health, its bite deals twelve damage, and it flies twice as fast. Each time it wounds something, it heals itself for the same amount.",

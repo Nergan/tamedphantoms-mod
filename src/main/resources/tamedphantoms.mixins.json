@@ -5,11 +5,13 @@
   "compatibilityLevel": "JAVA_21",
   "mixins": [
     "PhantomSitFlapMixin",
-    "PhantomMoveControlMixin"
+    "PhantomMoveControlMixin",
+    "PhantomSpawnerMixin"
   ],
-    "client": [
+  "client": [
     "PhantomModelLookMixin",
-    "PlayerRideBankMixin"
+    "PlayerRideBankMixin",
+    "MoonSkyMixin"
   ],
   "injectors": {
     "defaultRequire": 1
