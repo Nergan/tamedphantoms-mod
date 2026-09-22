@@ -13,13 +13,16 @@ class TamedPhantomLookControl(private val phantom: TamedPhantomEntity) : LookCon
     override fun tick() {
         if (phantom.isVehicle) {
             phantom.yHeadRot = phantom.yBodyRot
+            phantom.trackingLook = false
             return
         }
         val target = phantom.glanceTarget
         if (target == null || !target.isAlive) {
+            phantom.trackingLook = false
             easeTowardBody()
             return
         }
+        phantom.trackingLook = true
 
         val desiredYaw = PhantomHeadLook.clampRelative(
             phantom.yBodyRot,

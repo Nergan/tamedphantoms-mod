@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.mixin;
 import com.tamedphantoms.mod.entity.TamedPhantomEntity;
 import com.tamedphantoms.mod.util.PhantomHeadLook;
 import com.tamedphantoms.mod.util.PhantomHeldLook;
+import com.tamedphantoms.mod.util.PhantomTailBend;
 import net.minecraft.client.model.PhantomModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
@@ -33,10 +34,17 @@ public abstract class PhantomModelLookMixin {
         if (entity instanceof TamedPhantomEntity) {
             return;
         }
-        ModelPart head = ((PhantomModel<?>) (Object) this).root().getChild("body").getChild("head");
+        ModelPart body = ((PhantomModel<?>) (Object) this).root().getChild("body");
+        ModelPart head = body.getChild("head");
+        ModelPart tailBase = body.getChild("tail_base");
+        ModelPart tailTip = tailBase.getChild("tail_tip");
+        float bend = PhantomTailBend.INSTANCE.visual(entity);
+        tailBase.yRot = bend;
+        tailTip.yRot = bend * 1.45F;
+
         head.yRot = 0.0F;
         head.zRot = 0.0F;
-        head.xRot = 0.2F;
+        head.xRot = PhantomHeadLook.REST_PITCH;
         Player player = PhantomHeldLook.INSTANCE.nearestHoldingTameItem(entity);
         if (player == null) {
             return;
@@ -49,6 +57,6 @@ public abstract class PhantomModelLookMixin {
         float yaw = PhantomHeadLook.INSTANCE.clampRelative(bodyYaw, lookYaw, PhantomHeadLook.MAX_YAW_DEGREES);
         float pitch = PhantomHeadLook.INSTANCE.clampRelative(headPitch, lookPitch, PhantomHeadLook.MAX_PITCH_DEGREES);
         head.yRot = PhantomHeadLook.INSTANCE.modelYawDegrees(yaw - bodyYaw, false) * Mth.DEG_TO_RAD;
-        head.xRot = 0.2F + PhantomHeadLook.INSTANCE.modelPitchDegrees(pitch - headPitch, false) * Mth.DEG_TO_RAD;
+        head.xRot = PhantomHeadLook.INSTANCE.headPitchRadians(pitch - headPitch, false, true);
     }
 }

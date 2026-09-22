@@ -2,8 +2,10 @@ package com.tamedphantoms.mod.client.render
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomHeadLook
-import com.tamedphantoms.mod.util.PhantomHover
-import com.tamedphantoms.mod.util.PhantomRideTilt
+import com.tamedphantoms.mod.util.PhantomShake
+import com.tamedphantoms.mod.util.PhantomSitFlutter
+import com.tamedphantoms.mod.util.PhantomTailBend
+import com.tamedphantoms.mod.util.PhantomWingbeat
 import net.minecraft.client.model.PhantomModel
 import net.minecraft.client.model.geom.ModelPart
 import net.minecraft.util.Mth
@@ -35,7 +37,7 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val pet = entity as? TamedPhantomEntity
         val upsideDown = pet?.isOrderedToSit() == true
         if (upsideDown) {
-            foldWings()
+            poseSittingWings(ageInTicks)
             wagTail(ageInTicks)
         } else {
             super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch)
@@ -45,22 +47,45 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
                 poseWings(pet, ageInTicks)
             }
         }
+        bendTail(entity)
         if (pet != null) {
             poseHead(pet, ageInTicks, netHeadYaw, headPitch, upsideDown)
+            poseShake(pet, ageInTicks)
         }
+    }
+
+    private fun bendTail(entity: Phantom) {
+        val bend = PhantomTailBend.visual(entity)
+        tailBase.yRot += bend
+        tailTip.yRot += bend * TAIL_BEND_TIP
+    }
+
+    private fun poseSittingWings(ageInTicks: Float) {
+        foldWings()
+        val left = PhantomSitFlutter.lift(ageInTicks, 0)
+        val right = PhantomSitFlutter.lift(ageInTicks, 1)
+        leftWingBase.zRot = WING_REST - left
+        leftWingTip.zRot = WING_REST - left * 1.35f
+        rightWingBase.zRot = -WING_REST + right
+        rightWingTip.zRot = -WING_REST + right * 1.35f
     }
 
     private fun poseWings(pet: TamedPhantomEntity, ageInTicks: Float) {
         val phase = pet.wingPhase
         if (phase.isNaN()) return
         val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
-        val time = phase + partial * PhantomHover.flapRate(PhantomRideTilt.blend(pet, partial))
+        val rate = Mth.lerp(partial, pet.wingFlapRateO, pet.wingFlapRate)
+        val amplitude = Mth.lerp(partial, pet.wingFlapAmpO, pet.wingFlapAmp)
+        val droop = Mth.lerp(partial, pet.wingDroopO, pet.wingDroop)
+        val time = phase + partial * rate
         val angle = (pet.getUniqueFlapTickOffset() + time) * WING_SPEED_DEG * Mth.DEG_TO_RAD
-        val roll = Mth.cos(angle) * WING_AMPLITUDE_DEG * Mth.DEG_TO_RAD
-        leftWingBase.zRot = roll
-        leftWingTip.zRot = roll
-        rightWingBase.zRot = -roll
-        rightWingTip.zRot = -roll
+        val roll = Mth.cos(angle) * WING_AMPLITUDE_DEG * Mth.DEG_TO_RAD * amplitude
+        val dip = droop
+        val tip = droop * PhantomWingbeat.TIP_CANCEL
+        leftWingBase.zRot = roll - dip
+        leftWingTip.zRot = roll + tip
+        rightWingBase.zRot = -leftWingBase.zRot
+        rightWingTip.zRot = -leftWingTip.zRot
     }
 
     private fun foldWings() {
@@ -96,8 +121,10 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         upsideDown: Boolean,
     ) {
         if (pet.isVehicle && pet.controllingPassenger != null) {
+            val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
+            val nod = Mth.lerp(partial, pet.clientRideHeadO, pet.clientRideHead)
             head.yRot = 0f
-            head.xRot = HEAD_REST_PITCH
+            head.xRot = PhantomHeadLook.REST_PITCH + nod * Mth.DEG_TO_RAD
             head.zRot = 0f
             return
         }
@@ -105,14 +132,27 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val lookPitch = Mth.lerp(partial, pet.clientHeadPitchO, pet.clientHeadPitch)
         val relativePitch = lookPitch - bodyPitch
         head.yRot = PhantomHeadLook.modelYawDegrees(netHeadYaw, upsideDown) * Mth.DEG_TO_RAD
-        head.xRot = HEAD_REST_PITCH + PhantomHeadLook.modelPitchDegrees(relativePitch, upsideDown) * Mth.DEG_TO_RAD
+        head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, pet.trackingLook)
         head.zRot = 0f
     }
 
-    companion object {
-        /** Поза головы в ванильной сетке, радианы. */
-        private const val HEAD_REST_PITCH = 0.2f
+    private fun poseShake(pet: TamedPhantomEntity, ageInTicks: Float) {
+        val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
+        val envelope = PhantomShake.envelope(pet.shakeTicks, partial)
+        if (envelope <= 0.01f) return
+        val swing = Mth.sin(ageInTicks * 1.45f) * envelope
+        head.yRot += swing * 0.6f
+        head.zRot += Mth.cos(ageInTicks * 1.45f) * envelope * 0.18f
+        tailBase.yRot += Mth.sin(ageInTicks * 1.85f) * envelope * 0.75f
+        tailTip.yRot += Mth.sin(ageInTicks * 2.15f) * envelope * 0.95f
+        val wing = Mth.sin(ageInTicks * 1.7f) * envelope * 0.4f
+        leftWingBase.zRot += wing
+        leftWingTip.zRot += wing
+        rightWingBase.zRot -= wing
+        rightWingTip.zRot -= wing
+    }
 
+    companion object {
         /** Лёгкий угол крыльев в покое, как в PartPose ванильной модели. */
         private const val WING_REST = 0.1f
 
@@ -123,5 +163,6 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         private const val TAIL_WAG_SPEED = 0.14f
         private const val TAIL_WAG_AMPLITUDE = 0.28f
         private const val TAIL_TIP_EXTRA = 0.45f
+        private const val TAIL_BEND_TIP = 1.45f
     }
 }

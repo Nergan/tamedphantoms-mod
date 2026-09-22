@@ -14,7 +14,11 @@ import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.util.PhantomAngerLogic
 import com.tamedphantoms.mod.util.PhantomFlightPace
+import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomHover
+import com.tamedphantoms.mod.util.PhantomShake
+import com.tamedphantoms.mod.util.PhantomWetness
+import com.tamedphantoms.mod.util.PhantomWingbeat
 import com.tamedphantoms.mod.util.PhantomAngerState
 import com.tamedphantoms.mod.util.PhantomSeatAssignment
 import com.tamedphantoms.mod.util.PhantomTamingLogic
@@ -54,6 +58,7 @@ import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
 import java.util.Optional
 import java.util.UUID
+import kotlin.math.hypot
 import kotlin.math.sqrt
 
 /**
@@ -77,11 +82,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val DATA_HEAD_PITCH: EntityDataAccessor<Float> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_RIDE_HEAD: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_SHAKE: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_TRACKING: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
 
         private const val TAG_TAMED = "Tamed"
         private const val TAG_OWNER = "Owner"
         private const val TAG_SITTING = "Sitting"
         private const val TAG_SADDLED = "Saddled"
+        private const val TAG_WET_TRACKED = "WetTracked"
+        private const val TAG_IN_WATER = "InWater"
+        private const val TAG_IN_RAIN = "InRain"
 
         /**
          * Phantom НЕ предоставляет собственный публичный статический
@@ -107,6 +121,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
         /** 11 секунд. Ванильный HUD мигает, когда осталось ≤10 с (200 тиков). */
         private const val NIGHT_VISION_DURATION_TICKS = 220
+
+        /** Насколько голова кивает вверх/вниз при наборе и снижении верхом, градусы. */
+        private const val RIDE_HEAD_DEGREES = 32f
     }
 
     init {
@@ -139,6 +156,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         builder.define(DATA_SADDLED, false)
         builder.define(DATA_DEFENDING, false)
         builder.define(DATA_HEAD_PITCH, 0f)
+        builder.define(DATA_RIDE_HEAD, 0f)
+        builder.define(DATA_SHAKE, 0)
+        builder.define(DATA_TRACKING, false)
     }
 
     /**
@@ -153,6 +173,29 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var clientHeadPitchO: Float = 0f
     var clientHeadPitch: Float = 0f
 
+    /** Кивок головы верхом: минус — вверх, плюс — вниз. Пишет сервер по клавишам пилота. */
+    var rideHeadPitch: Float
+        get() = this.entityData.get(DATA_RIDE_HEAD)
+        set(value) = this.entityData.set(DATA_RIDE_HEAD, value)
+
+    var clientRideHeadO: Float = 0f
+    var clientRideHead: Float = 0f
+
+    /** Сколько тиков ещё трястись после воды или дождя. */
+    var shakeTicks: Int
+        get() = this.entityData.get(DATA_SHAKE)
+        set(value) = this.entityData.set(DATA_SHAKE, value)
+
+    /** Сервер выставляет, когда голова целится в кого-то, а не просто лежит в покое. */
+    var trackingLook: Boolean
+        get() = this.entityData.get(DATA_TRACKING)
+        set(value) = this.entityData.set(DATA_TRACKING, value)
+
+    /** Насколько yRot изменился за последний клиентский тик. Для изгиба хвоста. */
+    var turnYawDelta: Float = 0f
+
+    private var wetMemory: PhantomWetness.Memory = PhantomWetness.Memory()
+
     /**
      * 0 — летит по прицелу, 1 — завис и задрал нос.
      * Считает только клиент пилота: именно он двигает фантома верхом.
@@ -160,10 +203,23 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var hoverBlend: Float = 0f
 
     /**
-     * Накопленная фаза взмаха. Обычный полёт идёт в ногу с tickCount,
-     * зависание крутит её быстрее. NaN — ещё не тикали на клиенте.
+     * Накопленная фаза взмаха. Скорость зависит от режима полёта.
+     * NaN — ещё не тикали на клиенте.
      */
     var wingPhase: Float = Float.NaN
+
+    /** Сглаженные множители взмаха для кадра. Пишет только клиентский тик. */
+    var wingFlapRate: Float = 1f
+    var wingFlapRateO: Float = 1f
+    var wingFlapAmp: Float = 1f
+    var wingFlapAmpO: Float = 1f
+    var wingDroop: Float = 0f
+    var wingDroopO: Float = 0f
+
+    private var wingGroundBlend: Float = 0f
+    private var wingTakeoffBlend: Float = 0f
+    private var wingGlideBlend: Float = 0f
+    private var wingTouchedGround: Boolean = false
 
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
@@ -225,6 +281,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (owner != null) {
             tag.putUUID(TAG_OWNER, owner)
         }
+        tag.putBoolean(TAG_WET_TRACKED, this.wetMemory.tracked)
+        tag.putBoolean(TAG_IN_WATER, this.wetMemory.inWater)
+        tag.putBoolean(TAG_IN_RAIN, this.wetMemory.inRain)
     }
 
     override fun readAdditionalSaveData(tag: CompoundTag) {
@@ -236,6 +295,13 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.setPhantomSize(PET_PHANTOM_SIZE)
         this.applyPetStats()
         this.setNoGravity(!this.isOrderedToSit())
+        if (tag.getBoolean(TAG_WET_TRACKED)) {
+            this.wetMemory = PhantomWetness.Memory(
+                tracked = true,
+                inWater = tag.getBoolean(TAG_IN_WATER),
+                inRain = tag.getBoolean(TAG_IN_RAIN),
+            )
+        }
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
@@ -471,10 +537,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.level().isClientSide) {
             this.clientHeadPitchO = this.clientHeadPitch
             this.clientHeadPitch = this.headLookPitch
+            this.clientRideHeadO = this.clientRideHead
+            this.clientRideHead = this.rideHeadPitch
+            this.wingFlapRateO = this.wingFlapRate
+            this.wingFlapAmpO = this.wingFlapAmp
+            this.wingDroopO = this.wingDroop
             if (this.controllingPassenger == null) {
                 this.hoverBlend = 0f
             }
         }
+        val yawBefore = this.yRot
         if (this.isOrderedToSit()) {
             this.xRot = 0.0f
         }
@@ -482,7 +554,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         super.tick()
 
         if (this.level().isClientSide) {
+            this.turnYawDelta = PhantomHeadLook.wrapDegrees(this.yRot - yawBefore)
             this.advanceWingPhase()
+            this.spawnShakeDroplets()
         }
 
         if (this.isOrderedToSit()) {
@@ -496,6 +570,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             return
         }
 
+        this.tickWetExit()
+        this.tickRideHead()
         this.tickAngerTimer()
 
         if (this.tamed) {
@@ -508,6 +584,50 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 this.pilotAscending = false
                 this.pilotDescending = false
             }
+        }
+    }
+
+    private fun tickWetExit() {
+        val inWater = this.isInWater
+        val inRain = this.isInWaterOrRain && !inWater
+        val (next, shake) = PhantomWetness.step(this.wetMemory, inWater, inRain)
+        this.wetMemory = next
+        if (shake) {
+            this.shakeTicks = PhantomShake.LENGTH
+            this.playSound(SoundEvents.PLAYER_SPLASH, 0.65f, 1.2f)
+        }
+        if (this.shakeTicks > 0) {
+            this.shakeTicks--
+        }
+    }
+
+    private fun tickRideHead() {
+        val riding = this.isVehicle && this.controllingPassenger != null
+        val target = if (!riding) {
+            0f
+        } else when {
+            this.pilotAscending && !this.pilotDescending -> -RIDE_HEAD_DEGREES
+            this.pilotDescending && !this.pilotAscending -> RIDE_HEAD_DEGREES
+            else -> 0f
+        }
+        this.rideHeadPitch = PhantomHeadLook.approachDegrees(this.rideHeadPitch, target, 6f)
+    }
+
+    private fun spawnShakeDroplets() {
+        if (this.shakeTicks <= 0 || this.tickCount % 2 != 0) return
+        val level = this.level()
+        repeat(4) {
+            val dx = (this.random.nextDouble() - 0.5) * 1.6
+            val dz = (this.random.nextDouble() - 0.5) * 1.6
+            level.addParticle(
+                ParticleTypes.SPLASH,
+                this.x + dx,
+                this.y + 0.35,
+                this.z + dz,
+                dx * 0.15,
+                0.12,
+                dz * 0.15,
+            )
         }
     }
 
@@ -553,16 +673,36 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun advanceWingPhase() {
+        val vertical = this.y - this.yo
+        val horizontal = hypot(this.x - this.xo, this.z - this.zo)
+        val onGround = this.onGround()
+        val launch = this.wingTouchedGround && !onGround && this.wingGroundBlend > 0.4f
+        this.wingTouchedGround = onGround
+        this.wingTakeoffBlend = PhantomWingbeat.stepTakeoff(this.wingTakeoffBlend, launch)
+        this.wingGroundBlend = PhantomWingbeat.stepGround(this.wingGroundBlend, onGround)
         val pilot = this.controllingPassenger as? Player
-        val boost = if (pilot != null) {
-            PhantomHover.flapRate(PhantomHover.blendFromPitches(pilot.xRot, this.xRot)) - 1f
+        val hover = if (pilot != null) {
+            PhantomHover.blendFromPitches(pilot.xRot, this.xRot)
         } else {
             0f
         }
+        val descending = PhantomWingbeat.descending(vertical, hover, this.wingGroundBlend)
+        this.wingGlideBlend = PhantomWingbeat.stepGlide(this.wingGlideBlend, descending)
+        val pose = PhantomWingbeat.pose(
+            vertical,
+            horizontal,
+            hover,
+            this.wingGroundBlend,
+            this.wingTakeoffBlend,
+            this.wingGlideBlend,
+        )
+        this.wingFlapRate = pose.rate
+        this.wingFlapAmp = pose.amplitude
+        this.wingDroop = pose.droop
         if (this.wingPhase.isNaN()) {
             this.wingPhase = (this.tickCount - 1).toFloat()
         }
-        this.wingPhase += 1f + boost
+        this.wingPhase += pose.rate
     }
 
     private fun tickRiderNightVision() {
@@ -648,10 +788,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             descending && !ascending -> -1.0
             else -> 0.0
         }
-        val moving = kotlin.math.abs(forwardInput) > 1.0E-4f ||
+        val reversing = forwardInput < -1.0E-4f
+        val driving = forwardInput > 1.0E-4f ||
             kotlin.math.abs(strafeInput) > 1.0E-4f ||
             wantedY != 0.0
-        this.hoverBlend = PhantomHover.step(this.hoverBlend, moving)
+        this.hoverBlend = PhantomHover.step(this.hoverBlend, driving && !reversing)
 
         this.yRot = pilot.yRot
         this.yRotO = this.yRot
@@ -678,9 +819,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             wantedZ *= norm
         }
 
-        val speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK *
+        var speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK *
             PhantomFlightPace.pace(this).toDouble() *
             PhantomFlightPace.waterScale(this.isUnderWater)
+        if (reversing) speed *= PhantomHover.REVERSE_SPEED
         val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR
         val targetVelocity = Vec3(wantedX * speed, wantedY * vSpeed, wantedZ * speed)
 

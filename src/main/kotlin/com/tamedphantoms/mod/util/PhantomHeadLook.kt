@@ -48,6 +48,18 @@ object PhantomHeadLook {
     fun modelPitchDegrees(relativePitch: Float, upsideDown: Boolean): Float =
         if (upsideDown) -relativePitch else relativePitch
 
+    /**
+     * Покой головы в ванильной сетке смотрит примерно на 11° вниз.
+     * Если оставить этот запас, пока фантом целится в игрока на одной высоте,
+     * взгляд садится в грудь, а не в глаза.
+     */
+    const val REST_PITCH = 0.2f
+
+    fun headPitchRadians(relativePitch: Float, upsideDown: Boolean, tracking: Boolean): Float {
+        val rest = if (tracking && !upsideDown) 0f else REST_PITCH
+        return rest + modelPitchDegrees(relativePitch, upsideDown) * (Math.PI.toFloat() / 180f)
+    }
+
     fun approachDegrees(current: Float, target: Float, maxStep: Float): Float {
         val delta = wrapDegrees(target - current).coerceIn(-maxStep, maxStep)
         return current + delta
