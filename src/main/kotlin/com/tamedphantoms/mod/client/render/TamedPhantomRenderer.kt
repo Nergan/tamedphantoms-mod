@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import com.tamedphantoms.mod.client.texture.PhantomTextureProcessor
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.client.model.geom.ModelLayers
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.PhantomRenderer
 import net.minecraft.resources.ResourceLocation
@@ -38,6 +39,9 @@ import net.minecraft.world.entity.monster.Phantom
 class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRenderer(context) {
 
     init {
+        // Своя модель на ванильной сетке: взгляд головы, сложенные крылья и хвост.
+        // Слои читают модель через getModel(), поэтому подмена видна и глазам, и седлу.
+        this.model = TamedPhantomModel(context.bakeLayer(ModelLayers.PHANTOM))
         // Ванильный PhantomRenderer уже добавил свой собственный слой глаз
         // (обычных, зелёно-жёлтых) в своём конструкторе, который только что
         // отработал (super(context) выше). Безопасного публичного способа

@@ -33,6 +33,9 @@ saddle flight, owner defense, repelling wild phantoms, and more.
 и многое другое.
 '''
 
+[[mixins]]
+config = "${mod_id}.mixins.json"
+
 # Явная зависимость от NeoForge нужной версии.
 [[dependencies.${mod_id}]] #optional
 modId = "neoforge"

@@ -2,9 +2,12 @@ package com.tamedphantoms.mod.entity
 
 import com.tamedphantoms.mod.config.ModConfig
 import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.entity.ai.TamedPhantomBodyControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomDefendGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomFollowOwnerGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomLeashWanderGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomLookAtPlayerGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomLookControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomMoveControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
@@ -36,7 +39,7 @@ import net.minecraft.world.entity.Saddleable
 import net.minecraft.world.entity.SpawnGroupData
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier
 import net.minecraft.world.entity.ai.attributes.Attributes
-import net.minecraft.world.entity.ai.control.LookControl
+import net.minecraft.world.entity.ai.control.BodyRotationControl
 import net.minecraft.world.level.ServerLevelAccessor
 import net.minecraft.world.entity.item.ItemEntity
 import net.minecraft.world.entity.monster.Phantom
@@ -69,6 +72,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val DATA_DEFENDING: EntityDataAccessor<Boolean> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_HEAD_PITCH: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
 
         private const val TAG_TAMED = "Tamed"
         private const val TAG_OWNER = "Owner"
@@ -103,7 +108,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     init {
         this.moveControl = TamedPhantomMoveControl(this)
-        this.lookControl = LookControl(this)
+        this.lookControl = TamedPhantomLookControl(this)
         this.setPhantomSize(PET_PHANTOM_SIZE)
     }
 
@@ -130,7 +135,23 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         builder.define(DATA_SITTING, false)
         builder.define(DATA_SADDLED, false)
         builder.define(DATA_DEFENDING, false)
+        builder.define(DATA_HEAD_PITCH, 0f)
     }
+
+    /**
+     * Абсолютный тангаж взгляда головы, градусы. Не путать с [xRot]:
+     * тот наклоняет всё тело в полёте.
+     */
+    var headLookPitch: Float
+        get() = this.entityData.get(DATA_HEAD_PITCH)
+        set(value) = this.entityData.set(DATA_HEAD_PITCH, value)
+
+    /** Предыдущий и текущий тангаж для плавного кадра. Пишет только клиентский тик. */
+    var clientHeadPitchO: Float = 0f
+    var clientHeadPitch: Float = 0f
+
+    /** Куда сейчас смотреть. Цель выставляет [TamedPhantomLookAtPlayerGoal], крутит [TamedPhantomLookControl]. */
+    var glanceTarget: Player? = null
 
     var tamed: Boolean
         get() = this.entityData.get(DATA_TAMED)
@@ -246,11 +267,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     // ИИ / цели
     // =====================================================================
 
+    override fun createBodyControl(): BodyRotationControl = TamedPhantomBodyControl(this)
+
     override fun registerGoals() {
         this.goalSelector.addGoal(1, TamedPhantomDefendGoal(this))
         this.goalSelector.addGoal(2, TamedPhantomFollowOwnerGoal(this))
         this.goalSelector.addGoal(3, TamedPhantomLeashWanderGoal(this))
         this.goalSelector.addGoal(4, TamedPhantomWanderGoal(this))
+        this.goalSelector.addGoal(5, TamedPhantomLookAtPlayerGoal(this))
     }
 
     override fun canAttackType(type: EntityType<*>): Boolean = this.angerState.isActive
@@ -428,6 +452,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     // =====================================================================
 
     override fun tick() {
+        if (this.level().isClientSide) {
+            this.clientHeadPitchO = this.clientHeadPitch
+            this.clientHeadPitch = this.headLookPitch
+        }
+        if (this.isOrderedToSit()) {
+            this.xRot = 0.0f
+        }
+
         super.tick()
 
         if (this.isOrderedToSit()) {
@@ -445,7 +477,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
         if (this.tamed) {
             this.tickRepelWildPhantoms(level)
-            this.tickLookAtNearbyPlayer()
             this.tickOwnerRecall()
 
             if (this.isVehicle() && this.controllingPassenger != null) {
@@ -496,13 +527,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             val push = 0.12
             wild.push(dx / dist * push, 0.0, dz / dist * push)
         }
-    }
-
-    private fun tickLookAtNearbyPlayer() {
-        if (this.isVehicle()) return
-        if (!this.isOrderedToSit() && !this.onGround()) return
-        val nearest = this.level().getNearestPlayer(this, ModConfig.LOOK_AT_PLAYER_RANGE) ?: return
-        this.lookControl.setLookAt(nearest, 30.0f, 30.0f)
     }
 
     private fun tickRiderNightVision() {
@@ -582,6 +606,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.setRot(this.yRot, this.xRot)
         this.yBodyRot = this.yRot
         this.yHeadRot = this.yBodyRot
+        this.headLookPitch = this.xRot
 
         val forwardInput = pilot.zza
         val strafeInput = pilot.xxa
