@@ -2,7 +2,6 @@ package com.tamedphantoms.mod.event
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
-import com.tamedphantoms.mod.network.PhantomDismountTapPayload
 import com.tamedphantoms.mod.util.PhantomDismountLogic
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
@@ -21,11 +20,12 @@ import java.util.UUID
  * Выше 8 блоков воздуха под фантомом слезание — два отдельных нажатия Shift
  * за секунду. Первое только предупреждает.
  *
- * Считать нажатия по самому снятию нельзя: клиент и сервер делают это
- * вразнобой, и игрок остаётся сидеть на фантоме, который уже летит сам.
- * Нажатия считает клиент и присылает на сервер. Пока сервер не подтвердил
- * слезание, пассажира из списка не выкидывают — только возвращают ссылку
- * на фантома, которую ваниль обнуляет до [Entity.removePassenger].
+ * Нажатие читает клиент с самой клавиши приседа и шлёт его на сервер.
+ * К моменту слезания [Player.isShiftKeyDown] уже бывает ложью, поэтому
+ * считать удары по этому флагу или по каждому вызову снятия нельзя.
+ * Пока сервер не подтвердил второе нажатие, пассажира из списка не
+ * выкидывают — только возвращают ссылку на фантома, которую ваниль
+ * обнуляет до [Entity.removePassenger].
  */
 object PhantomDismount {
 
@@ -44,8 +44,6 @@ object PhantomDismount {
 
     /** Выставляет клиент. На сервере остаётся «никто», чтобы не тянуть клиентские классы. */
     var isLocalPlayer: (Player) -> Boolean = { false }
-
-    private var lastClientAttempt = Long.MIN_VALUE
 
     private val vehicleField = try {
         Entity::class.java.getDeclaredField("vehicle").apply { isAccessible = true }
@@ -76,10 +74,11 @@ object PhantomDismount {
         decision.remove()
     }
 
-    /** Новое нажатие Shift, уже отфильтрованное на клиенте. */
+    /** Фронт клавиши Shift, присланный клиентом. */
     fun onTap(player: ServerPlayer) {
-        val phantom = player.vehicle as? TamedPhantomEntity ?: return
-        if (!phantom.isAlive || player.isSpectator) return
+        if (player.isSpectator) return
+        val phantom = this.riddenPhantom(player) ?: return
+        if (!phantom.isAlive) return
         val now = player.level().gameTime
         if (this.airBelow(phantom) <= SAFE_DROP) {
             windows.remove(player.uuid)
@@ -91,7 +90,12 @@ object PhantomDismount {
         if (step.confirm) {
             windows.remove(player.uuid)
             armed.add(player.uuid)
-            player.stopRiding()
+            if (player.vehicle !== phantom && phantom.passengers.contains(player)) {
+                this.link(player, phantom)
+            }
+            if (player.vehicle === phantom) {
+                player.stopRiding()
+            }
             return
         }
         val start = step.windowStart
@@ -173,10 +177,7 @@ object PhantomDismount {
         if (player.level().isClientSide) {
             if (!isLocalPlayer(player)) return false
             if (this.clientDismountAllowed()) return false
-            val high = this.airBelow(phantom) > SAFE_DROP
-            if (!high) return false
-            this.noteClientAttempt(player.level().gameTime)
-            return !this.clientDismountAllowed()
+            return this.airBelow(phantom) > SAFE_DROP
         }
         if (this.airBelow(phantom) <= SAFE_DROP) {
             windows.remove(player.uuid)
@@ -189,15 +190,13 @@ object PhantomDismount {
         return true
     }
 
-    private fun noteClientAttempt(now: Long) {
-        val previous = if (lastClientAttempt == Long.MIN_VALUE) null else lastClientAttempt
-        val fresh = PhantomDismountLogic.isNewPress(now, previous)
-        lastClientAttempt = now
-        if (!fresh) return
-        try {
-            PacketDistributor.sendToServer(PhantomDismountTapPayload)
-        } catch (_: Throwable) {
-        }
+    private fun riddenPhantom(player: ServerPlayer): TamedPhantomEntity? {
+        val direct = player.vehicle as? TamedPhantomEntity
+        if (direct != null) return direct
+        val known = windows[player.uuid]?.phantomId ?: return null
+        val phantom = player.serverLevel().getEntity(known) as? TamedPhantomEntity ?: return null
+        if (phantom.passengers.contains(player)) return phantom
+        return null
     }
 
     private fun link(player: Player, phantom: TamedPhantomEntity): Boolean {

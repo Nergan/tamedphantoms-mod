@@ -53,17 +53,4 @@ class PhantomDismountLogicTest {
         assertTrue(tap.warn)
         assertEquals(121L, tap.windowStart)
     }
-
-    @Test
-    @DisplayName("Повтор на следующем тике — то же удержание")
-    fun nextTickIsSameHold() {
-        assertFalse(PhantomDismountLogic.isNewPress(now = 11, previous = 10))
-    }
-
-    @Test
-    @DisplayName("Пауза в два тика — новое нажатие")
-    fun gapIsNewPress() {
-        assertTrue(PhantomDismountLogic.isNewPress(now = 12, previous = 10))
-        assertTrue(PhantomDismountLogic.isNewPress(now = 5, previous = null))
-    }
 }
