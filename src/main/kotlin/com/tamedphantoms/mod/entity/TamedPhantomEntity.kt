@@ -150,8 +150,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var clientHeadPitchO: Float = 0f
     var clientHeadPitch: Float = 0f
 
-    /** Куда сейчас смотреть. Цель выставляет [TamedPhantomLookAtPlayerGoal], крутит [TamedPhantomLookControl]. */
-    var glanceTarget: Player? = null
+    /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
+    var glanceTarget: LivingEntity? = null
 
     var tamed: Boolean
         get() = this.entityData.get(DATA_TAMED)

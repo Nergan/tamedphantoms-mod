@@ -44,13 +44,16 @@ class TamedPhantomDefendGoal(private val phantom: TamedPhantomEntity) : Goal() {
     }
 
     override fun stop() {
+        if (phantom.glanceTarget === this.target) {
+            phantom.glanceTarget = null
+        }
         this.target = null
         this.attackCooldown = 0
     }
 
     override fun tick() {
         val target = this.target ?: return
-        phantom.lookControl.setLookAt(target, 30.0f, 30.0f)
+        phantom.glanceTarget = target
 
         val distSq = phantom.distanceToSqr(target)
         // Подлетаем к цели — переиспользуем штатный moveControl фантома (тот же,

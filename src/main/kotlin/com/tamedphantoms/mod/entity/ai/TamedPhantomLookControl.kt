@@ -5,8 +5,8 @@ import com.tamedphantoms.mod.util.PhantomHeadLook
 import net.minecraft.world.entity.ai.control.LookControl
 
 /**
- * Поворачивает только голову. Тангаж тела (xRot) — это наклон полёта,
- * ванильный LookControl затирал бы его взглядом на игрока.
+ * Поворачивает только голову: на игрока или, в самообороне, на цель атаки.
+ * Тангаж тела (xRot) — это наклон полёта, ванильный LookControl затирал бы его.
  */
 class TamedPhantomLookControl(private val phantom: TamedPhantomEntity) : LookControl(phantom) {
 
