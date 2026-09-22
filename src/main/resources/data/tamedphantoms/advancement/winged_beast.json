@@ -1,0 +1,23 @@
+{
+  "parent": "tamedphantoms:tame_phantom",
+  "display": {
+    "icon": {
+      "id": "tamedphantoms:tab_icon"
+    },
+    "title": {
+      "translate": "advancements.tamedphantoms.winged_beast.title"
+    },
+    "description": {
+      "translate": "advancements.tamedphantoms.winged_beast.description"
+    },
+    "frame": "challenge",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "screamed": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

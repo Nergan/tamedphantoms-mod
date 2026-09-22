@@ -1,0 +1,16 @@
+{
+  "name": "tamedphantoms.guide.entry.scream",
+  "icon": "tamedphantoms:tab_icon",
+  "category": "tamedphantoms:combat",
+  "sortnum": 2,
+  "pages": [
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.scream.1"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.scream.2"
+    }
+  ]
+}
