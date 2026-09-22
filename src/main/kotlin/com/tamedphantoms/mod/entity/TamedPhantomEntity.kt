@@ -5,6 +5,7 @@ import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.ai.TamedPhantomBodyControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomDefendGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomFollowOwnerGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomHeldItemLookGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomLeashWanderGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomLookAtPlayerGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomLookControl
@@ -274,7 +275,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.goalSelector.addGoal(2, TamedPhantomFollowOwnerGoal(this))
         this.goalSelector.addGoal(3, TamedPhantomLeashWanderGoal(this))
         this.goalSelector.addGoal(4, TamedPhantomWanderGoal(this))
-        this.goalSelector.addGoal(5, TamedPhantomLookAtPlayerGoal(this))
+        this.goalSelector.addGoal(5, TamedPhantomHeldItemLookGoal(this))
+        this.goalSelector.addGoal(6, TamedPhantomLookAtPlayerGoal(this))
     }
 
     override fun canAttackType(type: EntityType<*>): Boolean = this.angerState.isActive

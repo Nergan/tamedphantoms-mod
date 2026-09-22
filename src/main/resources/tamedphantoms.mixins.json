@@ -4,7 +4,11 @@
   "package": "com.tamedphantoms.mod.mixin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "PhantomSitFlapMixin"
+    "PhantomSitFlapMixin",
+    "PhantomMoveControlMixin"
+  ],
+  "client": [
+    "PhantomModelLookMixin"
   ],
   "injectors": {
     "defaultRequire": 1

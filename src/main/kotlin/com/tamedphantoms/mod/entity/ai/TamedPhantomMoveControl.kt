@@ -11,10 +11,16 @@ import kotlin.math.sqrt
  * Плавное управление полётом ручного/освобождённого фантома.
  *
  * Ванильный `PhantomMoveControl` слушает только внутреннее `moveTargetPoint`
- * и игнорирует [setWantedPosition]. Здесь точка Goal'ов используется напрямую,
- * а скорость и поворот сглаживаются, чтобы не было рывков и мгновенных остановок.
+ * и игнорирует [setWantedPosition]. Здесь точка Goal'ов используется напрямую.
+ * Скорость набирается плавно, а корпус доворачивается к точке за несколько тиков.
  */
 class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
+
+    /** Было 4° и 3.2° за тик — корпус заметно отставал от точки, куда он летит. */
+    private companion object {
+        const val YAW_STEP = 12f
+        const val PITCH_STEP = 8f
+    }
 
     private var currentSpeed = 0.12f
 
@@ -44,12 +50,12 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
 
         if (horiz > 1.0E-4) {
             val targetYaw = (Mth.atan2(dz, dx) * (180.0 / Math.PI)).toFloat() - 90.0f
-            mob.yRot = rotlerp(mob.yRot, targetYaw, 4.0f)
+            mob.yRot = rotlerp(mob.yRot, targetYaw, YAW_STEP)
             mob.yBodyRot = mob.yRot
         }
 
         val pitch = (-(Mth.atan2(-dy, horiz.coerceAtLeast(1.0E-4)) * (180.0 / Math.PI))).toFloat()
-        mob.xRot = rotlerp(mob.xRot, pitch.coerceIn(-32.0f, 32.0f), 3.2f)
+        mob.xRot = rotlerp(mob.xRot, pitch.coerceIn(-32.0f, 32.0f), PITCH_STEP)
 
         val ease = (dist / 4.0).coerceIn(0.28, 1.0)
         val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f)
