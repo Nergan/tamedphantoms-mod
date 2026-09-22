@@ -65,7 +65,7 @@
   "tamedphantoms.guide.page.tame.2": "By default every attempt succeeds. The chance can be changed in the server settings. A phantom that was released can be tamed again in the same way. Free phantoms of that kind have bright $(#e8c400)yellow eyes$().",
 
   "tamedphantoms.guide.entry.care": "Care and the Lead",
-  "tamedphantoms.guide.page.care.1": "Only the owner can feed a tamed phantom. Any food will restore its health. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. A released phantom will not abide a lead: it bolts aside and snaps free at once.",
+  "tamedphantoms.guide.page.care.1": "Only the owner can feed a tamed phantom. Any food will restore its health. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. A released phantom will not abide a lead: it drifts aside and snaps free, without shoving off the player.",
   "tamedphantoms.guide.page.care.2": "Sunlight will not burn it, and it will not drown. If you travel too far, it will appear beside you again, the way a wolf returns when it has been left behind.",
 
   "tamedphantoms.guide.entry.release": "Letting Go",

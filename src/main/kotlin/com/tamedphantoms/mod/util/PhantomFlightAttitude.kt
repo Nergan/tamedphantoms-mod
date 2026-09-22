@@ -28,11 +28,8 @@ object PhantomFlightAttitude {
         val headYaw: Float,
     )
 
-    /** Назад — тоже зависание, даже если одновременно есть стрейф или снижение. */
-    fun wantsHover(forwardSpeed: Double, strafeSpeed: Double): Boolean {
-        if (forwardSpeed < -MOVE_EPS) return true
-        return forwardSpeed <= MOVE_EPS && abs(strafeSpeed) <= MOVE_EPS
-    }
+    /** Назад, зависание и стрейф без хода вперёд держат позу зависания. */
+    fun wantsHover(forwardSpeed: Double, strafeSpeed: Double): Boolean = forwardSpeed <= MOVE_EPS
 
     fun pose(forwardSpeed: Double, strafeSpeed: Double, vertical: Double, hoverBlend: Float): Pose {
         val climb = (vertical / VERTICAL_FULL).coerceIn(-1.0, 1.0).toFloat()

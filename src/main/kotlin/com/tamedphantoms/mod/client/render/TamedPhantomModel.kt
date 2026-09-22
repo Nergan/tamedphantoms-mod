@@ -98,12 +98,55 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val flightLeft = roll
         val flightRight = -roll
         val crawl = Mth.lerp(partial, pet.wingCrawlO, pet.wingCrawl).coerceIn(0f, 1f)
-        val step = Mth.sin(Mth.lerp(partial, pet.crawlPhaseO, pet.crawlPhase)) * PhantomCrawl.STEP
-        val droop = PhantomCrawl.DROOP
-        leftWingBase.zRot = Mth.lerp(crawl, flightLeft, droop + step)
-        leftWingTip.zRot = Mth.lerp(crawl, flightLeft, droop * PhantomCrawl.TIP + step)
-        rightWingBase.zRot = Mth.lerp(crawl, flightRight, -droop + step)
-        rightWingTip.zRot = Mth.lerp(crawl, flightRight, -droop * PhantomCrawl.TIP + step)
+        val takeoff = Mth.lerp(partial, pet.wingTakeoffO, pet.wingTakeoffBlend).coerceIn(0f, 1f)
+        val swim = Mth.lerp(partial, pet.swimBlendO, pet.swimBlend).coerceIn(0f, 1f)
+        val step = Mth.sin(Mth.lerp(partial, pet.crawlPhaseO, pet.crawlPhase))
+        val sweep = step * PhantomCrawl.SWEEP
+        val lift = PhantomCrawl.LIFT
+
+        var leftBaseZ = flightLeft
+        var rightBaseZ = flightRight
+        var leftTipZ = flightLeft
+        var rightTipZ = flightRight
+        var leftBaseY = 0f
+        var rightBaseY = 0f
+
+        if (takeoff > 0.01f) {
+            val stroke = Mth.sin(angle)
+            val base = stroke * 0.95f
+            val tipWorld = Mth.sin(angle - 0.9f) * 1.15f
+            val tipLocal = tipWorld - base
+            leftBaseZ = Mth.lerp(takeoff, leftBaseZ, base)
+            rightBaseZ = Mth.lerp(takeoff, rightBaseZ, -base)
+            leftTipZ = Mth.lerp(takeoff, leftTipZ, tipLocal)
+            rightTipZ = Mth.lerp(takeoff, rightTipZ, -tipLocal)
+        }
+
+        if (swim > 0.01f) {
+            val ripple = ageInTicks * 0.16f
+            val baseWave = Mth.sin(ripple) * 0.2f
+            val tipWave = Mth.sin(ripple - 1.05f) * 0.34f
+            leftBaseZ = Mth.lerp(swim, leftBaseZ, baseWave)
+            rightBaseZ = Mth.lerp(swim, rightBaseZ, -baseWave)
+            leftTipZ = Mth.lerp(swim, leftTipZ, tipWave - baseWave)
+            rightTipZ = Mth.lerp(swim, rightTipZ, -(tipWave - baseWave))
+        }
+
+        leftWingBase.zRot = Mth.lerp(crawl, leftBaseZ, -lift)
+        rightWingBase.zRot = Mth.lerp(crawl, rightBaseZ, lift)
+        leftWingTip.zRot = Mth.lerp(crawl, leftTipZ, 0f)
+        rightWingTip.zRot = Mth.lerp(crawl, rightTipZ, 0f)
+        leftWingBase.yRot = Mth.lerp(crawl, leftBaseY, sweep)
+        rightWingBase.yRot = Mth.lerp(crawl, rightBaseY, -sweep)
+        leftWingTip.yRot = Mth.lerp(crawl, leftWingTip.yRot, 0f)
+        rightWingTip.yRot = Mth.lerp(crawl, rightWingTip.yRot, 0f)
+        if (crawl > 0f) {
+            val flat = 1f - crawl
+            leftWingBase.xRot *= flat
+            rightWingBase.xRot *= flat
+            leftWingTip.xRot *= flat
+            rightWingTip.xRot *= flat
+        }
     }
 
     private fun foldWings() {

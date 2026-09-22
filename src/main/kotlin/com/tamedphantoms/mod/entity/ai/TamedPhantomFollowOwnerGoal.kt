@@ -2,19 +2,29 @@ package com.tamedphantoms.mod.entity.ai
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomOwnerTeleport
+import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.util.Mth
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.level.levelgen.Heightmap
 import java.util.EnumSet
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * Следование за хозяином: издалека догоняет, рядом медленно кружит
- * вокруг него, плавно меняя радиус и высоту.
+ * Следование за хозяином: издалека догоняет, рядом кружит, иногда
+ * садится, подползает и снова взлетает.
  */
 class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goal() {
+
+    private enum class Mode {
+        FLY,
+        LAND,
+        CRAWL,
+        LAUNCH,
+    }
 
     companion object {
         private const val CATCH_UP_DISTANCE = 8.0
@@ -28,6 +38,12 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
     private var heightTicks = 0
     private var desiredRadius = 2.4
     private var desiredHeight = 1.5
+    private var mode = Mode.FLY
+    private var modeTicks = 0
+    private var landCooldown = 240
+    private var landX = 0.0
+    private var landY = 0.0
+    private var landZ = 0.0
 
     init {
         flags = EnumSet.of(Flag.MOVE)
@@ -57,10 +73,13 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
         desiredHeight = hoverHeight
         radiusTicks = 0
         heightTicks = 0
+        mode = Mode.FLY
+        modeTicks = 0
     }
 
     override fun stop() {
         owner = null
+        mode = Mode.FLY
     }
 
     override fun tick() {
@@ -72,7 +91,73 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
         if (dist > PhantomOwnerTeleport.DISTANCE) {
             return
         }
+        if (phantom.isDefending() || dist > 16.0) {
+            mode = Mode.FLY
+        }
+        if (landCooldown > 0) landCooldown--
 
+        when (mode) {
+            Mode.FLY -> tickFly(owner, dist)
+            Mode.LAND -> tickLand(owner, dist)
+            Mode.CRAWL -> tickCrawl(owner, dist)
+            Mode.LAUNCH -> tickLaunch(owner)
+        }
+    }
+
+    private fun tickFly(owner: Player, dist: Double) {
+        if (dist < 7.0 && landCooldown <= 0 && !owner.isInWater && phantom.random.nextInt(90) == 0) {
+            val spot = landingSpot(owner)
+            if (spot != null) {
+                landX = spot[0]
+                landY = spot[1]
+                landZ = spot[2]
+                mode = Mode.LAND
+                modeTicks = 90
+                return
+            }
+        }
+        flyOrbit(owner, dist)
+    }
+
+    private fun tickLand(owner: Player, dist: Double) {
+        modeTicks--
+        phantom.moveControl.setWantedPosition(landX, landY + 0.35, landZ, 0.5)
+        phantom.lookControl.setLookAt(owner, 12f, 12f)
+        val dx = phantom.x - landX
+        val dz = phantom.z - landZ
+        val arrived = dx * dx + dz * dz < 2.2 && phantom.y < landY + 1.4
+        if (modeTicks <= 0 || arrived) {
+            mode = Mode.CRAWL
+            modeTicks = 50 + phantom.random.nextInt(70)
+        }
+        if (dist > 14.0) mode = Mode.FLY
+    }
+
+    private fun tickCrawl(owner: Player, dist: Double) {
+        modeTicks--
+        val ground = surfaceY(Mth.floor(phantom.x), Mth.floor(phantom.z)) ?: owner.y
+        phantom.moveControl.setWantedPosition(owner.x, ground + 0.25, owner.z, 0.22)
+        phantom.lookControl.setLookAt(owner, 16f, 16f)
+        if (modeTicks <= 0 || dist < 1.8) {
+            mode = Mode.LAUNCH
+            modeTicks = 36
+            landCooldown = 320 + phantom.random.nextInt(180)
+        }
+        if (dist > 12.0) {
+            mode = Mode.FLY
+            landCooldown = 200
+        }
+    }
+
+    private fun tickLaunch(owner: Player) {
+        modeTicks--
+        phantom.moveControl.setWantedPosition(owner.x, owner.y + 2.4, owner.z, 0.72)
+        if (modeTicks <= 0 || phantom.y > owner.y + 1.3) {
+            mode = Mode.FLY
+        }
+    }
+
+    private fun flyOrbit(owner: Player, dist: Double) {
         if (radiusTicks-- <= 0) {
             radiusTicks = 36 + phantom.random.nextInt(48)
             desiredRadius = if (dist > CATCH_UP_DISTANCE) {
@@ -111,6 +196,30 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
         if (!catchingUp) {
             phantom.lookControl.setLookAt(owner, 12.0f, 12.0f)
         }
+    }
+
+    private fun landingSpot(owner: Player): DoubleArray? {
+        val level = phantom.level()
+        val angle = phantom.random.nextDouble() * Mth.TWO_PI
+        val radius = 1.4 + phantom.random.nextDouble() * 2.4
+        val x = Mth.floor(owner.x + cos(angle) * radius)
+        val z = Mth.floor(owner.z + sin(angle) * radius)
+        val surface = surfaceY(x, z) ?: return null
+        if (owner.y - surface > 5.5) return null
+        if (owner.isInWater) return null
+        val groundPos = BlockPos(x, Mth.floor(surface) - 1, z)
+        val ground = level.getBlockState(groundPos)
+        if (!ground.fluidState.isEmpty || ground.getCollisionShape(level, groundPos).isEmpty) return null
+        val above = level.getBlockState(BlockPos(x, Mth.floor(surface), z))
+        if (!above.fluidState.isEmpty) return null
+        return doubleArrayOf(x + 0.5, surface, z + 0.5)
+    }
+
+    private fun surfaceY(x: Int, z: Int): Double? {
+        val level = phantom.level()
+        val surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z)
+        if (surface <= level.minBuildHeight + 1) return null
+        return surface.toDouble()
     }
 
     private fun findOwner(): Player? {

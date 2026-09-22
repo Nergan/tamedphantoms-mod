@@ -280,10 +280,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var crawlPhaseO: Float = 0f
 
     private var wingGroundBlend: Float = 0f
-    private var wingTakeoffBlend: Float = 0f
+    var wingTakeoffBlend: Float = 0f
+    var wingTakeoffO: Float = 0f
     private var wingGlideBlend: Float = 0f
     private var wingTouchedGround: Boolean = false
     private var crawlLock: Boolean = false
+    private var skimLatched: Boolean = false
+    private var skimGroundTicks: Int = 0
+    private var skimAirTicks: Int = 0
+    private var takeoffQueued: Boolean = false
+    private var diveEnergy: Double = 0.0
+    private var windCooldown: Int = 0
+    private var motionSampleX: Double = Double.NaN
+    private var motionSampleY: Double = Double.NaN
+    private var motionSampleZ: Double = Double.NaN
 
     fun crawlVisual(partial: Float): Float =
         Mth.lerp(partial, this.wingCrawlO, this.wingCrawl).coerceIn(0f, 1f)
@@ -442,14 +452,25 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     override fun canBeLeashed(): Boolean = this.isAlive
 
-    fun boltFromLeash(dropLead: Boolean = true) {
-        val angle = this.random.nextFloat() * Mth.TWO_PI
-        val speed = 0.9
-        this.boltMotion = Vec3(-Mth.sin(angle) * speed, 0.42, Mth.cos(angle) * speed)
+    fun boltFromLeash(from: Entity, dropLead: Boolean = true) {
+        var dx = this.x - from.x
+        var dz = this.z - from.z
+        if (dx * dx + dz * dz < 0.04) {
+            val ang = this.random.nextFloat() * Mth.TWO_PI
+            dx = Mth.cos(ang).toDouble()
+            dz = Mth.sin(ang).toDouble()
+        }
+        val len = hypot(dx, dz).coerceAtLeast(0.1)
+        val side = if (this.random.nextBoolean()) 1.0 else -1.0
+        val sx = -dz / len * side * 0.9 + dx / len * 0.25
+        val sz = dx / len * side * 0.9 + dz / len * 0.25
+        val slen = hypot(sx, sz).coerceAtLeast(0.1)
+        val speed = 0.14
+        this.boltMotion = Vec3(sx / slen * speed, 0.02, sz / slen * speed)
         this.deltaMovement = this.boltMotion
-        this.yRot = angle * Mth.RAD_TO_DEG
+        this.yRot = (Mth.atan2(sz, sx) * Mth.RAD_TO_DEG).toFloat() - 90f
         this.yRotO = this.yRot
-        this.boltTicks = 14
+        this.boltTicks = 46
         this.navigation.stop()
         if (this.isLeashed) {
             this.dropLeash(true, dropLead)
@@ -665,6 +686,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.wingFlapAmpO = this.wingFlapAmp
             this.wingDroopO = this.wingDroop
             this.wingTipHangO = this.wingTipHang
+            this.wingTakeoffO = this.wingTakeoffBlend
             this.bankO = this.bank
             this.acroPitchO = this.acroPitch
             this.headBankYawO = this.headBankYaw
@@ -690,6 +712,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.tickFlightVisuals()
             this.advanceWingPhase()
             this.spawnShakeDroplets()
+            this.spawnSwimTrail()
         }
 
         if (this.isOrderedToSit()) {
@@ -708,6 +731,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.tickAngerTimer()
         this.tickScream(level)
         this.tickAcrobatics()
+        this.tickDiveWind()
         if (this.boltTicks > 0) {
             this.boltTicks--
         }
@@ -778,6 +802,83 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 0.12,
                 dz * 0.15,
             )
+        }
+    }
+
+    private fun spawnSwimTrail() {
+        if (!this.isInWater) return
+        val level = this.level()
+        val yaw = this.yRot * Mth.DEG_TO_RAD
+        val rightX = Mth.cos(yaw).toDouble()
+        val rightZ = Mth.sin(yaw).toDouble()
+        val backX = Mth.sin(yaw).toDouble()
+        val backZ = -Mth.cos(yaw).toDouble()
+        val motion = this.deltaMovement
+        for (side in doubleArrayOf(-0.9, 0.9)) {
+            val px = this.x + rightX * side + backX * 0.4
+            val py = this.y + 0.28
+            val pz = this.z + rightZ * side + backZ * 0.4
+            level.addParticle(ParticleTypes.BUBBLE, px, py, pz, -motion.x * 0.25, 0.03, -motion.z * 0.25)
+            if (this.random.nextFloat() < 0.4f) {
+                level.addParticle(ParticleTypes.BUBBLE_POP, px, py + 0.1, pz, 0.0, 0.02, 0.0)
+            }
+            if (this.tickCount % 3 == 0 && this.random.nextBoolean()) {
+                level.addParticle(ParticleTypes.SPLASH, px, py, pz, -motion.x * 0.04, 0.01, -motion.z * 0.04)
+            }
+        }
+    }
+
+    private fun updateSkim(pressed: Boolean): Boolean {
+        if (pressed) {
+            this.skimAirTicks = 0
+            this.skimGroundTicks++
+            if (this.skimGroundTicks >= 2) this.skimLatched = true
+        } else {
+            this.skimGroundTicks = 0
+            if (this.skimLatched) {
+                this.skimAirTicks++
+                if (this.skimAirTicks == 1) this.takeoffQueued = true
+                if (this.skimAirTicks >= 5) this.skimLatched = false
+            } else {
+                this.skimAirTicks = 0
+            }
+        }
+        return this.skimLatched
+    }
+
+    private fun flattenGroundAttitude() {
+        this.acroPitch = 0f
+        this.acroRoll = 0f
+        this.loopProgress = 0f
+        this.bank = 0f
+        this.bankTarget = 0f
+        this.headYawTarget = 0f
+        this.acrobatic = false
+        this.diveEnergy = 0.0
+    }
+
+    private fun tickDiveWind() {
+        if (this.windCooldown > 0) this.windCooldown--
+        val prevX = this.motionSampleX
+        val prevY = this.motionSampleY
+        val prevZ = this.motionSampleZ
+        this.motionSampleX = this.x
+        this.motionSampleY = this.y
+        this.motionSampleZ = this.z
+        if (prevY.isNaN() || !this.isVehicle) return
+        val dy = this.y - prevY
+        val horizontal = hypot(this.x - prevX, this.z - prevZ)
+        if (dy < -0.28 && horizontal > 0.35 && this.windCooldown <= 0) {
+            val volume = ((-dy - 0.2) * 1.4).toFloat().coerceIn(0.3f, 0.8f)
+            this.level().playSound(
+                null,
+                this.blockPosition(),
+                SoundEvents.ELYTRA_FLYING,
+                SoundSource.PLAYERS,
+                volume,
+                0.92f,
+            )
+            this.windCooldown = 16
         }
     }
 
@@ -881,7 +982,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun tickAcrobatics() {
         val ridden = this.isVehicle && this.controllingPassenger is Player
-        val crawling = ridden && PhantomGroundSkim.pressed(this)
+        val crawling = ridden && this.updateSkim(PhantomGroundSkim.pressed(this))
+        if (crawling) {
+            this.flattenGroundAttitude()
+            this.entityData.set(DATA_ACRO_PITCH, 0f)
+            this.entityData.set(DATA_ACRO_ROLL, 0f)
+            this.entityData.set(DATA_ACROBATIC, false)
+            return
+        }
         val acrobatic = PhantomAcrobatics.allows(
             this.pilotForward.toDouble(),
             this.pilotStrafe.toDouble(),
@@ -931,7 +1039,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun tickFlightVisuals() {
-        this.crawlLock = PhantomGroundSkim.pressed(this)
+        this.crawlLock = this.updateSkim(PhantomGroundSkim.pressed(this))
+        if (this.crawlLock) {
+            this.flattenGroundAttitude()
+        }
         if (this.isOrderedToSit() || this.crawlLock) {
             this.bankTarget = 0f
             this.headYawTarget = 0f
@@ -1018,7 +1129,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val vertical = this.y - this.yo
         val horizontal = hypot(this.x - this.xo, this.z - this.zo)
         val skimming = this.crawlLock
-        val launch = this.wingTouchedGround && !skimming && this.wingGroundBlend > 0.4f
+        val launch = this.takeoffQueued && this.wingGroundBlend > 0.35f
+        this.takeoffQueued = false
         this.wingTouchedGround = skimming
         this.wingTakeoffBlend = PhantomWingbeat.stepTakeoff(this.wingTakeoffBlend, launch)
         this.wingGroundBlend = PhantomWingbeat.stepGround(this.wingGroundBlend, skimming)
@@ -1148,8 +1260,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             else -> 0.0
         }
         val reversing = forwardInput < -1.0E-4f
-        val translating = forwardInput > 1.0E-4f || kotlin.math.abs(strafeInput) > 1.0E-4f
-        this.hoverBlend = PhantomHover.step(this.hoverBlend, translating && !reversing)
+        val flyingForward = forwardInput > 1.0E-4f
+        this.hoverBlend = PhantomHover.step(this.hoverBlend, flyingForward)
         val attitude = PhantomFlightAttitude.pose(
             forwardInput.toDouble(),
             strafeInput.toDouble(),
@@ -1188,8 +1300,15 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             PhantomFlightPace.pace(this).toDouble() *
             PhantomFlightPace.waterScale(this.isUnderWater)
         if (reversing) speed *= PhantomHover.REVERSE_SPEED
-        val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR
-        val targetVelocity = Vec3(wantedX * speed, wantedY * vSpeed, wantedZ * speed)
+        if (wantedY < 0.0 && !this.crawlLock) {
+            this.diveEnergy = (this.diveEnergy + 0.016).coerceAtMost(1.0)
+        } else {
+            this.diveEnergy = (this.diveEnergy - 0.04).coerceAtLeast(0.0)
+        }
+        val dive = 1.0 + this.diveEnergy * 0.9
+        val diveVertical = 1.0 + this.diveEnergy * 0.45
+        val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR * diveVertical
+        val targetVelocity = Vec3(wantedX * speed * dive, wantedY * vSpeed, wantedZ * speed * dive)
 
         this.deltaMovement = this.deltaMovement.lerp(targetVelocity, ModConfig.FLIGHT_ACCELERATION)
         this.move(MoverType.SELF, this.deltaMovement)

@@ -155,7 +155,7 @@ class PhantomFlightAttitudeTest {
         assertTrue(PhantomFlightAttitude.wantsHover(0.0, 0.0))
         assertTrue(PhantomFlightAttitude.wantsHover(-0.3, 0.2))
         assertTrue(!PhantomFlightAttitude.wantsHover(0.3, 0.0))
-        assertTrue(!PhantomFlightAttitude.wantsHover(0.0, 0.3))
+        assertTrue(PhantomFlightAttitude.wantsHover(0.0, 0.3))
 
         val hover = PhantomFlightAttitude.pose(0.0, 0.0, -0.4, hoverBlend = 1f)
         assertEquals(PhantomHover.PITCH_DEGREES, hover.pitch, 0.001f)
@@ -189,7 +189,8 @@ class PhantomAcrobaticsTest {
         var roll = 0f
         var loop = 0f
         var done = false
-        repeat(59) {
+        val steps = (PhantomAcrobatics.FULL_TURN / PhantomAcrobatics.STEP).toInt()
+        repeat(steps - 1) {
             val step = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f)
             pitch = step.pitch
             roll = step.roll
@@ -209,9 +210,11 @@ class PhantomAcrobaticsTest {
         assertTrue(!PhantomAcrobatics.allows(0.0, 0.0, crawling = false, sitting = false, ridden = true))
         assertTrue(!PhantomAcrobatics.allows(-0.4, 0.0, crawling = false, sitting = false, ridden = true))
         assertTrue(PhantomAcrobatics.allows(0.4, 0.0, crawling = false, sitting = false, ridden = true))
+        assertTrue(!PhantomAcrobatics.allows(0.0, 0.8, crawling = false, sitting = false, ridden = true))
+        assertTrue(!PhantomAcrobatics.allows(-0.4, 0.8, crawling = false, sitting = false, ridden = true))
 
         var barrelRoll = 0f
-        repeat(5) {
+        repeat(20) {
             barrelRoll = PhantomAcrobatics.step(0f, barrelRoll, 0f, acrobatic = true, climb = 0f, strafe = 1f).roll
         }
         assertTrue(barrelRoll < -PhantomFlightAttitude.BANK)

@@ -83,7 +83,7 @@ object PhantomInteractionHandler {
             if (phantom.isLeashed && !player.abilities.instabuild) {
                 stack.shrink(1)
             }
-            phantom.boltFromLeash(dropLead = !player.abilities.instabuild)
+            phantom.boltFromLeash(player, dropLead = !player.abilities.instabuild)
             return
         }
 

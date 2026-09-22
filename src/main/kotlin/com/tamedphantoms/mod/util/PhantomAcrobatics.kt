@@ -3,14 +3,15 @@ package com.tamedphantoms.mod.util
 import kotlin.math.abs
 
 /**
- * Пока фантом летит вперёд или вбок, набор, снижение и поворот не останавливаются
- * на фиксированном угле: наклон копится и может пройти полный оборот.
- * Зависание, задний ход, ползание и сидение этот набор сбрасывают.
+ * Петля и бочка только в полёте вперёд. Набор копится медленно.
+ * Зависание, стрейф на месте, задний ход, ползание и сидение набор сбрасывают.
  */
 object PhantomAcrobatics {
 
-    const val STEP = 6f
+    const val STEP = 2f
+    const val EASE = 2.4f
     const val FULL_TURN = 360f
+    private const val FORWARD_EPS = 0.045
 
     data class State(
         val pitch: Float,
@@ -27,7 +28,7 @@ object PhantomAcrobatics {
         ridden: Boolean,
     ): Boolean {
         if (!ridden || sitting || crawling) return false
-        return !PhantomFlightAttitude.wantsHover(forward, strafe)
+        return forward > FORWARD_EPS
     }
 
     fun step(
@@ -58,5 +59,5 @@ object PhantomAcrobatics {
         return State(nextPitch, nextRoll, if (done) 0f else nextLoop, done)
     }
 
-    private fun ease(value: Float): Float = PhantomHeadLook.approachDegrees(value, 0f, STEP)
+    private fun ease(value: Float): Float = PhantomHeadLook.approachDegrees(value, 0f, EASE)
 }

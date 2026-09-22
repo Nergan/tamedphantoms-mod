@@ -22,8 +22,8 @@ object PhantomScream {
 
     fun play(level: ServerLevel, phantom: TamedPhantomEntity) {
         val pos = phantom.blockPosition()
-        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 3.2f, 0.46f)
-        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 2.4f, 0.34f)
+        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 8f, 0.46f)
+        level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 6.2f, 0.34f)
     }
 
     fun frighten(level: ServerLevel, phantom: TamedPhantomEntity, blindness: Boolean) {

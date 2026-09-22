@@ -5,7 +5,7 @@ import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ViewportEvent
 
-/** Крен и тангаж камеры повторяют модель, пока фантом летит вперёд. В зависании и задом тангаж не трогает. */
+/** Крен и тангаж камеры повторяют модель в полёте вперёд. Знаки противоположны повороту модели: так горизонт совпадает с ней. */
 object PhantomRideBank {
 
     @SubscribeEvent
@@ -14,7 +14,8 @@ object PhantomRideBank {
         val phantom = rider.vehicle as? TamedPhantomEntity ?: return
         if (phantom.isOrderedToSit()) return
         val partial = event.partialTick.toFloat()
-        event.pitch = event.pitch + phantom.ridePitchVisual(partial)
-        event.roll = event.roll - phantom.bankVisual(partial)
+        if (phantom.crawlVisual(partial) > 0.45f) return
+        event.pitch = event.pitch - phantom.ridePitchVisual(partial)
+        event.roll = event.roll + phantom.bankVisual(partial)
     }
 }
