@@ -8,7 +8,8 @@
     "PhantomMoveControlMixin"
   ],
     "client": [
-    "PhantomModelLookMixin"
+    "PhantomModelLookMixin",
+    "PlayerRideBankMixin"
   ],
   "injectors": {
     "defaultRequire": 1

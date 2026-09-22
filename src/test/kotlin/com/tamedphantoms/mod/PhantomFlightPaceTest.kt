@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod
 
+import com.tamedphantoms.mod.util.PhantomFlightAttitude
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomHover
@@ -38,7 +39,7 @@ class PhantomFlightPaceTest {
 class PhantomHoverTest {
 
     @Test
-    @DisplayName("Зависание набирается примерно за секунду и даёт 28 градусов и взмах ×1.75")
+    @DisplayName("Зависание набирается примерно за секунду и даёт 22 градуса и взмах ×1.75")
     fun blendPitchAndFlap() {
         var blend = 0f
         repeat(20) { blend = PhantomHover.step(blend, moving = false) }
@@ -47,7 +48,7 @@ class PhantomHoverTest {
         blend = PhantomHover.step(1f, moving = true)
         assertTrue(blend < 1f)
 
-        assertEquals(28f, PhantomHover.pitchOffset(1f), 0.001f)
+        assertEquals(22f, PhantomHover.pitchOffset(1f), 0.001f)
         assertEquals(0f, PhantomHover.pitchOffset(0f), 0.001f)
         assertEquals(1.75f, PhantomHover.flapRate(1f), 0.001f)
         assertEquals(1f, PhantomHover.flapRate(0f), 0.001f)
@@ -58,9 +59,9 @@ class PhantomHoverTest {
     @DisplayName("Клевок корпуса — это разница между наклоном тела и прицелом пилота")
     fun noseUpComesFromBodyPitch() {
         assertEquals(0f, PhantomHover.noseUpDegrees(40f, 20f), 0.001f)
-        assertEquals(28f, PhantomHover.noseUpDegrees(0f, 28f), 0.001f)
+        assertEquals(22f, PhantomHover.noseUpDegrees(0f, 22f), 0.001f)
         assertEquals(0f, PhantomHover.blendFromPitches(40f, 20f), 0.001f)
-        assertEquals(1f, PhantomHover.blendFromPitches(0f, 28f), 0.001f)
+        assertEquals(1f, PhantomHover.blendFromPitches(0f, 22f), 0.001f)
     }
 }
 
@@ -84,12 +85,14 @@ class PhantomPoseTest {
     }
 
     @Test
-    @DisplayName("Лёжа, крылья поднимаются по очереди")
+    @DisplayName("Лёжа, крылья по очереди поднимаются редкой фразой")
     fun sittingWingsAlternate() {
-        assertTrue(PhantomSitFlutter.lift(9f, 0) > 0.4f)
-        assertEquals(0f, PhantomSitFlutter.lift(9f, 1), 0.0001f)
-        assertEquals(0f, PhantomSitFlutter.lift(49f, 0), 0.0001f)
-        assertTrue(PhantomSitFlutter.lift(49f, 1) > 0.4f)
+        assertTrue(PhantomSitFlutter.lift(18f, 0) > 0.1f)
+        assertEquals(0f, PhantomSitFlutter.lift(18f, 1), 0.0001f)
+        assertTrue(PhantomSitFlutter.lift(40f, 1) > 0.1f)
+        assertEquals(0f, PhantomSitFlutter.lift(40f, 0), 0.0001f)
+        assertEquals(0f, PhantomSitFlutter.lift(200f, 0), 0.0001f)
+        assertEquals(0f, PhantomSitFlutter.lift(200f, 1), 0.0001f)
     }
 
     @Test
@@ -128,12 +131,46 @@ class PhantomWingbeatTest {
     fun groundAndTakeoff() {
         val skim = PhantomWingbeat.pose(0.0, 0.2, 0f, 1f, 0f, 0f)
         assertEquals(PhantomWingbeat.GROUND_DROOP, skim.droop, 0.001f)
-        assertTrue(skim.amplitude < 0.2f)
+        assertEquals(1f, skim.tipHang, 0.001f)
+        assertTrue(skim.amplitude < 0.05f)
 
         val launch = PhantomWingbeat.pose(0.2, 0.2, 0f, 1f, 1f, 0f)
         assertEquals(0f, launch.droop, 0.001f)
         assertEquals(PhantomWingbeat.TAKEOFF_RATE, launch.rate, 0.001f)
         assertEquals(1f, PhantomWingbeat.stepTakeoff(0.2f, launch = true), 0.001f)
+
+        val swim = PhantomWingbeat.pose(0.3, 0.6, 1f, 0f, 0f, 0f, swim = 1f)
+        assertTrue(swim.rate < 0.25f)
+        assertTrue(swim.amplitude < 0.1f)
+    }
+}
+
+class PhantomFlightAttitudeTest {
+
+    @Test
+    @DisplayName("Чистое снижение и задний ход держат нос в зависании, ход вперёд при снижении опускает его")
+    fun pitchFollowsFlightNotLook() {
+        assertTrue(PhantomFlightAttitude.wantsHover(0.0, 0.0))
+        assertTrue(PhantomFlightAttitude.wantsHover(-0.3, 0.2))
+        assertTrue(!PhantomFlightAttitude.wantsHover(0.3, 0.0))
+        assertTrue(!PhantomFlightAttitude.wantsHover(0.0, 0.3))
+
+        val hover = PhantomFlightAttitude.pose(0.0, 0.0, -0.4, hoverBlend = 1f)
+        assertEquals(PhantomHover.PITCH_DEGREES, hover.pitch, 0.001f)
+        assertEquals(0f, hover.bank, 0.001f)
+
+        val dive = PhantomFlightAttitude.pose(0.4, 0.0, -0.4, hoverBlend = 0f)
+        assertTrue(dive.pitch < 0f)
+        assertTrue(dive.pitch > -PhantomFlightAttitude.MOVE_PITCH - 0.01f)
+
+        val climb = PhantomFlightAttitude.pose(0.4, 0.0, 0.4, hoverBlend = 0f)
+        assertTrue(climb.pitch > 0f)
+        assertTrue(climb.pitch < PhantomHover.PITCH_DEGREES)
+
+        val bank = PhantomFlightAttitude.pose(0.4, 0.4, 0.0, hoverBlend = 0f)
+        assertEquals(PhantomFlightAttitude.BANK, bank.bank, 0.001f)
+        assertEquals(PhantomFlightAttitude.HEAD_YAW, bank.headYaw, 0.001f)
+        assertTrue(bank.headYaw <= PhantomFlightAttitude.HEAD_YAW)
     }
 }
 

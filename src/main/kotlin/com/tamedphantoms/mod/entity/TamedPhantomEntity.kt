@@ -14,6 +14,8 @@ import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.util.PhantomAngerLogic
 import com.tamedphantoms.mod.util.PhantomFlightPace
+import com.tamedphantoms.mod.util.PhantomFlightAttitude
+import com.tamedphantoms.mod.util.PhantomGroundSkim
 import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomHover
 import com.tamedphantoms.mod.util.PhantomShake
@@ -197,10 +199,29 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private var wetMemory: PhantomWetness.Memory = PhantomWetness.Memory()
 
     /**
-     * 0 — летит по прицелу, 1 — завис и задрал нос.
-     * Считает только клиент пилота: именно он двигает фантома верхом.
+     * 0 — летит, 1 — завис, пятится или снижается без хода вперёд и вбок.
+     * У пилота считается по клавишам, у остальных клиентов — по скорости.
      */
     var hoverBlend: Float = 0f
+
+    /** Крен в градусах. Положительный — влево. Сглаживается на клиенте. */
+    var bank: Float = 0f
+    var bankO: Float = 0f
+
+    /** Поворот головы в сторону крена, градусы. Не больше [PhantomFlightAttitude.HEAD_YAW]. */
+    var headBankYaw: Float = 0f
+    var headBankYawO: Float = 0f
+
+    /** Тангаж хвоста, градусы. Вверх при снижении, вниз при наборе. */
+    var tailPitch: Float = 0f
+    var tailPitchO: Float = 0f
+
+    /** 0 — воздух, 1 — глаза под водой. */
+    var swimBlend: Float = 0f
+    var swimBlendO: Float = 0f
+
+    private var bankTarget: Float = 0f
+    private var headYawTarget: Float = 0f
 
     /**
      * Накопленная фаза взмаха. Скорость зависит от режима полёта.
@@ -215,6 +236,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var wingFlapAmpO: Float = 1f
     var wingDroop: Float = 0f
     var wingDroopO: Float = 0f
+    var wingTipHang: Float = 0f
+    var wingTipHangO: Float = 0f
 
     private var wingGroundBlend: Float = 0f
     private var wingTakeoffBlend: Float = 0f
@@ -542,9 +565,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.wingFlapRateO = this.wingFlapRate
             this.wingFlapAmpO = this.wingFlapAmp
             this.wingDroopO = this.wingDroop
-            if (this.controllingPassenger == null) {
-                this.hoverBlend = 0f
-            }
+            this.wingTipHangO = this.wingTipHang
+            this.bankO = this.bank
+            this.headBankYawO = this.headBankYaw
+            this.tailPitchO = this.tailPitch
+            this.swimBlendO = this.swimBlend
         }
         val yawBefore = this.yRot
         if (this.isOrderedToSit()) {
@@ -555,6 +580,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
         if (this.level().isClientSide) {
             this.turnYawDelta = PhantomHeadLook.wrapDegrees(this.yRot - yawBefore)
+            this.tickFlightVisuals()
             this.advanceWingPhase()
             this.spawnShakeDroplets()
         }
@@ -672,20 +698,50 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    private fun tickFlightVisuals() {
+        if (this.isOrderedToSit()) {
+            this.bankTarget = 0f
+            this.headYawTarget = 0f
+        }
+        val vertical = this.y - this.yo
+        val (forward, strafe) = PhantomFlightAttitude.split(this.yRot, this.x - this.xo, this.z - this.zo)
+        val localRide = this.isControlledByLocalInstance && this.controllingPassenger is Player
+        if (!localRide && !this.isOrderedToSit()) {
+            val moving = !PhantomFlightAttitude.wantsHover(forward, strafe)
+            this.hoverBlend = PhantomHover.step(this.hoverBlend, moving)
+            val pose = PhantomFlightAttitude.pose(forward, strafe, vertical, this.hoverBlend)
+            this.bankTarget = pose.bank
+            this.headYawTarget = pose.headYaw
+        }
+        if (!this.isVehicle) {
+            this.headYawTarget = 0f
+        }
+        this.bank = PhantomHeadLook.approachDegrees(this.bank, this.bankTarget, 6f)
+        val yawTarget = this.headYawTarget.coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
+        this.headBankYaw = PhantomHeadLook.approachDegrees(this.headBankYaw, yawTarget, 3.5f)
+            .coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
+        val tailTarget = if (kotlin.math.abs(vertical) < 0.03) {
+            0f
+        } else {
+            (vertical * 40.0).coerceIn(-16.0, 16.0).toFloat()
+        }
+        this.tailPitch = PhantomHeadLook.approachDegrees(this.tailPitch, tailTarget, 2.5f)
+        this.swimBlend = if (this.isUnderWater) {
+            (this.swimBlend + 0.07f).coerceAtMost(1f)
+        } else {
+            (this.swimBlend - 0.05f).coerceAtLeast(0f)
+        }
+    }
+
     private fun advanceWingPhase() {
         val vertical = this.y - this.yo
         val horizontal = hypot(this.x - this.xo, this.z - this.zo)
-        val onGround = this.onGround()
-        val launch = this.wingTouchedGround && !onGround && this.wingGroundBlend > 0.4f
-        this.wingTouchedGround = onGround
+        val skimming = PhantomGroundSkim.pressed(this)
+        val launch = this.wingTouchedGround && !skimming && this.wingGroundBlend > 0.4f
+        this.wingTouchedGround = skimming
         this.wingTakeoffBlend = PhantomWingbeat.stepTakeoff(this.wingTakeoffBlend, launch)
-        this.wingGroundBlend = PhantomWingbeat.stepGround(this.wingGroundBlend, onGround)
-        val pilot = this.controllingPassenger as? Player
-        val hover = if (pilot != null) {
-            PhantomHover.blendFromPitches(pilot.xRot, this.xRot)
-        } else {
-            0f
-        }
+        this.wingGroundBlend = PhantomWingbeat.stepGround(this.wingGroundBlend, skimming)
+        val hover = this.hoverBlend.coerceIn(0f, 1f)
         val descending = PhantomWingbeat.descending(vertical, hover, this.wingGroundBlend)
         this.wingGlideBlend = PhantomWingbeat.stepGlide(this.wingGlideBlend, descending)
         val pose = PhantomWingbeat.pose(
@@ -695,10 +751,12 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.wingGroundBlend,
             this.wingTakeoffBlend,
             this.wingGlideBlend,
+            this.swimBlend,
         )
         this.wingFlapRate = pose.rate
         this.wingFlapAmp = pose.amplitude
         this.wingDroop = pose.droop
+        this.wingTipHang = pose.tipHang
         if (this.wingPhase.isNaN()) {
             this.wingPhase = (this.tickCount - 1).toFloat()
         }
@@ -789,14 +847,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             else -> 0.0
         }
         val reversing = forwardInput < -1.0E-4f
-        val driving = forwardInput > 1.0E-4f ||
-            kotlin.math.abs(strafeInput) > 1.0E-4f ||
-            wantedY != 0.0
-        this.hoverBlend = PhantomHover.step(this.hoverBlend, driving && !reversing)
+        val translating = forwardInput > 1.0E-4f || kotlin.math.abs(strafeInput) > 1.0E-4f
+        this.hoverBlend = PhantomHover.step(this.hoverBlend, translating && !reversing)
+        val attitude = PhantomFlightAttitude.pose(
+            forwardInput.toDouble(),
+            strafeInput.toDouble(),
+            wantedY * 0.4,
+            this.hoverBlend,
+        )
+        this.bankTarget = attitude.bank
+        this.headYawTarget = attitude.headYaw
 
         this.yRot = pilot.yRot
         this.yRotO = this.yRot
-        this.xRot = pilot.xRot * 0.5f + PhantomHover.pitchOffset(this.hoverBlend)
+        this.xRot = attitude.pitch
         this.setRot(this.yRot, this.xRot)
         this.yBodyRot = this.yRot
         this.yHeadRot = this.yBodyRot

@@ -3,12 +3,12 @@ package com.tamedphantoms.mod.util
 /**
  * Зависание и задний ход верхом.
  * Наклон корпуса — в сторону, противоположную прошлой: прежний знак на модели
- * выглядел перевёрнутым. На полном смешении это 28°.
+ * выглядел перевёрнутым. На полном смешении это 22°.
  * Взмахи в этом положении в 1.75 раза чаще обычных.
  */
 object PhantomHover {
 
-    const val PITCH_DEGREES = 28f
+    const val PITCH_DEGREES = 22f
     const val FLAP_BOOST = 0.75f
     const val BLEND_PER_TICK = 0.10f
     const val REVERSE_SPEED = 0.75

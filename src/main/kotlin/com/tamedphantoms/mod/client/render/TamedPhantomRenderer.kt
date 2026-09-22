@@ -68,9 +68,13 @@ class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRen
         scale: Float,
     ) {
         super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale)
-        if (entity !is TamedPhantomEntity || !entity.isVehicle) return
+        if (entity !is TamedPhantomEntity || entity.isOrderedToSit()) return
         val shown = Mth.lerp(partialTick, entity.xRotO, entity.xRot)
-        poseStack.mulPose(Axis.XP.rotationDegrees(shown - entity.xRot))
+        if (entity.isVehicle) {
+            poseStack.mulPose(Axis.XP.rotationDegrees(shown - entity.xRot))
+        }
+        val bank = Mth.lerp(partialTick, entity.bankO, entity.bank)
+        poseStack.mulPose(Axis.ZP.rotationDegrees(-bank))
     }
 
     override fun scale(livingEntity: Phantom, poseStack: PoseStack, partialTickTime: Float) {

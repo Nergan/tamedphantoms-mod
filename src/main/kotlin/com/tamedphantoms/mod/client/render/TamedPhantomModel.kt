@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.client.render
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomFlightAttitude
 import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomShake
 import com.tamedphantoms.mod.util.PhantomSitFlutter
@@ -47,27 +48,42 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
                 poseWings(pet, ageInTicks)
             }
         }
-        bendTail(entity)
+        bendTail(entity, ageInTicks)
         if (pet != null) {
+            poseTailFlight(pet, ageInTicks, upsideDown)
             poseHead(pet, ageInTicks, netHeadYaw, headPitch, upsideDown)
             poseShake(pet, ageInTicks)
         }
     }
 
-    private fun bendTail(entity: Phantom) {
-        val bend = PhantomTailBend.visual(entity)
+    private fun bendTail(entity: Phantom, ageInTicks: Float) {
+        val partial = (ageInTicks - entity.tickCount).coerceIn(0f, 1f)
+        val bend = PhantomTailBend.visual(entity, partial)
         tailBase.yRot += bend
-        tailTip.yRot += bend * TAIL_BEND_TIP
+        tailTip.yRot += bend * PhantomTailBend.TIP_FOLLOW
+    }
+
+    private fun poseTailFlight(pet: TamedPhantomEntity, ageInTicks: Float, upsideDown: Boolean) {
+        if (upsideDown) return
+        val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
+        val swim = Mth.lerp(partial, pet.swimBlendO, pet.swimBlend).coerceIn(0f, 1f)
+        val pitch = Mth.lerp(partial, pet.tailPitchO, pet.tailPitch) * (1f - swim) * Mth.DEG_TO_RAD
+        tailBase.xRot = tailBase.xRot * (1f - swim) + pitch
+        tailTip.xRot = tailTip.xRot * (1f - swim) + pitch
+        if (swim <= 0.01f) return
+        val wave = ageInTicks * SWIM_WAVE
+        tailBase.yRot += Mth.sin(wave) * 0.34f * swim
+        tailTip.yRot += Mth.sin(wave - SWIM_LAG) * 0.5f * swim
     }
 
     private fun poseSittingWings(ageInTicks: Float) {
         foldWings()
         val left = PhantomSitFlutter.lift(ageInTicks, 0)
         val right = PhantomSitFlutter.lift(ageInTicks, 1)
-        leftWingBase.zRot = WING_REST - left
-        leftWingTip.zRot = WING_REST - left * 1.35f
-        rightWingBase.zRot = -WING_REST + right
-        rightWingTip.zRot = -WING_REST + right * 1.35f
+        leftWingBase.zRot = WING_REST + left
+        leftWingTip.zRot = WING_REST + left * 1.15f
+        rightWingBase.zRot = -WING_REST - right
+        rightWingTip.zRot = -WING_REST - right * 1.15f
     }
 
     private fun poseWings(pet: TamedPhantomEntity, ageInTicks: Float) {
@@ -77,13 +93,13 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val rate = Mth.lerp(partial, pet.wingFlapRateO, pet.wingFlapRate)
         val amplitude = Mth.lerp(partial, pet.wingFlapAmpO, pet.wingFlapAmp)
         val droop = Mth.lerp(partial, pet.wingDroopO, pet.wingDroop)
+        val hang = Mth.lerp(partial, pet.wingTipHangO, pet.wingTipHang).coerceIn(0f, 1f)
         val time = phase + partial * rate
         val angle = (pet.getUniqueFlapTickOffset() + time) * WING_SPEED_DEG * Mth.DEG_TO_RAD
         val roll = Mth.cos(angle) * WING_AMPLITUDE_DEG * Mth.DEG_TO_RAD * amplitude
-        val dip = droop
-        val tip = droop * PhantomWingbeat.TIP_CANCEL
-        leftWingBase.zRot = roll - dip
-        leftWingTip.zRot = roll + tip
+        val tipFollow = Mth.lerp(hang, PhantomWingbeat.TIP_CANCEL, -PhantomWingbeat.TIP_DRAG)
+        leftWingBase.zRot = roll - droop
+        leftWingTip.zRot = roll + droop * tipFollow
         rightWingBase.zRot = -leftWingBase.zRot
         rightWingTip.zRot = -leftWingTip.zRot
     }
@@ -123,7 +139,9 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         if (pet.isVehicle && pet.controllingPassenger != null) {
             val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
             val nod = Mth.lerp(partial, pet.clientRideHeadO, pet.clientRideHead)
-            head.yRot = 0f
+            val yaw = Mth.lerp(partial, pet.headBankYawO, pet.headBankYaw)
+                .coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
+            head.yRot = yaw * Mth.DEG_TO_RAD
             head.xRot = PhantomHeadLook.REST_PITCH + nod * Mth.DEG_TO_RAD
             head.zRot = 0f
             return
@@ -143,8 +161,11 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         val swing = Mth.sin(ageInTicks * 1.45f) * envelope
         head.yRot += swing * 0.6f
         head.zRot += Mth.cos(ageInTicks * 1.45f) * envelope * 0.18f
-        tailBase.yRot += Mth.sin(ageInTicks * 1.85f) * envelope * 0.75f
-        tailTip.yRot += Mth.sin(ageInTicks * 2.15f) * envelope * 0.95f
+        val wag = Mth.sin(ageInTicks * 1.65f) * envelope
+        tailBase.yRot += wag * 0.5f
+        tailTip.yRot += wag * 0.66f
+        tailBase.xRot += wag * 0.12f
+        tailTip.xRot += wag * 0.16f
         val wing = Mth.sin(ageInTicks * 1.7f) * envelope * 0.4f
         leftWingBase.zRot += wing
         leftWingTip.zRot += wing
@@ -163,6 +184,7 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         private const val TAIL_WAG_SPEED = 0.14f
         private const val TAIL_WAG_AMPLITUDE = 0.28f
         private const val TAIL_TIP_EXTRA = 0.45f
-        private const val TAIL_BEND_TIP = 1.45f
+        private const val SWIM_WAVE = 0.15f
+        private const val SWIM_LAG = 0.6f
     }
 }

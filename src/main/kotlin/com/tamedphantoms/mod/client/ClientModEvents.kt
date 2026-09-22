@@ -33,6 +33,7 @@ object ClientModEvents {
         ClientPhantomInputSender.init()
         ClientFlightSpeedSender.init()
         NeoForge.EVENT_BUS.register(ClientPhantomSoundHandler)
+        NeoForge.EVENT_BUS.register(PhantomRideBank)
 
         // Подключаем встроенный экран настроек NeoForge: Mods -> Tamed Phantoms
         // -> кнопка "Config". Он сам строит интерфейс по зарегистрированному

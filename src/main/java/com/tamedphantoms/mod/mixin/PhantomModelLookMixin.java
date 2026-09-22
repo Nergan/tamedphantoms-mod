@@ -38,9 +38,9 @@ public abstract class PhantomModelLookMixin {
         ModelPart head = body.getChild("head");
         ModelPart tailBase = body.getChild("tail_base");
         ModelPart tailTip = tailBase.getChild("tail_tip");
-        float bend = PhantomTailBend.INSTANCE.visual(entity);
+        float bend = PhantomTailBend.INSTANCE.visual(entity, ageInTicks - entity.tickCount);
         tailBase.yRot = bend;
-        tailTip.yRot = bend * 1.45F;
+        tailTip.yRot = bend * PhantomTailBend.TIP_FOLLOW;
 
         head.yRot = 0.0F;
         head.zRot = 0.0F;

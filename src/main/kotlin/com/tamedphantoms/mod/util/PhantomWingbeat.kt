@@ -8,7 +8,7 @@ package com.tamedphantoms.mod.util
  *
  * Набор и взлёт — чаще и глубже, быстрый прямой полёт — чуть реже,
  * долгое снижение — крылья почти неподвижны и раскрыты,
- * у земли основание опущено, кончик ближе к горизонту.
+ * у земли взмах почти пропадает, крыло висит и кончик опущен ещё ниже.
  */
 object PhantomWingbeat {
 
@@ -22,14 +22,19 @@ object PhantomWingbeat {
     const val TAKEOFF_RATE = 1.42f
     const val TAKEOFF_AMPLITUDE = 1.48f
     const val TAKEOFF_TICKS = 64f
-    const val GROUND_RATE = 0.4f
-    const val GROUND_AMPLITUDE = 0.12f
+    const val GROUND_RATE = 0.12f
+    const val GROUND_AMPLITUDE = 0.02f
+    const val SWIM_RATE = 0.16f
+    const val SWIM_AMPLITUDE = 0.05f
 
     /** Основание крыла вниз, радианы. Положительное число — вниз. */
-    const val GROUND_DROOP = 0.42f
+    const val GROUND_DROOP = 0.72f
 
     /** Доля опускания, которую кончик отыгрывает обратно к горизонту. */
     const val TIP_CANCEL = 0.72f
+
+    /** Насколько кончик опущен сильнее основания, когда крыло волочится. */
+    const val TIP_DRAG = 1.4f
 
     private const val CLIMB_START = 0.06
     private const val CLIMB_FULL = 0.22
@@ -41,6 +46,8 @@ object PhantomWingbeat {
         val rate: Float,
         val amplitude: Float,
         val droop: Float,
+        /** 0 — кончик ближе к горизонту, 1 — кончик висит ниже основания. */
+        val tipHang: Float,
     )
 
     fun stepGround(current: Float, onGround: Boolean): Float =
@@ -65,11 +72,13 @@ object PhantomWingbeat {
         ground: Float,
         takeoff: Float,
         glide: Float,
+        swim: Float = 0f,
     ): Pose {
         val hoverW = hover.coerceIn(0f, 1f)
         val groundW = ground.coerceIn(0f, 1f)
         val takeoffW = takeoff.coerceIn(0f, 1f)
-        val glideW = glide.coerceIn(0f, 1f) * (1f - hoverW) * (1f - groundW)
+        val swimW = swim.coerceIn(0f, 1f)
+        val glideW = glide.coerceIn(0f, 1f) * (1f - hoverW) * (1f - groundW) * (1f - swimW)
         val climbW = ramp(vertical, CLIMB_START, CLIMB_FULL) * (1f - groundW) * (1f - hoverW)
         val cruiseW = ramp(horizontal, CRUISE_START, CRUISE_FULL) *
             (1f - groundW) * (1f - hoverW) * (1f - climbW) * (1f - glideW)
@@ -88,8 +97,11 @@ object PhantomWingbeat {
         amplitude = mix(amplitude, GROUND_AMPLITUDE, groundW)
         rate = mix(rate, TAKEOFF_RATE, takeoffW)
         amplitude = mix(amplitude, TAKEOFF_AMPLITUDE, takeoffW)
-        val droop = GROUND_DROOP * groundW * (1f - takeoffW)
-        return Pose(rate, amplitude, droop)
+        rate = mix(rate, SWIM_RATE, swimW)
+        amplitude = mix(amplitude, SWIM_AMPLITUDE, swimW)
+        val droop = GROUND_DROOP * groundW * (1f - takeoffW) * (1f - swimW)
+        val tipHang = groundW * (1f - takeoffW) * (1f - swimW)
+        return Pose(rate, amplitude, droop, tipHang)
     }
 
     private fun ramp(value: Double, start: Double, full: Double): Float {
