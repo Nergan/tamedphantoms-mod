@@ -678,7 +678,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             wantedZ *= norm
         }
 
-        val speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK * PhantomFlightPace.pace(this).toDouble()
+        val speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK *
+            PhantomFlightPace.pace(this).toDouble() *
+            PhantomFlightPace.waterScale(this.isUnderWater)
         val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR
         val targetVelocity = Vec3(wantedX * speed, wantedY * vSpeed, wantedZ * speed)
 

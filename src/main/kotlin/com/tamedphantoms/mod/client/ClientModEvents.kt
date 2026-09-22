@@ -33,7 +33,6 @@ object ClientModEvents {
         modBus.addListener(::onRegisterReloadListeners)
         ClientPhantomInputSender.init()
         ClientFlightSpeedSender.init()
-        PhantomRideCamera.init()
         NeoForge.EVENT_BUS.register(ClientPhantomSoundHandler)
 
         // Подключаем встроенный экран настроек NeoForge: Mods -> Tamed Phantoms

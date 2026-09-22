@@ -8,6 +8,7 @@ import net.minecraft.client.model.geom.ModelLayers
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.PhantomRenderer
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.util.Mth
 import net.minecraft.world.entity.monster.Phantom
 
 /**
@@ -56,6 +57,20 @@ class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRen
             return PhantomTextureProcessor.bodyTexture()
         }
         return super.getTextureLocation(entity)
+    }
+
+    override fun setupRotations(
+        entity: Phantom,
+        poseStack: PoseStack,
+        bob: Float,
+        yBodyRot: Float,
+        partialTick: Float,
+        scale: Float,
+    ) {
+        super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale)
+        if (entity !is TamedPhantomEntity || !entity.isVehicle) return
+        val shown = Mth.lerp(partialTick, entity.xRotO, entity.xRot)
+        poseStack.mulPose(Axis.XP.rotationDegrees(shown - entity.xRot))
     }
 
     override fun scale(livingEntity: Phantom, poseStack: PoseStack, partialTickTime: Float) {

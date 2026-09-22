@@ -7,8 +7,9 @@ import com.tamedphantoms.mod.entity.TamedPhantomEntity
  * Множитель скорости относительно дикого фантома.
  *
  * Числа в коде полёта — это прежнее поведение питомца, оно ощущается как ×2
- * от дикого. Поэтому игровой множитель 2.0 ничего не меняет, а 1.5
- * (значение по умолчанию) берёт три четверти от этих чисел.
+ * от дикого. Поэтому игровой множитель 2.0 ничего не меняет, а 1.25
+ * (значение по умолчанию) берёт 0.625 от этих чисел.
+ * Под водой скорость ещё умножается на 0.8.
  *
  * Клиентская настройка хозяина может только убавить скорость его
  * прирученных фантомов. Освобождённые смотрят только на серверный множитель.
@@ -18,6 +19,7 @@ object PhantomFlightPace {
     const val BASELINE = 2.0
     const val MIN = 0.25
     const val MAX = 4.0
+    const val WATER_SPEED = 0.8
 
     /**
      * Подставляется клиентом: его собственная настройка.
@@ -34,6 +36,8 @@ object PhantomFlightPace {
     }
 
     fun paceOf(multiple: Double): Float = (multiple / BASELINE).toFloat()
+
+    fun waterScale(underwater: Boolean): Double = if (underwater) WATER_SPEED else 1.0
 
     fun pace(phantom: TamedPhantomEntity): Float {
         val server = ServerConfig.CONFIG.flightSpeed.get()

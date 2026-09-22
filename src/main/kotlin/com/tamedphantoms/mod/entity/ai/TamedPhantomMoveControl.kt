@@ -60,7 +60,8 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
 
         val ease = (dist / 4.0).coerceIn(0.28, 1.0)
         val pace = PhantomFlightPace.pace(phantom)
-        val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f) * pace
+        val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f) *
+            pace * PhantomFlightPace.waterScale(phantom.isUnderWater).toFloat()
         currentSpeed = Mth.approach(currentSpeed, targetSpeed, 0.022f)
 
         val desired = Vec3(dx / dist * currentSpeed, dy / dist * currentSpeed, dz / dist * currentSpeed)

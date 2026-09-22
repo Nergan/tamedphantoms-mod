@@ -2,13 +2,13 @@ package com.tamedphantoms.mod.util
 
 /**
  * Зависание верхом, когда наездник отпустил клавиши.
- * Нос задирается плавно, взмахи крыльев чуть учащаются.
+ * Нос задирается на 20°, взмахи становятся в полтора раза чаще.
  * Положительный градус здесь — нос вверх; в xRot Майнкрафта это минус.
  */
 object PhantomHover {
 
-    const val PITCH_DEGREES = 10f
-    const val FLAP_BOOST = 0.30f
+    const val PITCH_DEGREES = 20f
+    const val FLAP_BOOST = 0.50f
     const val BLEND_PER_TICK = 0.10f
 
     fun step(current: Float, moving: Boolean): Float {

@@ -4,8 +4,8 @@ import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import net.minecraft.world.entity.player.Player
 
 /**
- * Видимый клевок носом. Берётся из уже синхронизированного наклона тела,
- * поэтому и пилот, и пассажир, и чужие клиенты видят один и тот же угол.
+ * Насколько нос уже задран относительно прицела. По этому числу
+ * ускоряются взмахи. Камеру и модель игрока оно не двигает.
  */
 object PhantomRideTilt {
 
