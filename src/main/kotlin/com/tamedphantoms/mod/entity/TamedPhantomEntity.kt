@@ -13,6 +13,8 @@ import com.tamedphantoms.mod.entity.ai.TamedPhantomMoveControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.util.PhantomAngerLogic
+import com.tamedphantoms.mod.util.PhantomFlightPace
+import com.tamedphantoms.mod.util.PhantomHover
 import com.tamedphantoms.mod.util.PhantomAngerState
 import com.tamedphantoms.mod.util.PhantomSeatAssignment
 import com.tamedphantoms.mod.util.PhantomTamingLogic
@@ -150,6 +152,18 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     /** Предыдущий и текущий тангаж для плавного кадра. Пишет только клиентский тик. */
     var clientHeadPitchO: Float = 0f
     var clientHeadPitch: Float = 0f
+
+    /**
+     * 0 — летит по прицелу, 1 — завис и задрал нос.
+     * Считает только клиент пилота: именно он двигает фантома верхом.
+     */
+    var hoverBlend: Float = 0f
+
+    /**
+     * Накопленная фаза взмаха. Обычный полёт идёт в ногу с tickCount,
+     * зависание крутит её быстрее. NaN — ещё не тикали на клиенте.
+     */
+    var wingPhase: Float = Float.NaN
 
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
@@ -457,12 +471,19 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.level().isClientSide) {
             this.clientHeadPitchO = this.clientHeadPitch
             this.clientHeadPitch = this.headLookPitch
+            if (this.controllingPassenger == null) {
+                this.hoverBlend = 0f
+            }
         }
         if (this.isOrderedToSit()) {
             this.xRot = 0.0f
         }
 
         super.tick()
+
+        if (this.level().isClientSide) {
+            this.advanceWingPhase()
+        }
 
         if (this.isOrderedToSit()) {
             this.xRot = 0.0f
@@ -529,6 +550,19 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             val push = 0.12
             wild.push(dx / dist * push, 0.0, dz / dist * push)
         }
+    }
+
+    private fun advanceWingPhase() {
+        val pilot = this.controllingPassenger as? Player
+        val boost = if (pilot != null) {
+            PhantomHover.flapRate(PhantomHover.blendFromPitches(pilot.xRot, this.xRot)) - 1f
+        } else {
+            0f
+        }
+        if (this.wingPhase.isNaN()) {
+            this.wingPhase = (this.tickCount - 1).toFloat()
+        }
+        this.wingPhase += 1f + boost
     }
 
     private fun tickRiderNightVision() {
@@ -602,16 +636,29 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun travelControlled(pilot: Player) {
+        val forwardInput = pilot.zza
+        val strafeInput = pilot.xxa
+        val (ascending, descending) = PilotInputAccess.read(
+            this.level().isClientSide,
+            this.pilotAscending,
+            this.pilotDescending,
+        )
+        val wantedY = when {
+            ascending && !descending -> 1.0
+            descending && !ascending -> -1.0
+            else -> 0.0
+        }
+        val moving = kotlin.math.abs(forwardInput) > 1.0E-4f ||
+            kotlin.math.abs(strafeInput) > 1.0E-4f ||
+            wantedY != 0.0
+        this.hoverBlend = PhantomHover.step(this.hoverBlend, moving)
+
         this.yRot = pilot.yRot
         this.yRotO = this.yRot
-        this.xRot = pilot.xRot * 0.5f
+        this.xRot = pilot.xRot * 0.5f + PhantomHover.pitchOffset(this.hoverBlend)
         this.setRot(this.yRot, this.xRot)
         this.yBodyRot = this.yRot
         this.yHeadRot = this.yBodyRot
-        this.headLookPitch = this.xRot
-
-        val forwardInput = pilot.zza
-        val strafeInput = pilot.xxa
 
         val yawRad = Math.toRadians(this.yRot.toDouble())
         val sin = Math.sin(yawRad)
@@ -631,18 +678,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             wantedZ *= norm
         }
 
-        val (ascending, descending) = PilotInputAccess.read(
-            this.level().isClientSide,
-            this.pilotAscending,
-            this.pilotDescending,
-        )
-        val wantedY = when {
-            ascending && !descending -> 1.0
-            descending && !ascending -> -1.0
-            else -> 0.0
-        }
-
-        val speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK
+        val speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK * PhantomFlightPace.pace(this).toDouble()
         val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR
         val targetVelocity = Vec3(wantedX * speed, wantedY * vSpeed, wantedZ * speed)
 

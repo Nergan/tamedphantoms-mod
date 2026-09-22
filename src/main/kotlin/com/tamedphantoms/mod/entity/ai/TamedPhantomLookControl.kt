@@ -11,8 +11,12 @@ import net.minecraft.world.entity.ai.control.LookControl
 class TamedPhantomLookControl(private val phantom: TamedPhantomEntity) : LookControl(phantom) {
 
     override fun tick() {
+        if (phantom.isVehicle) {
+            phantom.yHeadRot = phantom.yBodyRot
+            return
+        }
         val target = phantom.glanceTarget
-        if (phantom.isVehicle || target == null || !target.isAlive) {
+        if (target == null || !target.isAlive) {
             easeTowardBody()
             return
         }

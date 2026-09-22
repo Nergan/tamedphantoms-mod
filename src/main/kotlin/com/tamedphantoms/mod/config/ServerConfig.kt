@@ -52,6 +52,7 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
     val tameChance: ModConfigSpec.DoubleValue
     val repelRadius: ModConfigSpec.DoubleValue
     val defendDurationTicks: ModConfigSpec.IntValue
+    val flightSpeed: ModConfigSpec.DoubleValue
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null
@@ -97,6 +98,21 @@ class ServerConfig(builder: ModConfigSpec.Builder) {
             .comment("Сколько тиков длится режим самозащиты после того, как фантома ударили (20 тиков = 1 секунда).")
             .translation("$KEY_PREFIX.taming.defend_time_ticks")
             .defineInRange("defend_time_ticks", 200, 20, 20 * 60 * 30)
+
+        builder.pop()
+
+        builder.push("flight")
+
+        flightSpeed = builder
+            .comment(
+                "Скорость полёта прирученных и освобождённых фантомов относительно дикого.",
+                "1.0 — как дикий, 2.0 — прежняя скорость питомцев в этом моде, 1.5 — значение по умолчанию.",
+                "Действует и на полёт верхом, и на самостоятельный полёт.",
+                "Хозяин может убавить скорость только своих прирученных фантомов в клиентском конфиге;",
+                "выше этого значения поднять её нельзя. Освобождённые всегда летают на серверной скорости.",
+            )
+            .translation("$KEY_PREFIX.flight.flight_speed")
+            .defineInRange("flight_speed", 1.5, 0.25, 4.0)
 
         builder.pop()
     }

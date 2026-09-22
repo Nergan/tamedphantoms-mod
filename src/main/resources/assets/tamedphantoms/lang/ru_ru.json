@@ -16,6 +16,9 @@
   "tamedphantoms.configuration.taming.defend_time_ticks": "Длительность самозащиты (тики)",
   "tamedphantoms.configuration.sound": "Звук",
   "tamedphantoms.configuration.sound.tamed_sound_volume": "Громкость прирученного фантома",
+  "tamedphantoms.configuration.flight": "Полёт",
+  "tamedphantoms.configuration.flight.flight_speed": "Скорость полёта",
+  "tamedphantoms.configuration.flight.owned_flight_speed": "Скорость своих фантомов",
 
   "advancements.tamedphantoms.tame_phantom.title": "Крылатый питомец",
   "advancements.tamedphantoms.tame_phantom.description": "Приручите фантома",

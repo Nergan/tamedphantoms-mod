@@ -3,7 +3,7 @@ package com.tamedphantoms.mod.config
 import net.neoforged.neoforge.common.ModConfigSpec
 
 /**
- * Клиентский конфиг: только то, что слышит/видит этот игрок.
+ * Клиентский конфиг: то, что этот игрок слышит сам, и скорость его собственных фантомов.
  * Файл: `config/tamedphantoms-client.toml`.
  */
 class ClientConfig(builder: ModConfigSpec.Builder) {
@@ -22,6 +22,7 @@ class ClientConfig(builder: ModConfigSpec.Builder) {
     }
 
     val tamedSoundVolume: ModConfigSpec.DoubleValue
+    val ownedFlightSpeed: ModConfigSpec.DoubleValue
 
     init {
         builder.push("sound")
@@ -32,6 +33,18 @@ class ClientConfig(builder: ModConfigSpec.Builder) {
             )
             .translation("$KEY_PREFIX.sound.tamed_sound_volume")
             .defineInRange("tamed_sound_volume", 0.5, 0.0, 1.0)
+        builder.pop()
+
+        builder.push("flight")
+        ownedFlightSpeed = builder
+            .comment(
+                "Скорость полёта СВОИХ прирученных фантомов относительно дикого.",
+                "Не может быть выше серверной скорости: если здесь поставить больше, возьмётся серверный потолок.",
+                "Чужие и освобождённые фантомы этой настройкой не затрагиваются.",
+                "1.0 — как дикий, 2.0 — прежняя скорость питомцев, 1.5 — значение по умолчанию.",
+            )
+            .translation("$KEY_PREFIX.flight.owned_flight_speed")
+            .defineInRange("owned_flight_speed", 1.5, 0.25, 4.0)
         builder.pop()
     }
 }

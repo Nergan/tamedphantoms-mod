@@ -16,6 +16,9 @@
   "tamedphantoms.configuration.taming.defend_time_ticks": "Self-defense duration (ticks)",
   "tamedphantoms.configuration.sound": "Sound",
   "tamedphantoms.configuration.sound.tamed_sound_volume": "Tamed phantom volume",
+  "tamedphantoms.configuration.flight": "Flight",
+  "tamedphantoms.configuration.flight.flight_speed": "Flight speed",
+  "tamedphantoms.configuration.flight.owned_flight_speed": "Speed of your phantoms",
 
   "advancements.tamedphantoms.tame_phantom.title": "Winged Pet",
   "advancements.tamedphantoms.tame_phantom.description": "Tame a phantom",

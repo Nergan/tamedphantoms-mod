@@ -7,8 +7,9 @@
     "PhantomSitFlapMixin",
     "PhantomMoveControlMixin"
   ],
-  "client": [
-    "PhantomModelLookMixin"
+    "client": [
+    "PhantomModelLookMixin",
+    "PlayerRideTiltMixin"
   ],
   "injectors": {
     "defaultRequire": 1

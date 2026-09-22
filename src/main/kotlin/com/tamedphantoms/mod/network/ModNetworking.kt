@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.network
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
 
@@ -28,6 +29,13 @@ object ModNetworking {
                     vehicle.setPilotInput(payload.ascending, payload.descending)
                 }
             }
+        }
+
+        registrar.playToServer(
+            PhantomFlightSpeedPayload.TYPE,
+            PhantomFlightSpeedPayload.STREAM_CODEC,
+        ) { payload, context ->
+            OwnerFlightSpeed.set(context.player().uuid, payload.speed.toDouble())
         }
     }
 }
