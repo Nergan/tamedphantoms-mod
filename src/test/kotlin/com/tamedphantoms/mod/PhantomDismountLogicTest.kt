@@ -11,64 +11,59 @@ import org.junit.jupiter.api.Test
 class PhantomDismountLogicTest {
 
     @Test
-    @DisplayName("Первая попытка высоко над землёй только предупреждает")
-    fun firstAttemptWarns() {
-        val step = PhantomDismountLogic.onAttempt(high = true, now = 100, window = null)
-        assertTrue(step.keepMounted)
-        assertTrue(step.warn)
-        assertEquals(100L, step.window!!.startedAt)
+    @DisplayName("Первое нажатие только открывает окно")
+    fun firstTapWarns() {
+        val tap = PhantomDismountLogic.onTap(now = 100, windowStart = null)
+        assertFalse(tap.confirm)
+        assertTrue(tap.warn)
+        assertEquals(100L, tap.windowStart)
     }
 
     @Test
-    @DisplayName("Повтор на следующем тике — то же удержание, не слезает")
-    fun holdingDoesNotConfirm() {
-        val first = PhantomDismountLogic.onAttempt(true, 100, null).window
-        val next = PhantomDismountLogic.onAttempt(true, 101, first)
-        assertTrue(next.keepMounted)
-        assertFalse(next.warn)
-        assertEquals(100L, next.window!!.startedAt)
+    @DisplayName("Повтор в тот же тик не считается вторым нажатием")
+    fun sameTickDoesNotConfirm() {
+        val tap = PhantomDismountLogic.onTap(now = 100, windowStart = 100)
+        assertFalse(tap.confirm)
+        assertFalse(tap.warn)
+        assertEquals(100L, tap.windowStart)
     }
 
     @Test
-    @DisplayName("Вторая попытка в ту же секунду после паузы слезает")
-    fun secondAttemptInsideWindowDismounts() {
-        val first = PhantomDismountLogic.onAttempt(true, 100, null).window
-        val second = PhantomDismountLogic.onAttempt(true, 110, first)
-        assertFalse(second.keepMounted)
-        assertNull(second.window)
-        assertFalse(second.warn)
+    @DisplayName("Второе нажатие в ту же секунду подтверждает")
+    fun secondTapInsideWindowConfirms() {
+        val tap = PhantomDismountLogic.onTap(now = 110, windowStart = 100)
+        assertTrue(tap.confirm)
+        assertFalse(tap.warn)
+        assertNull(tap.windowStart)
     }
 
     @Test
-    @DisplayName("Вторая попытка позже секунды снова только предупреждает")
-    fun secondAttemptAfterWindowDoesNotDismount() {
-        val first = PhantomDismountLogic.onAttempt(true, 100, null).window
-        val late = PhantomDismountLogic.onAttempt(true, 130, first)
-        assertTrue(late.keepMounted)
-        assertTrue(late.warn)
-        assertEquals(130L, late.window!!.startedAt)
+    @DisplayName("Нажатие ровно через секунду ещё подтверждает")
+    fun tapAtWindowEdgeConfirms() {
+        val tap = PhantomDismountLogic.onTap(now = 120, windowStart = 100)
+        assertTrue(tap.confirm)
+        assertNull(tap.windowStart)
     }
 
     @Test
-    @DisplayName("Долгое удержание не продлевает окно и само не слезает")
-    fun longHoldDoesNotBecomeSecondPress() {
-        var window = PhantomDismountLogic.onAttempt(true, 0, null).window
-        for (tick in 1L..40L) {
-            val step = PhantomDismountLogic.onAttempt(true, tick, window)
-            assertTrue(step.keepMounted)
-            window = step.window
-        }
-        assertEquals(0L, window!!.startedAt)
-        val after = PhantomDismountLogic.onAttempt(true, 50, window)
-        assertTrue(after.keepMounted)
-        assertTrue(after.warn)
+    @DisplayName("Нажатие позже секунды снова первое")
+    fun lateTapStartsOver() {
+        val tap = PhantomDismountLogic.onTap(now = 121, windowStart = 100)
+        assertFalse(tap.confirm)
+        assertTrue(tap.warn)
+        assertEquals(121L, tap.windowStart)
     }
 
     @Test
-    @DisplayName("Ниже порога высоты попытка слезает сразу")
-    fun lowAltitudeDismountsImmediately() {
-        val step = PhantomDismountLogic.onAttempt(high = false, now = 50, window = null)
-        assertFalse(step.keepMounted)
-        assertNull(step.window)
+    @DisplayName("Повтор на следующем тике — то же удержание")
+    fun nextTickIsSameHold() {
+        assertFalse(PhantomDismountLogic.isNewPress(now = 11, previous = 10))
+    }
+
+    @Test
+    @DisplayName("Пауза в два тика — новое нажатие")
+    fun gapIsNewPress() {
+        assertTrue(PhantomDismountLogic.isNewPress(now = 12, previous = 10))
+        assertTrue(PhantomDismountLogic.isNewPress(now = 5, previous = null))
     }
 }

@@ -1364,18 +1364,37 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.spawnAtLocation(ItemStack(Items.PHANTOM_MEMBRANE, count), 0.5f)
     }
 
-    override fun removePassenger(passenger: Entity) {
-        val keepMounted = passenger is Player && PhantomDismount.shouldKeepMounted(passenger, this)
+    /** Снять пассажира, не проходя проверку «два Shift». Только для восстановления ссылки. */
+    internal fun detachPassengerNow(passenger: Entity) {
         super.removePassenger(passenger)
-        if (keepMounted) {
-            PhantomDismount.restore(passenger, this)
+    }
+
+    override fun removePassenger(passenger: Entity) {
+        if (PhantomDismount.bypassing()) {
+            super.removePassenger(passenger)
             return
         }
-        if (passenger is LivingEntity) {
-            val effect = passenger.getEffect(MobEffects.NIGHT_VISION)
-            if (effect != null && effect.duration <= NIGHT_VISION_DURATION_TICKS && effect.amplifier == 0) {
-                passenger.removeEffect(MobEffects.NIGHT_VISION)
+        val player = passenger as? Player
+        if (player == null) {
+            super.removePassenger(passenger)
+            return
+        }
+        val keepMounted = PhantomDismount.shouldKeepMounted(player, this)
+        try {
+            if (keepMounted) {
+                PhantomDismount.restore(player, this)
+                return
             }
+            if (player is ServerPlayer) {
+                PhantomDismount.allowClient(player)
+            }
+            super.removePassenger(passenger)
+            val effect = player.getEffect(MobEffects.NIGHT_VISION)
+            if (effect != null && effect.duration <= NIGHT_VISION_DURATION_TICKS && effect.amplifier == 0) {
+                player.removeEffect(MobEffects.NIGHT_VISION)
+            }
+        } finally {
+            PhantomDismount.finish()
         }
     }
 

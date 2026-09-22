@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.client
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
@@ -25,6 +26,7 @@ object ClientPhantomInputSender {
         PilotInputAccess.clientReader = {
             ModKeyMappings.FLY_UP.isDown to ModKeyMappings.FLY_DOWN.isDown
         }
+        PhantomDismount.isLocalPlayer = { rider -> rider === Minecraft.getInstance().player }
         NeoForge.EVENT_BUS.addListener(::onClientTick)
     }
 

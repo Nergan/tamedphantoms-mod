@@ -2,32 +2,32 @@ package com.tamedphantoms.mod.util
 
 /**
  * Два отдельных нажатия Shift за [WINDOW_TICKS] тиков.
- * Повтор вызова в том же удержании (каждый тик, пока клавиша зажата) вторым нажатием не считается:
- * между попытками должна быть пауза хотя бы в [GAP_TICKS] тиков.
- * Состояние клавиши здесь не используется: в момент снятия с ездового оно уже бывает ложным.
+ * Удержание — это повтор попытки каждый тик; новым нажатием она становится
+ * только после паузы хотя бы в [NEW_PRESS_GAP] тиков.
  */
 object PhantomDismountLogic {
 
     const val WINDOW_TICKS = 20L
-    const val GAP_TICKS = 4L
+    const val NEW_PRESS_GAP = 2L
 
-    data class Window(val startedAt: Long, val lastAttempt: Long)
+    data class Tap(val confirm: Boolean, val warn: Boolean, val windowStart: Long?)
 
-    data class Step(val keepMounted: Boolean, val window: Window?, val warn: Boolean)
-
-    fun onAttempt(high: Boolean, now: Long, window: Window?): Step {
-        if (!high) return Step(keepMounted = false, window = null, warn = false)
-        if (window == null) {
-            return Step(keepMounted = true, window = Window(now, now), warn = true)
+    /** [windowStart] — тик первого нажатия. Повтор в ту же игровую секунду подтверждает слезание. */
+    fun onTap(now: Long, windowStart: Long?): Tap {
+        if (windowStart == null) {
+            return Tap(confirm = false, warn = true, windowStart = now)
         }
-        val age = now - window.startedAt
-        val gap = now - window.lastAttempt
-        if (gap >= GAP_TICKS) {
-            if (age <= WINDOW_TICKS) {
-                return Step(keepMounted = false, window = null, warn = false)
-            }
-            return Step(keepMounted = true, window = Window(now, now), warn = true)
+        if (now == windowStart) {
+            return Tap(confirm = false, warn = false, windowStart = windowStart)
         }
-        return Step(keepMounted = true, window = window.copy(lastAttempt = now), warn = false)
+        if (now - windowStart <= WINDOW_TICKS) {
+            return Tap(confirm = true, warn = false, windowStart = null)
+        }
+        return Tap(confirm = false, warn = true, windowStart = now)
+    }
+
+    fun isNewPress(now: Long, previous: Long?): Boolean {
+        if (previous == null) return true
+        return now - previous >= NEW_PRESS_GAP
     }
 }

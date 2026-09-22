@@ -1,8 +1,10 @@
 package com.tamedphantoms.mod.network
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import net.minecraft.server.level.ServerPlayer
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
 
@@ -18,7 +20,7 @@ object ModNetworking {
     }
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
-        val registrar = event.registrar("4")
+        val registrar = event.registrar("5")
 
         registrar.playToServer(
             PhantomInputPayload.TYPE,
@@ -66,6 +68,23 @@ object ModNetworking {
             PhantomMoonPulsePayload.STREAM_CODEC,
         ) { _, context ->
             context.enqueueWork { MoonSickness.trigger() }
+        }
+
+        registrar.playToServer(
+            PhantomDismountTapPayload.TYPE,
+            PhantomDismountTapPayload.STREAM_CODEC,
+        ) { _, context ->
+            val player = context.player() as? ServerPlayer
+            if (player != null) {
+                PhantomDismount.onTap(player)
+            }
+        }
+
+        registrar.playToClient(
+            PhantomDismountAllowPayload.TYPE,
+            PhantomDismountAllowPayload.STREAM_CODEC,
+        ) { _, _ ->
+            PhantomDismount.grantClientDismount()
         }
     }
 }
