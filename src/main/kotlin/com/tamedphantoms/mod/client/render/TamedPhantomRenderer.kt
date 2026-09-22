@@ -78,6 +78,10 @@ class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRen
                 poseStack.mulPose(Axis.XP.rotationDegrees(extraPitch))
             }
         }
+        val acro = entity.acroPitchVisual(partialTick)
+        if (acro != 0f) {
+            poseStack.mulPose(Axis.XP.rotationDegrees(acro))
+        }
         poseStack.mulPose(Axis.ZP.rotationDegrees(-entity.bankVisual(partialTick)))
     }
 

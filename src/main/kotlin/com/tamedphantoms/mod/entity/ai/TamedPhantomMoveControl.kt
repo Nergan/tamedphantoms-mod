@@ -27,6 +27,12 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
 
     override fun tick() {
         val phantom = mob as? TamedPhantomEntity
+        val bolt = phantom?.takeBoltMotion()
+        if (bolt != null) {
+            operation = Operation.WAIT
+            mob.deltaMovement = bolt
+            return
+        }
         if (phantom == null || phantom.isOrderedToSit() || phantom.isVehicle) {
             operation = Operation.WAIT
             return

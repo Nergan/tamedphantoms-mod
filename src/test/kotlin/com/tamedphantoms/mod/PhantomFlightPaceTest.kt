@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod
 
+import com.tamedphantoms.mod.util.PhantomAcrobatics
 import com.tamedphantoms.mod.util.PhantomCrawl
 import com.tamedphantoms.mod.util.PhantomFlightAttitude
 import com.tamedphantoms.mod.util.PhantomFlightPace
@@ -176,6 +177,44 @@ class PhantomFlightAttitudeTest {
         assertTrue(PhantomFlightAttitude.tailPitchDegrees(0.3) < -8f)
         assertTrue(PhantomFlightAttitude.tailPitchDegrees(-0.3) > 8f)
         assertEquals(0f, PhantomFlightAttitude.tailPitchDegrees(0.0), 0.001f)
+    }
+}
+
+class PhantomAcrobaticsTest {
+
+    @Test
+    @DisplayName("В прямом полёте наклон копится до полной петли, в зависании и назад — нет")
+    fun loopOnlyWhileFlyingForward() {
+        var pitch = 0f
+        var roll = 0f
+        var loop = 0f
+        var done = false
+        repeat(59) {
+            val step = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f)
+            pitch = step.pitch
+            roll = step.roll
+            loop = step.loop
+            done = step.completedLoop
+        }
+        assertTrue(!done)
+        assertTrue(pitch > PhantomFlightAttitude.MOVE_PITCH)
+
+        val finished = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f)
+        assertTrue(finished.completedLoop)
+
+        val hover = PhantomAcrobatics.step(40f, 30f, 40f, acrobatic = false, climb = 1f, strafe = 1f)
+        assertTrue(!hover.completedLoop)
+        assertTrue(hover.pitch < 40f)
+        assertTrue(hover.roll < 30f)
+        assertTrue(!PhantomAcrobatics.allows(0.0, 0.0, crawling = false, sitting = false, ridden = true))
+        assertTrue(!PhantomAcrobatics.allows(-0.4, 0.0, crawling = false, sitting = false, ridden = true))
+        assertTrue(PhantomAcrobatics.allows(0.4, 0.0, crawling = false, sitting = false, ridden = true))
+
+        var barrelRoll = 0f
+        repeat(5) {
+            barrelRoll = PhantomAcrobatics.step(0f, barrelRoll, 0f, acrobatic = true, climb = 0f, strafe = 1f).roll
+        }
+        assertTrue(barrelRoll < -PhantomFlightAttitude.BANK)
     }
 }
 

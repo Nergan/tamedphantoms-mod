@@ -27,7 +27,11 @@ public class PlayerRideBankMixin {
         if (!(player.getVehicle() instanceof TamedPhantomEntity phantom) || phantom.isOrderedToSit()) {
             return;
         }
+        float pitch = phantom.ridePitchVisual(partialTick);
         float bank = phantom.bankVisual(partialTick);
+        poseStack.translate(0.0, 0.9, 0.0);
+        poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
         poseStack.mulPose(Axis.ZP.rotationDegrees(-bank));
+        poseStack.translate(0.0, -0.9, 0.0);
     }
 }

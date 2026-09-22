@@ -12,6 +12,7 @@ import com.tamedphantoms.mod.entity.ai.TamedPhantomLookControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomMoveControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
+import com.tamedphantoms.mod.util.PhantomAcrobatics
 import com.tamedphantoms.mod.util.PhantomAngerLogic
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import com.tamedphantoms.mod.event.ModAdvancements
@@ -99,6 +100,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val DATA_SCREAM_EYES: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_ACRO_PITCH: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_ACRO_ROLL: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_ACROBATIC: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_IMMORTAL: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
 
         private const val TAG_TAMED = "Tamed"
         private const val TAG_OWNER = "Owner"
@@ -108,6 +117,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private const val TAG_IN_WATER = "InWater"
         private const val TAG_IN_RAIN = "InRain"
         private const val TAG_SCREAM_COOLDOWN = "ScreamCooldown"
+        private const val TAG_IMMORTAL = "Immortal"
 
         /**
          * Phantom НЕ предоставляет собственный публичный статический
@@ -159,6 +169,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
      */
     private var pilotAscending: Boolean = false
     private var pilotDescending: Boolean = false
+    private var pilotForward: Float = 0f
+    private var pilotStrafe: Float = 0f
 
     override fun defineSynchedData(builder: SynchedEntityData.Builder) {
         super.defineSynchedData(builder)
@@ -172,6 +184,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         builder.define(DATA_SHAKE, 0)
         builder.define(DATA_TRACKING, false)
         builder.define(DATA_SCREAM_EYES, 0)
+        builder.define(DATA_ACRO_PITCH, 0f)
+        builder.define(DATA_ACRO_ROLL, 0f)
+        builder.define(DATA_ACROBATIC, false)
+        builder.define(DATA_IMMORTAL, false)
     }
 
     /**
@@ -275,6 +291,38 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     fun bankVisual(partial: Float): Float =
         Mth.lerp(partial, this.bankO, this.bank) * (1f - this.crawlVisual(partial))
 
+    /** Лишний тангаж сверх позы полёта. Копится, пока держат набор или снижение. */
+    var acroPitch: Float = 0f
+    var acroPitchO: Float = 0f
+    private var acroRoll: Float = 0f
+    private var loopProgress: Float = 0f
+
+    /** Летит вперёд или вбок: камера и модель могут крутиться дальше фиксированного наклона. */
+    var acrobatic: Boolean = false
+
+    var immortal: Boolean
+        get() = this.entityData.get(DATA_IMMORTAL)
+        set(value) {
+            this.entityData.set(DATA_IMMORTAL, value)
+            if (value) this.setGlowingTag(true)
+        }
+
+    var boltTicks: Int = 0
+    private var boltMotion: Vec3 = Vec3.ZERO
+
+    fun takeBoltMotion(): Vec3? = if (this.boltTicks > 0) this.boltMotion else null
+
+    fun acroPitchVisual(partial: Float): Float =
+        Mth.lerp(partial, this.acroPitchO, this.acroPitch) * (1f - this.crawlVisual(partial))
+
+    fun ridePitchVisual(partial: Float): Float {
+        val crawl = this.crawlVisual(partial)
+        val extra = Mth.lerp(partial, this.acroPitchO, this.acroPitch) * (1f - crawl)
+        if (!this.acrobatic) return extra
+        val shown = Mth.lerp(partial, this.xRotO, this.xRot) * (1f - crawl)
+        return shown + extra
+    }
+
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
 
@@ -317,9 +365,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     fun isOwnedBy(entity: LivingEntity): Boolean = entity.uuid == this.ownerUUID
 
     /** Вызывается из обработчика сетевого пакета на сервере (только для владельца-пилота). */
-    fun setPilotInput(ascending: Boolean, descending: Boolean) {
+    fun setPilotInput(ascending: Boolean, descending: Boolean, forward: Float = 0f, strafe: Float = 0f) {
         this.pilotAscending = ascending
         this.pilotDescending = descending
+        this.pilotForward = forward
+        this.pilotStrafe = strafe
     }
 
     // =====================================================================
@@ -339,6 +389,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         tag.putBoolean(TAG_IN_WATER, this.wetMemory.inWater)
         tag.putBoolean(TAG_IN_RAIN, this.wetMemory.inRain)
         tag.putInt(TAG_SCREAM_COOLDOWN, this.screamCooldown)
+        tag.putBoolean(TAG_IMMORTAL, this.immortal)
     }
 
     override fun readAdditionalSaveData(tag: CompoundTag) {
@@ -358,6 +409,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             )
         }
         this.screamCooldown = tag.getInt(TAG_SCREAM_COOLDOWN).coerceAtLeast(0)
+        this.immortal = tag.getBoolean(TAG_IMMORTAL)
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
@@ -388,7 +440,21 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     override fun decreaseAirSupply(currentAir: Int): Int = currentAir
 
-    override fun canBeLeashed(): Boolean = this.tamed && this.isAlive
+    override fun canBeLeashed(): Boolean = this.isAlive
+
+    fun boltFromLeash(dropLead: Boolean = true) {
+        val angle = this.random.nextFloat() * Mth.TWO_PI
+        val speed = 0.9
+        this.boltMotion = Vec3(-Mth.sin(angle) * speed, 0.42, Mth.cos(angle) * speed)
+        this.deltaMovement = this.boltMotion
+        this.yRot = angle * Mth.RAD_TO_DEG
+        this.yRotO = this.yRot
+        this.boltTicks = 14
+        this.navigation.stop()
+        if (this.isLeashed) {
+            this.dropLeash(true, dropLead)
+        }
+    }
 
     override fun handleLeashAtDistance(leashHolder: Entity, distance: Float): Boolean {
         if (this.isOrderedToSit()) {
@@ -600,11 +666,17 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.wingDroopO = this.wingDroop
             this.wingTipHangO = this.wingTipHang
             this.bankO = this.bank
+            this.acroPitchO = this.acroPitch
             this.headBankYawO = this.headBankYaw
             this.tailPitchO = this.tailPitch
             this.swimBlendO = this.swimBlend
             this.wingCrawlO = this.wingCrawl
             this.crawlPhaseO = this.crawlPhase
+            if (this.isVehicle && !this.isControlledByLocalInstance) {
+                this.acroPitch = this.entityData.get(DATA_ACRO_PITCH)
+                this.bank = this.entityData.get(DATA_ACRO_ROLL)
+                this.acrobatic = this.entityData.get(DATA_ACROBATIC)
+            }
         }
         val yawBefore = this.yRot
         if (this.isOrderedToSit()) {
@@ -635,6 +707,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.tickRideHead()
         this.tickAngerTimer()
         this.tickScream(level)
+        this.tickAcrobatics()
+        if (this.boltTicks > 0) {
+            this.boltTicks--
+        }
+        if (this.immortal) {
+            this.setGlowingTag(true)
+            if (this.health < this.maxHealth) {
+                this.health = this.maxHealth
+            }
+            if (this.y < level.minBuildHeight) {
+                this.teleportTo(this.x, (level.minBuildHeight + 8).toDouble(), this.z)
+                this.deltaMovement = Vec3.ZERO
+            }
+        }
 
         if (this.tamed) {
             this.tickRepelWildPhantoms(level)
@@ -645,6 +731,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             } else {
                 this.pilotAscending = false
                 this.pilotDescending = false
+                this.pilotForward = 0f
+                this.pilotStrafe = 0f
             }
         }
     }
@@ -791,6 +879,57 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    private fun tickAcrobatics() {
+        val ridden = this.isVehicle && this.controllingPassenger is Player
+        val crawling = ridden && PhantomGroundSkim.pressed(this)
+        val acrobatic = PhantomAcrobatics.allows(
+            this.pilotForward.toDouble(),
+            this.pilotStrafe.toDouble(),
+            crawling,
+            this.isOrderedToSit(),
+            ridden,
+        )
+        val climb = when {
+            this.pilotAscending && !this.pilotDescending -> 1f
+            this.pilotDescending && !this.pilotAscending -> -1f
+            else -> 0f
+        }
+        val stepped = PhantomAcrobatics.step(
+            this.acroPitch,
+            this.acroRoll,
+            this.loopProgress,
+            acrobatic,
+            climb,
+            this.pilotStrafe,
+        )
+        this.acroPitch = stepped.pitch
+        this.acroRoll = stepped.roll
+        this.loopProgress = stepped.loop
+        this.acrobatic = acrobatic
+        this.entityData.set(DATA_ACRO_PITCH, stepped.pitch)
+        this.entityData.set(DATA_ACRO_ROLL, stepped.roll)
+        this.entityData.set(DATA_ACROBATIC, acrobatic)
+        if (stepped.completedLoop) {
+            this.becomeImmortal()
+        }
+    }
+
+    var loopReadyToReport: Boolean = false
+
+    fun tryOwnerLoop(player: Player) {
+        if (player.vehicle !== this || !this.isOwnedBy(player)) return
+        if (kotlin.math.abs(this.loopProgress) < 270f && kotlin.math.abs(this.acroPitch) < 270f) return
+        this.becomeImmortal()
+    }
+
+    private fun becomeImmortal() {
+        val first = !this.immortal
+        this.immortal = true
+        if (!first) return
+        val rider = this.controllingPassenger as? ServerPlayer ?: return
+        ModAdvancements.grantDeadLoop(rider)
+    }
+
     private fun tickFlightVisuals() {
         this.crawlLock = PhantomGroundSkim.pressed(this)
         if (this.isOrderedToSit() || this.crawlLock) {
@@ -800,7 +939,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val vertical = this.y - this.yo
         val (forward, strafe) = PhantomFlightAttitude.split(this.yRot, this.x - this.xo, this.z - this.zo)
         val localRide = this.isControlledByLocalInstance && this.controllingPassenger is Player
-        if (!localRide && !this.isOrderedToSit()) {
+        val remoteRide = this.isVehicle && !localRide
+        if (!localRide && !this.isOrderedToSit() && !remoteRide) {
             val moving = !PhantomFlightAttitude.wantsHover(forward, strafe)
             this.hoverBlend = PhantomHover.step(this.hoverBlend, moving)
             val pose = PhantomFlightAttitude.pose(forward, strafe, vertical, this.hoverBlend)
@@ -818,7 +958,47 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 this.setRot(this.yRot, this.xRot)
             }
         }
-        this.bank = PhantomHeadLook.approachDegrees(this.bank, this.bankTarget, 6f)
+        if (localRide) {
+            val pilot = this.controllingPassenger as Player
+            val (ascending, descending) = PilotInputAccess.read(
+                this.level().isClientSide,
+                this.pilotAscending,
+                this.pilotDescending,
+            )
+            val climb = when {
+                ascending && !descending -> 1f
+                descending && !ascending -> -1f
+                else -> 0f
+            }
+            val acrobatic = PhantomAcrobatics.allows(
+                pilot.zza.toDouble(),
+                pilot.xxa.toDouble(),
+                crawling = this.crawlLock,
+                sitting = this.isOrderedToSit(),
+                ridden = true,
+            )
+            val stepped = PhantomAcrobatics.step(
+                this.acroPitch,
+                this.bank,
+                this.loopProgress,
+                acrobatic,
+                climb,
+                pilot.xxa,
+            )
+            this.acroPitch = stepped.pitch
+            this.loopProgress = stepped.loop
+            this.acrobatic = acrobatic
+            if (acrobatic) {
+                this.bank = stepped.roll
+                this.bankTarget = stepped.roll
+            }
+            if (stepped.completedLoop && this.isOwnedBy(pilot)) {
+                this.loopReadyToReport = true
+            }
+        }
+        if (!remoteRide && !(localRide && this.acrobatic)) {
+            this.bank = PhantomHeadLook.approachDegrees(this.bank, this.bankTarget, 6f)
+        }
         val yawTarget = this.headYawTarget.coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
         this.headBankYaw = PhantomHeadLook.approachDegrees(this.headBankYaw, yawTarget, 3.5f)
             .coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
@@ -894,6 +1074,21 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     // =====================================================================
 
     override fun causeFallDamage(fallDistance: Float, multiplier: Float, source: DamageSource): Boolean = false
+
+    override fun hurt(source: DamageSource, amount: Float): Boolean {
+        if (this.immortal) return false
+        return super.hurt(source, amount)
+    }
+
+    override fun isInvulnerableTo(source: DamageSource): Boolean {
+        if (this.immortal) return true
+        return super.isInvulnerableTo(source)
+    }
+
+    override fun kill() {
+        if (this.immortal) return
+        super.kill()
+    }
 
     override fun checkFallDamage(y: Double, onGround: Boolean, state: BlockState, pos: BlockPos) {
         if (this.isOrderedToSit()) {

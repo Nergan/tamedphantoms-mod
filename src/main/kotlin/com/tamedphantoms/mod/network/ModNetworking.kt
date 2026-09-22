@@ -17,7 +17,7 @@ object ModNetworking {
     }
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
-        val registrar = event.registrar("2")
+        val registrar = event.registrar("3")
 
         registrar.playToServer(
             PhantomInputPayload.TYPE,
@@ -26,7 +26,7 @@ object ModNetworking {
             context.player().let { player ->
                 val vehicle = player.vehicle
                 if (vehicle is TamedPhantomEntity && vehicle.isOwnedBy(player)) {
-                    vehicle.setPilotInput(payload.ascending, payload.descending)
+                    vehicle.setPilotInput(payload.ascending, payload.descending, payload.forward, payload.strafe)
                 }
             }
         }
@@ -46,6 +46,17 @@ object ModNetworking {
             val vehicle = player.vehicle
             if (vehicle is TamedPhantomEntity) {
                 vehicle.tryOwnerScream(player)
+            }
+        }
+
+        registrar.playToServer(
+            PhantomLoopPayload.TYPE,
+            PhantomLoopPayload.STREAM_CODEC,
+        ) { _, context ->
+            val player = context.player()
+            val vehicle = player.vehicle
+            if (vehicle is TamedPhantomEntity) {
+                vehicle.tryOwnerLoop(player)
             }
         }
     }

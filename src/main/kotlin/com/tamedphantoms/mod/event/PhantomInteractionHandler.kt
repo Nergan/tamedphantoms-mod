@@ -78,6 +78,15 @@ object PhantomInteractionHandler {
             return
         }
 
+        if (stack.`is`(Items.LEAD) && !phantom.tamed) {
+            phantom.setLeashedTo(player, true)
+            if (phantom.isLeashed && !player.abilities.instabuild) {
+                stack.shrink(1)
+            }
+            phantom.boltFromLeash(dropLead = !player.abilities.instabuild)
+            return
+        }
+
         if (stack.`is`(Items.LEAD) && phantom.tamed && phantom.canHaveALeashAttachedToIt()) {
             phantom.setLeashedTo(player, true)
             if (!player.abilities.instabuild) {

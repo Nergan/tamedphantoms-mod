@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.client
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.network.PhantomInputPayload
+import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
 import net.minecraft.client.Minecraft
 import net.neoforged.neoforge.client.event.ClientTickEvent
@@ -35,12 +36,18 @@ object ClientPhantomInputSender {
             PacketDistributor.sendToServer(PhantomScreamPayload)
         }
         screamWasDown = screamDown
+        if (phantom != null && phantom.loopReadyToReport && phantom.isOwnedBy(player)) {
+            phantom.loopReadyToReport = false
+            PacketDistributor.sendToServer(PhantomLoopPayload)
+        }
         if (phantom == null) return
 
         PacketDistributor.sendToServer(
             PhantomInputPayload(
                 ascending = ModKeyMappings.FLY_UP.isDown,
                 descending = ModKeyMappings.FLY_DOWN.isDown,
+                forward = player.zza,
+                strafe = player.xxa,
             ),
         )
     }

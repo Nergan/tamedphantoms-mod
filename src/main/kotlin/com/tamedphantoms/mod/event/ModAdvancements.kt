@@ -23,12 +23,15 @@ object ModAdvancements {
     private val TAME_PHANTOM_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "tame_phantom")
     private val RELEASE_PHANTOM_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "release_phantom")
     private val WINGED_BEAST_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "winged_beast")
+    private val DEAD_LOOP_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "dead_loop")
 
     fun grantTamePhantom(player: ServerPlayer) = grant(player, TAME_PHANTOM_ID, "tamed_phantom")
 
     fun grantReleasePhantom(player: ServerPlayer) = grant(player, RELEASE_PHANTOM_ID, "released_phantom")
 
     fun grantWingedBeast(player: ServerPlayer) = grant(player, WINGED_BEAST_ID, "screamed")
+
+    fun grantDeadLoop(player: ServerPlayer) = grant(player, DEAD_LOOP_ID, "looped")
 
     private fun grant(player: ServerPlayer, advancementId: ResourceLocation, criterion: String) {
         try {

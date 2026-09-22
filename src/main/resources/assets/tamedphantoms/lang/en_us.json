@@ -34,6 +34,8 @@
   "advancements.tamedphantoms.release_phantom.description": "Release a tamed phantom",
   "advancements.tamedphantoms.winged_beast.title": "Winged Beast",
   "advancements.tamedphantoms.winged_beast.description": "Make your phantom scream",
+  "advancements.tamedphantoms.dead_loop.title": "Dead Loop!",
+  "advancements.tamedphantoms.dead_loop.description": "Pull a loop on a phantom. That phantom will glow, and it will not die",
 
   "tamedphantoms.guide.name": "Phantom Taming Guide",
   "tamedphantoms.guide.subtitle": "A night-sky companion",
@@ -63,7 +65,7 @@
   "tamedphantoms.guide.page.tame.2": "By default every attempt succeeds. The chance can be changed in the server settings. A phantom that was released can be tamed again in the same way. Free phantoms of that kind have bright $(#e8c400)yellow eyes$().",
 
   "tamedphantoms.guide.entry.care": "Care and the Lead",
-  "tamedphantoms.guide.page.care.1": "Only the owner can feed a tamed phantom. Any food will restore its health. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line.",
+  "tamedphantoms.guide.page.care.1": "Only the owner can feed a tamed phantom. Any food will restore its health. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. A released phantom will not abide a lead: it bolts aside and snaps free at once.",
   "tamedphantoms.guide.page.care.2": "Sunlight will not burn it, and it will not drown. If you travel too far, it will appear beside you again, the way a wolf returns when it has been left behind.",
 
   "tamedphantoms.guide.entry.release": "Letting Go",
@@ -76,7 +78,7 @@
 
   "tamedphantoms.guide.entry.flight": "In the Air",
   "tamedphantoms.guide.page.flight.1": "While you are riding, the movement keys send the phantom forward, back, and to the sides. Jump makes it climb. The left Control key makes it descend. It turns with your look. You and anyone sitting behind you receive $(thing)Night Vision$() for as long as you stay in the air.",
-  "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section.",
+  "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section. While the phantom flies forward, the camera follows its climb and dive. Hold climb, dive, or a turn and the lean keeps going, far enough for a loop or a barrel roll. Hovering and flying backward keep the usual tilt, and the camera does not follow it. A full loop grants a secret advancement. That phantom glows from then on, and it will not die.",
 
   "tamedphantoms.guide.entry.sit": "Sitting Still",
   "tamedphantoms.guide.page.sit.1": "Only the owner can ask a phantom to sit, and only while not riding it. If there is no saddle, use the right mouse button. If there is a saddle, sneak and use the right mouse button. The phantom turns over, falls, and stays where it lands. Falling does not hurt it. A breath of wind marks the command.",

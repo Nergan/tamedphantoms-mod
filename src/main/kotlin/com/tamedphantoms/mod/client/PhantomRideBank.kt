@@ -5,7 +5,7 @@ import net.minecraft.world.entity.player.Player
 import net.neoforged.bus.api.SubscribeEvent
 import net.neoforged.neoforge.client.event.ViewportEvent
 
-/** Крен камеры только от бокового полёта. Тангаж взгляда не трогает. */
+/** Крен и тангаж камеры повторяют модель, пока фантом летит вперёд. В зависании и задом тангаж не трогает. */
 object PhantomRideBank {
 
     @SubscribeEvent
@@ -14,6 +14,7 @@ object PhantomRideBank {
         val phantom = rider.vehicle as? TamedPhantomEntity ?: return
         if (phantom.isOrderedToSit()) return
         val partial = event.partialTick.toFloat()
+        event.pitch = event.pitch + phantom.ridePitchVisual(partial)
         event.roll = event.roll - phantom.bankVisual(partial)
     }
 }

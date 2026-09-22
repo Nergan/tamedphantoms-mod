@@ -20,7 +20,12 @@ import net.minecraft.resources.ResourceLocation
  * именно на файлах в пакете `network/` — это самое вероятное место,
  * пришлите лог так же, как раньше, и это быстро поправится.
  */
-data class PhantomInputPayload(val ascending: Boolean, val descending: Boolean) : CustomPacketPayload {
+data class PhantomInputPayload(
+    val ascending: Boolean,
+    val descending: Boolean,
+    val forward: Float,
+    val strafe: Float,
+) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
 
@@ -33,6 +38,10 @@ data class PhantomInputPayload(val ascending: Boolean, val descending: Boolean) 
             PhantomInputPayload::ascending,
             ByteBufCodecs.BOOL,
             PhantomInputPayload::descending,
+            ByteBufCodecs.FLOAT,
+            PhantomInputPayload::forward,
+            ByteBufCodecs.FLOAT,
+            PhantomInputPayload::strafe,
             ::PhantomInputPayload,
         )
     }
