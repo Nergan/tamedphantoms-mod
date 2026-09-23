@@ -21,6 +21,7 @@ issueTrackerURL = "https://github.com/Nergan/tamedphantoms-mod/issues"
 modId = "${mod_id}" #mandatory
 version = "${mod_version}" #mandatory
 displayName = "${mod_name}" #mandatory
+logoFile = "logo.png"
 displayURL = "https://github.com/Nergan/tamedphantoms-mod"
 authors = "${mod_authors}"
 description = '''
