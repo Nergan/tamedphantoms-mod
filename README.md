@@ -105,4 +105,4 @@ An invalid item id falls back to the default and a warning is written to the log
 
 ## License
 
-The code is [MIT](LICENSE). Vanilla Minecraft textures are not shipped: eye and body recoloring is computed on the client from the installed game.
+The code is [MPL-2.0](LICENSE). Vanilla Minecraft textures are not shipped: eye and body recoloring is computed on the client from the installed game.
