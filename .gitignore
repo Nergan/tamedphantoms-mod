@@ -47,3 +47,7 @@ desktop.ini
 *.log
 eclipse/
 release-assets/
+
+# McnCDN worker private key
+mcns-ci-github.pem
+.mcns-cdn/
