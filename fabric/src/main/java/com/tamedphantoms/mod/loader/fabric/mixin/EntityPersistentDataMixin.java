@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.loader.fabric.mixin;
 
+import com.tamedphantoms.mod.loader.fabric.PersistentDataCarrier;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.entity.Entity;

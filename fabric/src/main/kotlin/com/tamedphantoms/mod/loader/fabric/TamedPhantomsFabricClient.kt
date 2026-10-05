@@ -46,7 +46,6 @@ class TamedPhantomsFabricClient : ClientModInitializer {
                 helper.register(VanillaPhantomRedEyesLayer(renderer))
             }
         }
-        PhantomTextureProcessor.prepareEyeTextures()
         ResourceManagerHelper.get(PackType.CLIENT_RESOURCES).registerReloadListener(object : SimpleSynchronousResourceReloadListener {
             override fun getFabricId(): ResourceLocation =
                 ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "phantom_textures")

@@ -38,7 +38,7 @@ version = modVersion
 group = modGroupId
 
 base {
-    archivesName.set(modId)
+    archivesName.set("${modId}-neoforge-${minecraftVersion}")
 }
 
 // Mojang поставляет Java 21 в комплекте с 1.21.x — компилируем под неё.

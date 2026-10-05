@@ -11,7 +11,7 @@ import com.tamedphantoms.mod.event.PhantomOwnerRecallHandler
 import com.tamedphantoms.mod.event.PhantomTemptHandler
 import com.tamedphantoms.mod.item.ModItems
 import com.tamedphantoms.mod.loader.fabric.mixin.MobGoalAccessor
-import com.tamedphantoms.mod.loader.fabric.mixin.PersistentDataCarrier
+import com.tamedphantoms.mod.loader.fabric.PersistentDataCarrier
 import com.tamedphantoms.mod.platform.ModAccess
 import com.tamedphantoms.mod.platform.ModNetwork
 import net.fabricmc.api.ModInitializer

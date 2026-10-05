@@ -176,11 +176,17 @@ object PhantomTextureProcessor {
     }
 
     private fun tryGenerateFromEyeSource(destination: ResourceLocation, transform: (Int) -> Int): Boolean {
-        val custom = Minecraft.getInstance().resourceManager.getResource(EYE_SOURCE)
-        if (custom.isPresent && tryGenerate(EYE_SOURCE, destination, transform)) {
-            return true
+        val manager = Minecraft.getInstance().resourceManager ?: return false
+        return try {
+            val custom = manager.getResource(EYE_SOURCE)
+            if (custom.isPresent && tryGenerate(EYE_SOURCE, destination, transform)) {
+                return true
+            }
+            tryGenerate(VANILLA_EYES, destination, transform)
+        } catch (t: Throwable) {
+            TamedPhantomsMod.LOGGER.warn("Не удалось прочитать текстуру глаз фантома.", t)
+            false
         }
-        return tryGenerate(VANILLA_EYES, destination, transform)
     }
 
     private fun tryGenerate(

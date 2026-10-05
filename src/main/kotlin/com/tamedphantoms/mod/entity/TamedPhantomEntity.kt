@@ -1428,6 +1428,35 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         super.checkFallDamage(y, onGround, state, pos)
     }
 
+    override fun positionRider(passenger: Entity, callback: Entity.MoveFunction) {
+        super.positionRider(passenger, callback)
+        if (this.isOrderedToSit()) return
+        val offset = passenger.position().subtract(this.position())
+        val previous = Vec3(this.xo, this.yo, this.zo).add(offset)
+        passenger.xo = previous.x
+        passenger.yo = previous.y
+        passenger.zo = previous.z
+        passenger.xOld = previous.x
+        passenger.yOld = previous.y
+        passenger.zOld = previous.z
+    }
+
+    /**
+     * Насколько седло уезжает от точки крепления, когда модель кренится и клюёт носом.
+     * При нулевом тангаже и крене сдвиг нулевой, поэтому ровный полёт не двигает игрока.
+     */
+    fun seatVisualShift(partial: Float): Vec3 {
+        val pitch = this.ridePitchVisual(partial)
+        val bank = this.bankVisual(partial)
+        if (pitch == 0f && bank == 0f) return Vec3.ZERO
+        val saddle = Vec3(0.0, 0.46, -0.17)
+        val pivot = Vec3(0.0, 0.85, 0.1)
+        val rad = (Math.PI / 180.0).toFloat()
+        val turned = saddle.subtract(pivot).xRot(pitch * rad).zRot(-bank * rad).add(pivot)
+        val yaw = Mth.rotLerp(partial, this.yRotO, this.yRot)
+        return turned.subtract(saddle).yRot(-yaw * rad)
+    }
+
     override fun travel(travelVector: Vec3) {
         if (this.isOrderedToSit()) {
             this.travelSitting()

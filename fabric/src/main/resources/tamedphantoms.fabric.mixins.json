@@ -7,7 +7,8 @@
     "EntityPersistentDataMixin",
     "MobGoalAccessor",
     "PhantomTargetMixin",
-    "PhantomGroupSpawnMixin"
+    "PhantomGroupSpawnMixin",
+    "PhantomBreathMixin"
   ],
   "client": [
     "PhantomSoundMixin",

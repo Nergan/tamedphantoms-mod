@@ -11,7 +11,7 @@ version = prop("mod_version")
 group = prop("mod_group_id")
 
 base {
-    archivesName.set("tamedphantoms-fabric")
+    archivesName.set("tamedphantoms-fabric-${prop("minecraft_version")}")
 }
 
 java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))

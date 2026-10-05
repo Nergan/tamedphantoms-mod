@@ -101,7 +101,7 @@ jobs:
               *) cp -v "${jar}" release-assets/ ;;
             esac
           done
-          test -f "release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar"
+          test -f "release-assets/tamedphantoms-neoforge-1.21.1-${{ steps.versions.outputs.mod_version }}.jar"
           fabric_jars=(fabric/build/libs/tamedphantoms-fabric-*.jar)
           if [[ ${#fabric_jars[@]} -eq 0 ]]; then
             echo "No Fabric jar in fabric/build/libs"
@@ -113,7 +113,7 @@ jobs:
               *) cp -v "${jar}" release-assets/ ;;
             esac
           done
-          test -f "release-assets/tamedphantoms-fabric-${{ steps.versions.outputs.mod_version }}.jar"
+          test -f "release-assets/tamedphantoms-fabric-1.21.1-${{ steps.versions.outputs.mod_version }}.jar"
           chmod +x .github/scripts/fetch-companion-jars.sh
           .github/scripts/fetch-companion-jars.sh \
             release-assets \
@@ -153,7 +153,7 @@ jobs:
 
             | File | Required | Source |
             | --- | --- | --- |
-            | `tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
+            | `tamedphantoms-neoforge-1.21.1-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
             | `kotlinforforge-${{ steps.versions.outputs.kff_version }}-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) (LGPL-2.1) |
             | `Patchouli-*-NEOFORGE.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
 
@@ -161,7 +161,7 @@ jobs:
 
             | File | Required | Source |
             | --- | --- | --- |
-            | `tamedphantoms-fabric-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
+            | `tamedphantoms-fabric-1.21.1-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
             | `fabric-api-*.jar` | Yes | [Fabric API](https://modrinth.com/mod/fabric-api) (Apache-2.0) |
             | `fabric-language-kotlin-*.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin) (Apache-2.0) |
             | `cloth-config-*.jar` | Yes, for the config screen | [Cloth Config](https://modrinth.com/mod/cloth-config) (LGPL-3.0) |
@@ -188,7 +188,7 @@ jobs:
             1.21.1
           java: |
             21
-          files: release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar
+          files: release-assets/tamedphantoms-neoforge-1.21.1-${{ steps.versions.outputs.mod_version }}.jar
           dependencies: |
             kotlin-for-forge(required){modrinth:ordsPcFz}
             patchouli(optional){modrinth:nU0bVIaL}
@@ -210,7 +210,7 @@ jobs:
             1.21.1
           java: |
             21
-          files: release-assets/tamedphantoms-fabric-${{ steps.versions.outputs.mod_version }}.jar
+          files: release-assets/tamedphantoms-fabric-1.21.1-${{ steps.versions.outputs.mod_version }}.jar
           dependencies: |
             fabric-api(required){modrinth:P7dR8mSH}
             fabric-language-kotlin(required){modrinth:Ha28R6CL}
@@ -245,7 +245,7 @@ jobs:
             fi
             printf '%s\n' "${matches[0]}"
           }
-          mod_jar="release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar"
+          mod_jar="release-assets/tamedphantoms-neoforge-1.21.1-${{ steps.versions.outputs.mod_version }}.jar"
           kff_jar="$(one 'release-assets/kotlinforforge-*.jar')"
           patchouli_jar="$(one 'release-assets/Patchouli-*-NEOFORGE.jar')"
           node scripts/mcns-release.mjs tamedphantoms-mod auto \
