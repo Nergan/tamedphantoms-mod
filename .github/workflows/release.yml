@@ -264,6 +264,17 @@ jobs:
           set -euo pipefail
           python3 .github/scripts/replace-modrinth-versions.py --finish release-assets/modrinth-delete-after-publish.txt
 
+      - name: Update Modrinth description
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MODRINTH_TOKEN}" ]]; then
+            echo "MODRINTH_TOKEN is empty. The Modrinth page will not be updated."
+            exit 0
+          fi
+          python3 .github/scripts/update-modrinth-body.py tamed-phantoms modrinth.md
+
       - name: Set up Node.js
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         uses: actions/setup-node@v4
