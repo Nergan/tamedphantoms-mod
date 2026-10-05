@@ -9,14 +9,8 @@ import net.neoforged.fml.loading.FMLEnvironment
 import net.neoforged.neoforge.event.entity.EntityAttributeCreationEvent
 
 /**
- * Общая (common, то есть отрабатывающая и на клиенте, и на сервере)
- * настройка мода уровня "шина мод-евентов".
- *
- * Клиентские вещи (рендереры, экран конфига и т.п.) намеренно вызываются
- * УСЛОВНО, только если [FMLEnvironment.dist] равен [Dist.CLIENT] — это
- * стандартный способ не дать JVM попытаться загрузить клиентские классы
- * (ссылающиеся на рендер-only/gui-only API) на выделенном сервере, где их
- * попросту нет в classpath.
+ * Клиентские классы подключаются только если [FMLEnvironment.dist] равен [Dist.CLIENT],
+ * чтобы выделенный сервер их не загружал.
  */
 object ModSetup {
 

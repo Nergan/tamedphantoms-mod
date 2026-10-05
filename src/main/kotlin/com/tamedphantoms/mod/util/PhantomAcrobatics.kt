@@ -62,7 +62,7 @@ object PhantomAcrobatics {
     }
 
     fun configuredStep(): Float =
-        ServerConfig.CONFIG.acrobaticsStep.get().toFloat().coerceIn(0.05f, 12f)
+        ServerConfig.acrobaticsStep().toFloat().coerceIn(0.05f, 12f)
 
     private fun ease(value: Float, step: Float): Float =
         PhantomHeadLook.approachDegrees(value, 0f, step * 1.2f)

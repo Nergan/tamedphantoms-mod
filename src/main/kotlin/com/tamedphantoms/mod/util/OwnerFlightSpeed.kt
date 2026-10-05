@@ -1,7 +1,5 @@
 package com.tamedphantoms.mod.util
 
-import net.neoforged.neoforge.common.NeoForge
-import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
@@ -14,10 +12,6 @@ object OwnerFlightSpeed {
 
     private val byOwner = ConcurrentHashMap<UUID, Double>()
 
-    fun init() {
-        NeoForge.EVENT_BUS.addListener(::onLogout)
-    }
-
     fun set(owner: UUID, speed: Double) {
         byOwner[owner] = speed.coerceIn(PhantomFlightPace.MIN, PhantomFlightPace.MAX)
     }
@@ -26,9 +20,5 @@ object OwnerFlightSpeed {
 
     fun clear(owner: UUID) {
         byOwner.remove(owner)
-    }
-
-    private fun onLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
-        clear(event.entity.uuid)
     }
 }

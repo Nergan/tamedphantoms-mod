@@ -36,7 +36,7 @@ import com.tamedphantoms.mod.util.PhantomTamingLogic
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.BlockParticleOption
 import net.minecraft.core.particles.ParticleTypes
-import net.neoforged.neoforge.fluids.FluidType
+import com.tamedphantoms.mod.platform.ModNetwork
 import net.minecraft.nbt.CompoundTag
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
@@ -75,7 +75,6 @@ import net.minecraft.world.level.storage.loot.LootTable
 import net.minecraft.world.level.Level
 import net.minecraft.world.level.block.state.BlockState
 import net.minecraft.world.phys.Vec3
-import net.neoforged.neoforge.network.PacketDistributor
 import java.util.Optional
 import java.util.UUID
 import kotlin.math.hypot
@@ -473,7 +472,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun applyConfiguredSize() {
-        val size = ServerConfig.CONFIG.phantomSize.get().coerceIn(0, 64)
+        val size = ServerConfig.phantomSize().coerceIn(0, 64)
         if (this.phantomSize != size) {
             this.setPhantomSize(size)
         }
@@ -485,8 +484,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     override fun isSunBurnTick(): Boolean = false
-
-    override fun canDrownInFluidType(type: FluidType): Boolean = false
 
     override fun decreaseAirSupply(currentAir: Int): Int = currentAir
 
@@ -558,7 +555,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     fun startDefending(attackerId: UUID) {
         this.setOrderedToSit(false, playEffects = false)
-        this.angerState = PhantomAngerLogic.onHurtBy(attackerId, ServerConfig.CONFIG.defendDurationTicks.get())
+        this.angerState = PhantomAngerLogic.onHurtBy(attackerId, ServerConfig.defendDurationTicks())
         this.setDefending(true)
     }
 
@@ -1083,7 +1080,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.repelCooldown-- > 0) return
         this.repelCooldown = ModConfig.REPEL_PUSH_INTERVAL_TICKS
 
-        val box = this.boundingBox.inflate(ServerConfig.CONFIG.repelRadius.get())
+        val box = this.boundingBox.inflate(ServerConfig.repelRadius())
         val nearby = level.getEntitiesOfClass(Phantom::class.java, box) { candidate ->
             candidate !== this && !(candidate is TamedPhantomEntity && candidate.tamed)
         }
@@ -1142,7 +1139,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun beginScream(level: ServerLevel, redEyes: Boolean, blindness: Boolean, awardOwner: ServerPlayer?, moonPulse: Boolean = false) {
-        val seconds = ServerConfig.CONFIG.screamCooldownSeconds.get().coerceAtLeast(1)
+        val seconds = ServerConfig.screamCooldownSeconds().coerceAtLeast(1)
         this.screamCooldown = seconds * 20
         this.screamTicks = PhantomScream.EFFECT_TICKS
         this.screamFears = blindness
@@ -1151,7 +1148,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         PhantomScream.play(level, this)
         PhantomScream.frighten(level, this, blindness)
         if (moonPulse) {
-            PacketDistributor.sendToPlayersInDimension(level, PhantomMoonPulsePayload)
+            ModNetwork.sendToDimension(level, PhantomMoonPulsePayload)
             for (listener in PhantomScream.listeners(level, this)) {
                 ModAdvancements.grantSickMoon(listener)
             }

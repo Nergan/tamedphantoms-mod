@@ -12,6 +12,8 @@ on:
 # действительно скачивает NeoForge/Minecraft/Kotlin for Forge с Maven
 # и собирает мод "по-настоящему", а не просто проверяет синтаксис.
 #
+# Gradle 8.11: Fabric Loom 1.9 нужен, чтобы перемапить Kotlin 2.1
+# (Cloth Config). NeoForge ModDevGradle на этой версии тоже собирается.
 # Используем официальный gradle/actions/setup-gradle вместо `./gradlew`:
 # в репозитории намеренно нет бинарника gradle-wrapper.jar (см. README.md,
 # раздел "Про gradle-wrapper.jar") — этот action ставит Gradle нужной
@@ -35,7 +37,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.10'
+          gradle-version: '8.11'
 
       - name: Build mod jar
         run: gradle build --stacktrace
@@ -47,7 +49,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tamedphantoms-jar
-          path: build/libs/*.jar
+          path: |
+            build/libs/*.jar
+            fabric/build/libs/*.jar
           if-no-files-found: error
 
       - name: Upload test report

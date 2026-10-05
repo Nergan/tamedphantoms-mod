@@ -2,7 +2,7 @@
 
 **[English](README.md)** · **[Русский](README.ru.md)**
 
-Мод для **Minecraft 1.21.1** (NeoForge): приручение фантомов, полёт на седле, посадка, поводок и освобождение. Написан на Kotlin через [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge).
+Мод для **Minecraft 1.21.1** на NeoForge и Fabric: приручение фантомов, полёт на седле, посадка, поводок и освобождение. Сборка NeoForge идёт через [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge), сборка Fabric — через [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin). Ставится один загрузчик, не оба сразу.
 
 Интерфейс и внутриигровая книга доступны на русском и английском.
 
@@ -10,7 +10,9 @@
 
 Готовые jar лежат в [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). Пуш в `main` обновляет файлы текущего релиза.
 
-Скачайте эти файлы и положите в папку `mods`:
+Скачайте один набор и положите эти файлы в папку `mods`.
+
+### NeoForge
 
 | Файл                               | Обязателен | Что это                                                                  |
 | ---------------------------------- | ---------- | ------------------------------------------------------------------------ |
@@ -18,7 +20,19 @@
 | `kotlinforforge-5.8.0-all.jar`     | Да         | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)            |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | Нет        | [Patchouli](https://modrinth.com/mod/patchouli), только если нужна книга |
 
-Workflow релиза собирает мод и забирает два чужих jar с Modrinth. SHA-256 у каждого файла GitHub считает сам и показывает рядом с ним на странице релиза. Файл `*-sources.jar` в `mods` класть не нужно.
+### Fabric
+
+| Файл                                      | Обязателен | Что это                                                                                    |
+| ----------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
+| `tamedphantoms-fabric-1.0.0.jar`          | Да         | этот мод                                                                                   |
+| `fabric-api-0.116.17+1.21.1.jar`          | Да         | [Fabric API](https://modrinth.com/mod/fabric-api)                                          |
+| `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Да   | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                  |
+| `cloth-config-15.0.140-fabric.jar`        | Да         | [Cloth Config](https://modrinth.com/mod/cloth-config), экран настроек                      |
+| `modmenu-11.0.4.jar`                      | Нет        | [Mod Menu](https://modrinth.com/mod/modmenu), кнопка, которая открывает этот экран         |
+| `placeholder-api-2.4.2+1.21.jar`          | Нет        | [Text Placeholder API](https://modrinth.com/mod/placeholder-api), нужен Mod Menu           |
+| `Patchouli-1.21.1-93-FABRIC.jar`          | Нет        | [Patchouli](https://modrinth.com/mod/patchouli), только если нужна книга                   |
+
+Workflow релиза собирает оба jar и забирает чужие jar с Modrinth. SHA-256 у каждого файла GitHub считает сам и показывает рядом с ним на странице релиза. Файл `*-sources.jar` в `mods` класть не нужно.
 
 ## Возможности
 
@@ -46,17 +60,30 @@ Workflow релиза собирает мод и забирает два чуж�
 | Minecraft        | 1.21.1                                    |
 | NeoForge         | 21.1.209 (подойдёт линейка 21.1.x)        |
 | Kotlin for Forge | 5.8.0, сборка **NeoForge**                |
+| Fabric Loader    | 0.16.10 или новее                         |
+| Fabric API       | 0.116.17+1.21.1                           |
+| Fabric Language Kotlin | 1.13.2+kotlin.2.1.20                |
+| Cloth Config     | 15.0.140, сборка Fabric                   |
 | Java             | 21                                        |
-| Patchouli        | любая для 1.21.1, только если нужна книга |
+| Patchouli        | любая для 1.21.1 того же загрузчика, только если нужна книга |
 
 ## Установка
 
+NeoForge:
+
 1. Установите NeoForge 1.21.1.
-2. Скачайте jar из [последнего Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
+2. Скачайте jar для NeoForge из [последнего Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
 3. Положите в `mods` файлы `tamedphantoms-1.0.0.jar` и `kotlinforforge-5.8.0-all.jar`.
 4. По желанию добавьте оттуда же `Patchouli-1.21.1-93-NEOFORGE.jar`.
 
-Мод нужен и на клиенте, и на сервере. Kotlin for Forge и Patchouli можно взять и с [Modrinth](https://modrinth.com/mod/kotlin-for-forge), не из GitHub Release.
+Fabric:
+
+1. Установите Fabric Loader 0.16.10 или новее для Minecraft 1.21.1.
+2. Скачайте jar для Fabric из того же релиза.
+3. Положите в `mods` файлы `tamedphantoms-fabric-1.0.0.jar`, Fabric API, Fabric Language Kotlin и Cloth Config.
+4. По желанию добавьте Mod Menu, Placeholder API и `Patchouli-1.21.1-93-FABRIC.jar`.
+
+Мод нужен и на клиенте, и на сервере. Зависимости можно взять и с Modrinth; версия Fabric там называется `1.0.0-fabric`.
 
 ## Управление полётом
 
@@ -75,11 +102,15 @@ Workflow релиза собирает мод и забирает два чуж�
 
 ## Настройки
 
-В игре: Mods → Tamed Phantoms → Config.
+NeoForge: Mods → Tamed Phantoms → Config.
+
+Fabric, если стоит Mod Menu: Mods → Tamed Phantoms → кнопка настроек. На чужом сервере правила мира только для чтения. Без Mod Menu правьте toml-файлы ниже.
 
 Файл мира: `saves/<мир>/serverconfig/tamedphantoms-server.toml`.
 
 На выделенном сервере: `world/serverconfig/tamedphantoms-server.toml`. Конфиг типа `SERVER`: значения задаёт сервер и рассылает игрокам.
+
+Fabric держит заготовку в `config/tamedphantoms-server.toml`. Новый мир копирует её в `serverconfig`, если своего файла ещё нет. На чужом сервере клиент получает эти значения от сервера.
 
 | Параметр            | По умолчанию                 | Смысл                                          |
 | ------------------- | ---------------------------- | ---------------------------------------------- |

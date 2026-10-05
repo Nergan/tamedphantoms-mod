@@ -46,6 +46,9 @@ java.toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 
 kotlin {
     jvmToolchain(21)
+    sourceSets.named("main") {
+        kotlin.srcDir("src/neoforge/kotlin")
+    }
 }
 
 tasks.withType<KotlinCompile>().configureEach {
@@ -56,6 +59,8 @@ tasks.withType<KotlinCompile>().configureEach {
 }
 
 sourceSets.main {
+    java.srcDir("src/neoforge/java")
+    resources.srcDir("src/neoforge/resources")
     resources {
         // Ресурсы, сгенерированные датагеном / шаблонизацией mods.toml.
         srcDir("src/generated/resources")

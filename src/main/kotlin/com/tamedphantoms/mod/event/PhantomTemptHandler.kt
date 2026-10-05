@@ -1,13 +1,13 @@
 package com.tamedphantoms.mod.event
 
 import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.platform.ModAccess
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.entity.ai.WildPhantomTemptGoal
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.monster.Phantom
 import net.minecraft.world.entity.player.Player
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent
-import net.neoforged.neoforge.event.entity.living.LivingChangeTargetEvent
 import java.util.Collections
 import java.util.WeakHashMap
 
@@ -19,32 +19,24 @@ object PhantomTemptHandler {
 
     private val injected = Collections.newSetFromMap(WeakHashMap<Phantom, Boolean>())
 
-    @SubscribeEvent
-    fun onJoin(event: EntityJoinLevelEvent) {
-        if (event.level.isClientSide) return
-        val phantom = event.entity as? Phantom ?: return
+    fun onJoin(entity: Entity) {
+        if (entity.level().isClientSide) return
+        val phantom = entity as? Phantom ?: return
         if (phantom is TamedPhantomEntity) return
         if (!injected.add(phantom)) return
-        phantom.goalSelector.addGoal(0, WildPhantomTemptGoal(phantom))
+        ModAccess.addGoal(phantom, 0, WildPhantomTemptGoal(phantom))
     }
 
-    @SubscribeEvent
-    fun onChangeTarget(event: LivingChangeTargetEvent) {
-        val phantom = event.entity as? Phantom ?: return
+    fun shouldCancelTarget(entity: LivingEntity, next: LivingEntity?): Boolean {
+        val phantom = entity as? Phantom ?: return false
         if (phantom is TamedPhantomEntity) {
-            if (phantom.tamed && event.originalAboutToBeSetTarget !== phantom.getDefendTarget()) {
-                event.isCanceled = true
-            }
-            return
+            return phantom.tamed && next !== phantom.getDefendTarget()
         }
-        val incoming = event.originalAboutToBeSetTarget
-        if (incoming is Player && isHoldingTameItem(incoming)) {
-            event.isCanceled = true
-        }
+        return next is Player && isHoldingTameItem(next)
     }
 
     private fun isHoldingTameItem(player: Player): Boolean {
-        val tameItem = ServerConfig.CONFIG.resolveTameItem()
+        val tameItem = ServerConfig.resolveTameItem()
         return player.mainHandItem.`is`(tameItem) || player.offhandItem.`is`(tameItem)
     }
 }

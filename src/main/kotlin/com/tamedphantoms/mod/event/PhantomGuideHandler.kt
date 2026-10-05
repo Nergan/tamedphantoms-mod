@@ -6,9 +6,9 @@ import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.fml.ModList
-import net.neoforged.neoforge.event.entity.player.PlayerEvent
+import com.tamedphantoms.mod.platform.ModNetwork
+import com.tamedphantoms.mod.platform.storedData
+import net.minecraft.world.entity.player.Player
 
 /**
  * Книжка Patchouli выдаётся только если мод установлен.
@@ -20,20 +20,18 @@ object PhantomGuideHandler {
     private const val PATCHOULI_ID = "patchouli"
     private const val TAG_RECEIVED = "tamedphantoms.received_guide"
 
-    fun isPatchouliLoaded(): Boolean = ModList.get().isLoaded(PATCHOULI_ID)
+    fun isPatchouliLoaded(): Boolean = ModNetwork.isModLoaded(PATCHOULI_ID)
 
-    @SubscribeEvent
-    fun onPlayerLogin(event: PlayerEvent.PlayerLoggedInEvent) {
-        val player = event.entity
+    fun onPlayerLogin(player: Player) {
         if (player.level().isClientSide) return
         if (!isPatchouliLoaded()) return
-        if (player.persistentData.getBoolean(TAG_RECEIVED)) return
+        if (player.storedData.getBoolean(TAG_RECEIVED)) return
 
         val book = createBookStack() ?: return
         if (!player.addItem(book)) {
             player.drop(book, false)
         }
-        player.persistentData.putBoolean(TAG_RECEIVED, true)
+        player.storedData.putBoolean(TAG_RECEIVED, true)
     }
 
     fun createBookStack(): ItemStack? {

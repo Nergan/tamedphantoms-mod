@@ -128,7 +128,7 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
     }
 
     private fun findTemptingPlayer(): Player? {
-        val tameItem = ServerConfig.CONFIG.resolveTameItem()
+        val tameItem = ServerConfig.resolveTameItem()
         return phantom.level().getNearestPlayer(phantom, TEMPT_RANGE)?.takeIf { player ->
             player.isAlive && (player.mainHandItem.`is`(tameItem) || player.offhandItem.`is`(tameItem))
         }

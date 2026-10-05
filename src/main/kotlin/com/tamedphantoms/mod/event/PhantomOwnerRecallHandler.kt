@@ -1,8 +1,7 @@
 package com.tamedphantoms.mod.event
 
 import com.tamedphantoms.mod.entity.PhantomOwnerRecall
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.event.entity.player.PlayerEvent
+import net.minecraft.world.entity.player.Player
 
 /**
  * После возрождения или смены измерения хозяин оказывается далеко,
@@ -11,23 +10,19 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent
  */
 object PhantomOwnerRecallHandler {
 
-    @SubscribeEvent
-    fun onRespawn(event: PlayerEvent.PlayerRespawnEvent) {
-        PhantomOwnerRecall.recallOwned(event.entity)
+    fun onRespawn(player: Player) {
+        PhantomOwnerRecall.recallOwned(player)
     }
 
-    @SubscribeEvent
-    fun onChangedDimension(event: PlayerEvent.PlayerChangedDimensionEvent) {
-        PhantomOwnerRecall.recallOwned(event.entity)
+    fun onChangedDimension(player: Player) {
+        PhantomOwnerRecall.recallOwned(player)
     }
 
-    @SubscribeEvent
-    fun onLogin(event: PlayerEvent.PlayerLoggedInEvent) {
-        PhantomOwnerRecall.recallOwned(event.entity)
+    fun onLogin(player: Player) {
+        PhantomOwnerRecall.recallOwned(player)
     }
 
-    @SubscribeEvent
-    fun onClone(event: PlayerEvent.Clone) {
-        PhantomOwnerRecall.copyTo(event.entity, event.original)
+    fun onClone(newPlayer: Player, oldPlayer: Player) {
+        PhantomOwnerRecall.copyTo(newPlayer, oldPlayer)
     }
 }

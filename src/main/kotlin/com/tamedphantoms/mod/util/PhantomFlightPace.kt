@@ -40,7 +40,7 @@ object PhantomFlightPace {
     fun waterScale(underwater: Boolean): Double = if (underwater) WATER_SPEED else 1.0
 
     fun pace(phantom: TamedPhantomEntity): Float {
-        val server = ServerConfig.CONFIG.flightSpeed.get()
+        val server = ServerConfig.flightSpeed()
         val preference = if (phantom.level().isClientSide) {
             clientPreference?.invoke()
         } else {

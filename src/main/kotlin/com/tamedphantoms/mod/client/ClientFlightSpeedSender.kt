@@ -2,11 +2,9 @@ package com.tamedphantoms.mod.client
 
 import com.tamedphantoms.mod.config.ClientConfig
 import com.tamedphantoms.mod.network.PhantomFlightSpeedPayload
+import com.tamedphantoms.mod.platform.ModNetwork
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.client.Minecraft
-import net.neoforged.neoforge.client.event.ClientTickEvent
-import net.neoforged.neoforge.common.NeoForge
-import net.neoforged.neoforge.network.PacketDistributor
 import kotlin.math.abs
 
 /**
@@ -19,19 +17,18 @@ object ClientFlightSpeedSender {
     private var sent = Float.NaN
 
     fun init() {
-        PhantomFlightPace.clientPreference = { ClientConfig.CONFIG.ownedFlightSpeed.get() }
-        NeoForge.EVENT_BUS.addListener(::onClientTick)
+        PhantomFlightPace.clientPreference = { ClientConfig.ownedFlightSpeed() }
     }
 
-    private fun onClientTick(event: ClientTickEvent.Post) {
+    fun onClientTick() {
         val player = Minecraft.getInstance().player
         if (player == null || Minecraft.getInstance().connection == null) {
             sent = Float.NaN
             return
         }
-        val value = ClientConfig.CONFIG.ownedFlightSpeed.get().toFloat()
+        val value = ClientConfig.ownedFlightSpeed().toFloat()
         if (!sent.isNaN() && abs(sent - value) <= 0.001f) return
-        PacketDistributor.sendToServer(PhantomFlightSpeedPayload(value))
+        ModNetwork.sendToServer(PhantomFlightSpeedPayload(value))
         sent = value
     }
 }

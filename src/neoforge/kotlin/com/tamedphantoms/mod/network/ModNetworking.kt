@@ -8,11 +8,6 @@ import net.minecraft.server.level.ServerPlayer
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
 
-/**
- * Регистрация пакета [PhantomInputPayload] и его обработчика на сервере.
- * Это ОБЩИЙ (common) код — вызывается для обеих сторон, но сам обработчик
- * реально что-то делает только когда пакет ПРИНИМАЕТ сервер.
- */
 object ModNetworking {
 
     fun init(modBus: IEventBus) {

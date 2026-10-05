@@ -12,7 +12,7 @@ public abstract class PhantomSpawnerMixin {
 
     @ModifyConstant(method = "tick", constant = @Constant(intValue = 72000))
     private int tamedphantoms$insomniaTicks(int original) {
-        int days = ServerConfig.Companion.getCONFIG().getInsomniaDays().get();
+        int days = ServerConfig.insomniaDays();
         return Math.max(0, days) * 24000;
     }
 }

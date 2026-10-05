@@ -2,7 +2,7 @@
 
 **[English](README.md)** · **[Русский](README.ru.md)**
 
-A **Minecraft 1.21.1** NeoForge mod: tame phantoms, ride them with a saddle, sit them, leash them, and release them. Written in Kotlin with [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge).
+A **Minecraft 1.21.1** mod for NeoForge and Fabric: tame phantoms, ride them with a saddle, sit them, leash them, and release them. The NeoForge build uses [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge). The Fabric build uses [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin). Install one loader, not both.
 
 The UI and in-game guidebook are available in English and Russian.
 
@@ -10,7 +10,9 @@ The UI and in-game guidebook are available in English and Russian.
 
 Jars live on [GitHub Releases](https://github.com/Nergan/tamedphantoms-mod/releases/latest). A push to `main` updates the files on the current version’s release.
 
-Download these files and put them in the `mods` folder:
+Download one set and put those files in the `mods` folder.
+
+### NeoForge
 
 | File                               | Required | What it is                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
@@ -18,7 +20,19 @@ Download these files and put them in the `mods` folder:
 | `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
-The release workflow builds the mod and fetches the two companion jars from Modrinth. GitHub shows a SHA-256 digest next to each file on the release page. Do not install `*-sources.jar`.
+### Fabric
+
+| File                                      | Required | What it is                                                                                         |
+| ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `tamedphantoms-fabric-1.0.0.jar`          | Yes      | this mod                                                                                           |
+| `fabric-api-0.116.17+1.21.1.jar`          | Yes      | [Fabric API](https://modrinth.com/mod/fabric-api)                                                  |
+| `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                    |
+| `cloth-config-15.0.140-fabric.jar`        | Yes      | [Cloth Config](https://modrinth.com/mod/cloth-config), the config screen                           |
+| `modmenu-11.0.4.jar`                      | No       | [Mod Menu](https://modrinth.com/mod/modmenu), the button that opens that screen                    |
+| `placeholder-api-2.4.2+1.21.jar`          | No       | [Text Placeholder API](https://modrinth.com/mod/placeholder-api), required by Mod Menu             |
+| `Patchouli-1.21.1-93-FABRIC.jar`          | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook                    |
+
+The release workflow builds both jars and fetches the companion jars from Modrinth. GitHub shows a SHA-256 digest next to each file on the release page. Do not install `*-sources.jar`.
 
 ## Features
 
@@ -46,17 +60,30 @@ The release workflow builds the mod and fetches the two companion jars from Modr
 | Minecraft        | 1.21.1                                      |
 | NeoForge         | 21.1.209 (any 21.1.x should work)           |
 | Kotlin for Forge | 5.8.0, **NeoForge** build                   |
+| Fabric Loader    | 0.16.10 or newer                            |
+| Fabric API       | 0.116.17+1.21.1                             |
+| Fabric Language Kotlin | 1.13.2+kotlin.2.1.20                  |
+| Cloth Config     | 15.0.140, Fabric build                      |
 | Java             | 21                                          |
-| Patchouli        | any 1.21.1 build, only if you want the book |
+| Patchouli        | any 1.21.1 build for the same loader, only if you want the book |
 
 ## Installation
 
+NeoForge:
+
 1. Install NeoForge 1.21.1.
-2. Download the jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
+2. Download the NeoForge jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
 3. Put `tamedphantoms-1.0.0.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
 4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
-The mod is required on both client and server. You can also get Kotlin for Forge and Patchouli from [Modrinth](https://modrinth.com/mod/kotlin-for-forge) instead of the GitHub release.
+Fabric:
+
+1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1.
+2. Download the Fabric jars from the same release.
+3. Put `tamedphantoms-fabric-1.0.0.jar`, Fabric API, Fabric Language Kotlin, and Cloth Config in `mods`.
+4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
+
+The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.0-fabric`.
 
 ## Flight controls
 
@@ -75,11 +102,15 @@ Only the owner in the front seat can steer.
 
 ## Configuration
 
-In-game: Mods → Tamed Phantoms → Config.
+NeoForge: Mods → Tamed Phantoms → Config.
+
+Fabric, with Mod Menu: Mods → Tamed Phantoms → the configure button. On a remote server the world rules are read-only. Without Mod Menu, edit the toml files below.
 
 World file: `saves/<world>/serverconfig/tamedphantoms-server.toml`.
 
 Dedicated server: `world/serverconfig/tamedphantoms-server.toml`. This is a `SERVER` config: the server owns the values and syncs them to clients.
+
+Fabric keeps a template at `config/tamedphantoms-server.toml`. A new world copies it into `serverconfig` when that file is not there yet. On a remote server the client receives these values from the server.
 
 | Option              | Default                      | Meaning                                     |
 | ------------------- | ---------------------------- | ------------------------------------------- |

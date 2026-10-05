@@ -15,8 +15,8 @@ permissions:
   contents: write
 
 # Пуш в main (и тег / ручной запуск) пересобирает мод и обновляет
-# GitHub Release для текущей mod_version: те же три jar перезаписываются.
-# Новый номер версии в gradle.properties → новый релиз vX.Y.Z.
+# GitHub Release для текущей mod_version: jar NeoForge и Fabric плюс
+# зависимости. Новый номер версии в gradle.properties → новый релиз vX.Y.Z.
 # SHA-256 у каждого файла считает сам GitHub при загрузке.
 
 jobs:
@@ -33,9 +33,21 @@ jobs:
           mod_version="$(grep -E '^mod_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
           kff_version="$(grep -E '^kff_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
           patchouli_version="$(grep -E '^patchouli_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
+          fabric_api_version="$(grep -E '^fabric_api_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
+          fabric_kotlin_version="$(grep -E '^fabric_kotlin_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
+          patchouli_fabric_version="$(grep -E '^patchouli_fabric_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
+          cloth_config_modrinth_version="$(grep -E '^cloth_config_modrinth_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
+          modmenu_version="$(grep -E '^modmenu_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
+          placeholder_api_version="$(grep -E '^placeholder_api_version=' gradle.properties | cut -d= -f2- | tr -d '\r')"
           echo "mod_version=${mod_version}" >> "$GITHUB_OUTPUT"
           echo "kff_version=${kff_version}" >> "$GITHUB_OUTPUT"
           echo "patchouli_version=${patchouli_version}" >> "$GITHUB_OUTPUT"
+          echo "fabric_api_version=${fabric_api_version}" >> "$GITHUB_OUTPUT"
+          echo "fabric_kotlin_version=${fabric_kotlin_version}" >> "$GITHUB_OUTPUT"
+          echo "patchouli_fabric_version=${patchouli_fabric_version}" >> "$GITHUB_OUTPUT"
+          echo "cloth_config_modrinth_version=${cloth_config_modrinth_version}" >> "$GITHUB_OUTPUT"
+          echo "modmenu_version=${modmenu_version}" >> "$GITHUB_OUTPUT"
+          echo "placeholder_api_version=${placeholder_api_version}" >> "$GITHUB_OUTPUT"
           echo "mod_version=${mod_version}" >> "$GITHUB_ENV"
 
       - name: Check tag matches mod_version
@@ -68,7 +80,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.10"
+          gradle-version: "8.11"
 
       - name: Build and test
         run: gradle build --stacktrace
@@ -90,11 +102,29 @@ jobs:
             esac
           done
           test -f "release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar"
+          fabric_jars=(fabric/build/libs/tamedphantoms-fabric-*.jar)
+          if [[ ${#fabric_jars[@]} -eq 0 ]]; then
+            echo "No Fabric jar in fabric/build/libs"
+            exit 1
+          fi
+          for jar in "${fabric_jars[@]}"; do
+            case "${jar}" in
+              *-sources.jar|*-dev.jar) continue ;;
+              *) cp -v "${jar}" release-assets/ ;;
+            esac
+          done
+          test -f "release-assets/tamedphantoms-fabric-${{ steps.versions.outputs.mod_version }}.jar"
           chmod +x .github/scripts/fetch-companion-jars.sh
           .github/scripts/fetch-companion-jars.sh \
             release-assets \
             "${{ steps.versions.outputs.kff_version }}" \
-            "${{ steps.versions.outputs.patchouli_version }}"
+            "${{ steps.versions.outputs.patchouli_version }}" \
+            "${{ steps.versions.outputs.fabric_api_version }}" \
+            "${{ steps.versions.outputs.fabric_kotlin_version }}" \
+            "${{ steps.versions.outputs.patchouli_fabric_version }}" \
+            "${{ steps.versions.outputs.cloth_config_modrinth_version }}" \
+            "${{ steps.versions.outputs.modmenu_version }}" \
+            "${{ steps.versions.outputs.placeholder_api_version }}"
           ls -lh release-assets
 
       - name: Publish GitHub Release
@@ -111,14 +141,33 @@ jobs:
             release-assets/tamedphantoms-*.jar
             release-assets/kotlinforforge-*.jar
             release-assets/Patchouli-*.jar
+            release-assets/fabric-api-*.jar
+            release-assets/fabric-language-kotlin-*.jar
+            release-assets/cloth-config-*.jar
+            release-assets/modmenu-*.jar
+            release-assets/placeholder-api-*.jar
           body: |
-            Minecraft **1.21.1** / NeoForge. Put the jars you need into the `mods` folder.
+            Minecraft **1.21.1**. Install either the NeoForge set or the Fabric set, not both.
+
+            ### NeoForge
 
             | File | Required | Source |
             | --- | --- | --- |
             | `tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
             | `kotlinforforge-${{ steps.versions.outputs.kff_version }}-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) (LGPL-2.1) |
             | `Patchouli-*-NEOFORGE.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
+
+            ### Fabric
+
+            | File | Required | Source |
+            | --- | --- | --- |
+            | `tamedphantoms-fabric-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
+            | `fabric-api-*.jar` | Yes | [Fabric API](https://modrinth.com/mod/fabric-api) (Apache-2.0) |
+            | `fabric-language-kotlin-*.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin) (Apache-2.0) |
+            | `cloth-config-*.jar` | Yes, for the config screen | [Cloth Config](https://modrinth.com/mod/cloth-config) (LGPL-3.0) |
+            | `modmenu-*.jar` | No, opens the config screen | [Mod Menu](https://modrinth.com/mod/modmenu) (MIT) |
+            | `placeholder-api-*.jar` | No, required by Mod Menu | [Text Placeholder API](https://modrinth.com/mod/placeholder-api) (LGPL-3.0) |
+            | `Patchouli-*-FABRIC.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
 
             Do not install `*-sources.jar`. Companion jars are official Modrinth builds, rehosted here for a one-page install. Patchouli is redistributed for non-commercial use with attribution to VazkiiMods. GitHub shows a SHA-256 digest next to each uploaded file.
 
@@ -142,6 +191,32 @@ jobs:
           files: release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar
           dependencies: |
             kotlin-for-forge(required){modrinth:ordsPcFz}
+            patchouli(optional){modrinth:nU0bVIaL}
+
+      - name: Publish Modrinth Fabric
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: tamed-phantoms
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: false
+          name: ${{ steps.versions.outputs.mod_version }} Fabric
+          version: ${{ steps.versions.outputs.mod_version }}-fabric
+          version-type: release
+          changelog: |
+            Minecraft 1.21.1 / Fabric. Tamed Phantoms ${{ steps.versions.outputs.mod_version }}.
+          loaders: |
+            fabric
+          game-versions: |
+            1.21.1
+          java: |
+            21
+          files: release-assets/tamedphantoms-fabric-${{ steps.versions.outputs.mod_version }}.jar
+          dependencies: |
+            fabric-api(required){modrinth:P7dR8mSH}
+            fabric-language-kotlin(required){modrinth:Ha28R6CL}
+            cloth-config(required){modrinth:9s6osm5g}
+            modmenu(optional){modrinth:mOgUt4GM}
+            placeholder-api(optional){modrinth:eXts2L7r}
             patchouli(optional){modrinth:nU0bVIaL}
 
       - name: Set up Node.js
@@ -170,9 +245,9 @@ jobs:
             fi
             printf '%s\n' "${matches[0]}"
           }
-          mod_jar="$(one 'release-assets/tamedphantoms-*.jar')"
+          mod_jar="release-assets/tamedphantoms-${{ steps.versions.outputs.mod_version }}.jar"
           kff_jar="$(one 'release-assets/kotlinforforge-*.jar')"
-          patchouli_jar="$(one 'release-assets/Patchouli-*.jar')"
+          patchouli_jar="$(one 'release-assets/Patchouli-*-NEOFORGE.jar')"
           node scripts/mcns-release.mjs tamedphantoms-mod auto \
             "mod=${mod_jar}" \
             "kotlinforforge=${kff_jar}" \

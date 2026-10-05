@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "tamedphantoms",
+  "version": "${version}",
+  "name": "Tamed Phantoms",
+  "description": "Tame phantoms: taming, saddle flight, and more.",
+  "authors": ["Tamed Phantoms contributors"],
+  "contact": {
+    "homepage": "https://github.com/Nergan/tamedphantoms-mod",
+    "issues": "https://github.com/Nergan/tamedphantoms-mod/issues"
+  },
+  "license": "MPL-2.0",
+  "icon": "logo.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.tamedphantoms.mod.loader.fabric.TamedPhantomsFabric"],
+    "client": ["com.tamedphantoms.mod.loader.fabric.TamedPhantomsFabricClient"],
+    "modmenu": ["com.tamedphantoms.mod.loader.fabric.TamedPhantomsModMenu"]
+  },
+  "mixins": [
+    "tamedphantoms.mixins.json",
+    "tamedphantoms.fabric.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.16.10",
+    "minecraft": "1.21.1",
+    "java": ">=21",
+    "fabric-api": "*",
+    "fabric-language-kotlin": ">=1.13.2+kotlin.2.1.20",
+    "cloth-config": "*"
+  },
+  "suggests": {
+    "patchouli": "*",
+    "modmenu": "*"
+  }
+}

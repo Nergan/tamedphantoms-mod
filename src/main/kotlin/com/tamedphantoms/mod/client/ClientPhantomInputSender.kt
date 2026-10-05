@@ -7,10 +7,8 @@ import com.tamedphantoms.mod.network.PhantomDismountTapPayload
 import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
+import com.tamedphantoms.mod.platform.ModNetwork
 import net.minecraft.client.Minecraft
-import net.neoforged.neoforge.client.event.ClientTickEvent
-import net.neoforged.neoforge.common.NeoForge
-import net.neoforged.neoforge.network.PacketDistributor
 
 /**
  * Пока игрок верхом на ручном фантоме, каждый клиентский тик отправляет на
@@ -29,10 +27,9 @@ object ClientPhantomInputSender {
             ModKeyMappings.FLY_UP.isDown to ModKeyMappings.FLY_DOWN.isDown
         }
         PhantomDismount.isLocalPlayer = { rider -> rider === Minecraft.getInstance().player }
-        NeoForge.EVENT_BUS.addListener(::onClientTick)
     }
 
-    private fun onClientTick(event: ClientTickEvent.Post) {
+    fun onClientTick() {
         val minecraft = Minecraft.getInstance()
         val player = minecraft.player ?: return
         val shiftDown = minecraft.options.keyShift.isDown
@@ -41,19 +38,19 @@ object ClientPhantomInputSender {
         val screamDown = ModKeyMappings.SCREAM.isDown
         val phantom = player.vehicle as? TamedPhantomEntity
         if (shiftPressed && minecraft.screen == null && phantom != null) {
-            PacketDistributor.sendToServer(PhantomDismountTapPayload)
+            ModNetwork.sendToServer(PhantomDismountTapPayload)
         }
         if (phantom != null && screamDown && !screamWasDown && phantom.isOwnedBy(player)) {
-            PacketDistributor.sendToServer(PhantomScreamPayload)
+            ModNetwork.sendToServer(PhantomScreamPayload)
         }
         screamWasDown = screamDown
         if (phantom != null && phantom.loopReadyToReport && phantom.isOwnedBy(player)) {
             phantom.loopReadyToReport = false
-            PacketDistributor.sendToServer(PhantomLoopPayload)
+            ModNetwork.sendToServer(PhantomLoopPayload)
         }
         if (phantom == null) return
 
-        PacketDistributor.sendToServer(
+        ModNetwork.sendToServer(
             PhantomInputPayload(
                 ascending = ModKeyMappings.FLY_UP.isDown,
                 descending = ModKeyMappings.FLY_DOWN.isDown,

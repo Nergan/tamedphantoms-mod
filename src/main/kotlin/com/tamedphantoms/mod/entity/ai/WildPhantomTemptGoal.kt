@@ -47,7 +47,7 @@ class WildPhantomTemptGoal(private val phantom: Phantom) : Goal() {
     }
 
     private fun findHoldingPlayer(): Player? {
-        val tameItem = ServerConfig.CONFIG.resolveTameItem()
+        val tameItem = ServerConfig.resolveTameItem()
         return phantom.level().getNearestPlayer(phantom, RANGE)?.takeIf { player ->
             player.isAlive && (player.mainHandItem.`is`(tameItem) || player.offhandItem.`is`(tameItem))
         }

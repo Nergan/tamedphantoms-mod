@@ -12,64 +12,50 @@ import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.monster.Phantom
 import net.minecraft.world.entity.player.Player
-import net.minecraft.world.item.Item
+import net.minecraft.world.entity.Entity
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
 
 object PhantomInteractionHandler {
 
-    @SubscribeEvent
-    fun onInteract(event: PlayerInteractEvent.EntityInteract) {
-        val player = event.entity
-
-        when (val target = event.target) {
+    /**
+     * @return результат, которым надо отменить взаимодействие, или null, если его не трогать.
+     * Обе руки шлют клик по сущности: пустая вторая рука тут же снимала «сидеть».
+     */
+    fun onEntityInteract(player: Player, target: Entity, hand: InteractionHand): InteractionResult? {
+        when (target) {
             is TamedPhantomEntity -> {
-                event.setCanceled(true)
-                event.cancellationResult = InteractionResult.SUCCESS
-                // Обе руки шлют EntityInteract: пустая вторая рука тут же снимала «сидеть».
-                if (event.hand != InteractionHand.MAIN_HAND) return
-                if (player.level().isClientSide) return
-                handleTamedPhantomEntity(player, target, player.getItemInHand(event.hand))
+                if (hand == InteractionHand.MAIN_HAND && !player.level().isClientSide) {
+                    handleTamedPhantomEntity(player, target, player.getItemInHand(hand))
+                }
+                return InteractionResult.SUCCESS
             }
             is Phantom -> {
-                val stack = player.getItemInHand(event.hand)
-                val tameItem: Item = ServerConfig.CONFIG.resolveTameItem()
-                if (stack.`is`(tameItem)) {
-                    event.setCanceled(true)
+                val stack = player.getItemInHand(hand)
+                if (stack.`is`(ServerConfig.resolveTameItem())) {
                     handleWildPhantom(player, target, stack)
+                    return InteractionResult.SUCCESS
                 }
             }
-            else -> Unit
         }
+        return null
     }
 
-    @SubscribeEvent
-    fun onUseWhileRiding(event: PlayerInteractEvent.RightClickItem) {
-        val player = event.entity
-        val phantom = player.vehicle as? TamedPhantomEntity ?: return
-        if (!phantom.tamed) return
-        val stack = player.getItemInHand(event.hand)
+    /** Кормление верхом. null — ванильное использование предмета. */
+    fun onUseItem(player: Player, hand: InteractionHand): InteractionResult? {
+        val phantom = player.vehicle as? TamedPhantomEntity ?: return null
+        if (!phantom.tamed) return null
+        val stack = player.getItemInHand(hand)
         if (PhantomHeldLook.isRefusal(stack) && !phantom.isOwnedBy(player)) {
-            event.isCanceled = true
-            event.cancellationResult = InteractionResult.CONSUME
             if (!player.level().isClientSide) phantom.rejectOffering(player)
-            return
+            return InteractionResult.CONSUME
         }
-        val releaseItem = ServerConfig.CONFIG.resolveReleaseItem()
-        if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return
-        val food = stack.get(DataComponents.FOOD) ?: return
-        if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return
-        if (player.level().isClientSide) {
-            event.cancellationResult = InteractionResult.CONSUME
-            event.isCanceled = true
-            return
-        }
-        if (tryHeal(player, phantom, stack)) {
-            event.cancellationResult = InteractionResult.CONSUME
-            event.isCanceled = true
-        }
+        val releaseItem = ServerConfig.resolveReleaseItem()
+        if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return null
+        if (stack.get(DataComponents.FOOD) == null) return null
+        if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return null
+        if (player.level().isClientSide) return InteractionResult.CONSUME
+        return if (tryHeal(player, phantom, stack)) InteractionResult.CONSUME else null
     }
 
     private fun handleWildPhantom(player: Player, phantom: Phantom, stack: ItemStack) {
@@ -77,7 +63,7 @@ object PhantomInteractionHandler {
         if (level.isClientSide) return
 
         val roll = phantom.random.nextFloat().toDouble()
-        val success = PhantomTamingLogic.rollTameSuccess(ServerConfig.CONFIG.tameChance.get(), roll)
+        val success = PhantomTamingLogic.rollTameSuccess(ServerConfig.tameChance(), roll)
 
         if (!player.abilities.instabuild) {
             stack.shrink(1)
@@ -124,7 +110,7 @@ object PhantomInteractionHandler {
         }
 
         if (!phantom.tamed) {
-            val tameItem = ServerConfig.CONFIG.resolveTameItem()
+            val tameItem = ServerConfig.resolveTameItem()
             if (stack.`is`(tameItem)) {
                 retame(player, phantom, stack)
             }
@@ -139,7 +125,7 @@ object PhantomInteractionHandler {
         if (!player.abilities.instabuild) {
             stack.shrink(1)
         }
-        if (!PhantomTamingLogic.rollTameSuccess(ServerConfig.CONFIG.tameChance.get(), roll)) {
+        if (!PhantomTamingLogic.rollTameSuccess(ServerConfig.tameChance(), roll)) {
             return
         }
         phantom.tameTo(player)
@@ -156,7 +142,7 @@ object PhantomInteractionHandler {
             return
         }
 
-        val releaseItem = ServerConfig.CONFIG.resolveReleaseItem()
+        val releaseItem = ServerConfig.resolveReleaseItem()
         if (isOwner && stack.`is`(releaseItem)) {
             if (!player.abilities.instabuild) stack.shrink(1)
             phantom.release()

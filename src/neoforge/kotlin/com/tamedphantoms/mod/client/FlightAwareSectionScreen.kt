@@ -1,7 +1,7 @@
 package com.tamedphantoms.mod.client
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig
-import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.config.NeoForgeServerConfig
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.client.gui.components.AbstractSliderButton
 import net.minecraft.client.gui.components.Button
@@ -163,8 +163,8 @@ class FlightAwareSectionScreen : ConfigurationScreen.ConfigurationSectionScreen 
         private const val VALUE = "tamedphantoms.configuration.flight.owned_flight_speed.value"
 
         fun serverFlightCap(): Double {
-            if (!ServerConfig.SPEC.isLoaded) return 1.25
-            return ServerConfig.CONFIG.flightSpeed.get().coerceIn(PhantomFlightPace.MIN, PhantomFlightPace.MAX)
+            if (!NeoForgeServerConfig.SPEC.isLoaded) return 1.25
+            return NeoForgeServerConfig.CONFIG.flightSpeed.get().coerceIn(PhantomFlightPace.MIN, PhantomFlightPace.MAX)
         }
 
         fun formatSpeed(value: Double): String {

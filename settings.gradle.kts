@@ -1,5 +1,9 @@
 pluginManagement {
     repositories {
+        maven {
+            name = "Fabric"
+            url = uri("https://maven.fabricmc.net/")
+        }
         // Репозиторий NeoForge (плагин net.neoforged.moddev и сам NeoForge).
         maven {
             name = "NeoForged"
@@ -23,6 +27,22 @@ plugins {
 dependencyResolutionManagement {
     repositories {
         maven {
+            name = "Fabric"
+            url = uri("https://maven.fabricmc.net/")
+        }
+        maven {
+            name = "Shedaniel"
+            url = uri("https://maven.shedaniel.me/")
+        }
+        maven {
+            name = "Terraformers"
+            url = uri("https://maven.terraformersmc.com/releases/")
+        }
+        maven {
+            name = "Minecraft libraries"
+            url = uri("https://libraries.minecraft.net/")
+        }
+        maven {
             name = "NeoForged"
             url = uri("https://maven.neoforged.net/releases")
         }
@@ -35,3 +55,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "tamedphantoms"
+include("fabric")

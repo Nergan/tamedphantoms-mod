@@ -42,7 +42,7 @@ object PhantomScream {
     }
 
     fun frighten(level: ServerLevel, phantom: TamedPhantomEntity, blindness: Boolean) {
-        val radius = ServerConfig.CONFIG.screamRadius.get()
+        val radius = ServerConfig.screamRadius()
         val reach = radius * radius
         val box = phantom.boundingBox.inflate(radius)
         val mobs = level.getEntitiesOfClass(Mob::class.java, box) { mob ->

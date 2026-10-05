@@ -2,6 +2,7 @@ package com.tamedphantoms.mod.event
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
+import com.tamedphantoms.mod.platform.ModNetwork
 import com.tamedphantoms.mod.util.PhantomDismountLogic
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
@@ -10,10 +11,6 @@ import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.player.Player
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.event.entity.player.PlayerEvent
-import net.neoforged.neoforge.event.tick.PlayerTickEvent
-import net.neoforged.neoforge.network.PacketDistributor
 import java.util.UUID
 
 /**
@@ -113,7 +110,7 @@ object PhantomDismount {
     /** Перед настоящим снятием: клиент не должен тут же посадить игрока обратно. */
     fun allowClient(player: ServerPlayer) {
         this.grantClientDismount()
-        PacketDistributor.sendToPlayer(player, PhantomDismountAllowPayload)
+        ModNetwork.sendToPlayer(player, PhantomDismountAllowPayload)
     }
 
     /** Вернуть ссылку на фантома, не выбрасывая игрока из списка пассажиров. */
@@ -135,38 +132,36 @@ object PhantomDismount {
         }
     }
 
-    @SubscribeEvent
-    fun onTick(event: PlayerTickEvent.Post) {
-        val player = event.entity as? ServerPlayer ?: return
-        val ride = windows[player.uuid] ?: return
-        val now = player.level().gameTime
+    fun onPlayerTick(player: Player) {
+        val serverPlayer = player as? ServerPlayer ?: return
+        val ride = windows[serverPlayer.uuid] ?: return
+        val now = serverPlayer.level().gameTime
         if (now - ride.startedAt > PhantomDismountLogic.WINDOW_TICKS) {
-            windows.remove(player.uuid)
-            armed.remove(player.uuid)
+            windows.remove(serverPlayer.uuid)
+            armed.remove(serverPlayer.uuid)
             return
         }
-        if (player.uuid in armed) return
-        val phantom = player.serverLevel().getEntity(ride.phantomId) as? TamedPhantomEntity ?: return
+        if (serverPlayer.uuid in armed) return
+        val phantom = serverPlayer.serverLevel().getEntity(ride.phantomId) as? TamedPhantomEntity ?: return
         if (!phantom.isAlive || phantom.isOrderedToSit() || this.airBelow(phantom) <= SAFE_DROP) {
-            windows.remove(player.uuid)
+            windows.remove(serverPlayer.uuid)
             return
         }
-        if (player.vehicle === phantom && phantom.passengers.contains(player)) return
-        if (phantom.passengers.contains(player)) {
-            this.restore(player, phantom)
+        if (serverPlayer.vehicle === phantom && phantom.passengers.contains(serverPlayer)) return
+        if (phantom.passengers.contains(serverPlayer)) {
+            this.restore(serverPlayer, phantom)
             return
         }
-        if (player.vehicle === phantom) {
-            this.unlink(player)
+        if (serverPlayer.vehicle === phantom) {
+            this.unlink(serverPlayer)
         }
-        if (player.vehicle == null) {
-            player.startRiding(phantom, true)
+        if (serverPlayer.vehicle == null) {
+            serverPlayer.startRiding(phantom, true)
         }
     }
 
-    @SubscribeEvent
-    fun onLogout(event: PlayerEvent.PlayerLoggedOutEvent) {
-        val id = event.entity.uuid
+    fun onLogout(player: Player) {
+        val id = player.uuid
         windows.remove(id)
         armed.remove(id)
     }

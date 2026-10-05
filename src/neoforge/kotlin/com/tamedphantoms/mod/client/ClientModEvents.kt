@@ -11,17 +11,15 @@ import net.minecraft.world.entity.EntityType
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.fml.ModContainer
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
+import net.neoforged.neoforge.client.event.ClientTickEvent
 import net.neoforged.neoforge.client.event.EntityRenderersEvent
 import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent
+import net.neoforged.neoforge.client.event.ViewportEvent
+import net.neoforged.neoforge.client.event.sound.PlaySoundEvent
 import net.neoforged.neoforge.client.gui.IConfigScreenFactory
 import net.neoforged.neoforge.common.NeoForge
 
-/**
- * Клиентская настройка. Вызывается условно из [com.tamedphantoms.mod.event.ModSetup]
- * — только на клиенте, никогда на выделенном сервере (где классов вроде
- * [EntityRenderersEvent] попросту не существует в classpath).
- */
 object ClientModEvents {
 
     fun init(modBus: IEventBus, modContainer: ModContainer) {
@@ -32,21 +30,35 @@ object ClientModEvents {
         modBus.addListener(::onRegisterReloadListeners)
         ClientPhantomInputSender.init()
         ClientFlightSpeedSender.init()
-        NeoForge.EVENT_BUS.register(ClientPhantomSoundHandler)
-        NeoForge.EVENT_BUS.register(PhantomRideBank)
-        NeoForge.EVENT_BUS.register(PhantomMoonLight)
+
+        val bus = NeoForge.EVENT_BUS
+        bus.addListener { _: ClientTickEvent.Post ->
+            ClientPhantomInputSender.onClientTick()
+            ClientFlightSpeedSender.onClientTick()
+            PhantomMoonLight.onTick()
+        }
+        bus.addListener { event: PlaySoundEvent ->
+            val next = ClientPhantomSoundHandler.adjust(event.sound)
+            if (next !== event.sound) {
+                event.setSound(next)
+            }
+        }
+        bus.addListener { event: ViewportEvent.ComputeCameraAngles ->
+            val angles = PhantomRideBank.adjust(event.camera.entity, event.partialTick.toFloat(), event.pitch, event.roll)
+                ?: return@addListener
+            event.pitch = angles.pitch
+            event.roll = angles.roll
+        }
+        bus.addListener { event: ViewportEvent.ComputeFogColor ->
+            val tint = PhantomMoonLight.tint(event.red, event.green, event.blue) ?: return@addListener
+            event.red = tint.red
+            event.green = tint.green
+            event.blue = tint.blue
+        }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             PhantomDiveWind.update(phantom)
         }
 
-        // Подключаем встроенный экран настроек NeoForge: Mods -> Tamed Phantoms
-        // -> кнопка "Config". Он сам строит интерфейс по зарегистрированному
-        // ServerConfig.SPEC, ClientConfig.SPEC и переводам ключей вида
-        // "tamedphantoms.configuration.*" (см. ServerConfig.kt / ClientConfig.kt).
-        // Для конфигов типа SERVER,
-        // если игрок подключён к чужому серверу (не хостит локально сам),
-        // экран показывает значения как read-only — это поведение самого
-        // NeoForge, не мода.
         modContainer.registerExtensionPoint(
             IConfigScreenFactory::class.java,
             IConfigScreenFactory { container, currentScreen -> modConfigurationScreen(container, currentScreen) },

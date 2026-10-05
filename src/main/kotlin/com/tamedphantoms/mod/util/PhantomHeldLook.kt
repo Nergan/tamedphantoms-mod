@@ -46,14 +46,14 @@ object PhantomHeldLook {
         isFood(player.mainHandItem) || isFood(player.offhandItem)
 
     fun holdsTameItem(player: Player): Boolean {
-        val item = ServerConfig.CONFIG.resolveTameItem()
+        val item = ServerConfig.resolveTameItem()
         return player.mainHandItem.`is`(item) || player.offhandItem.`is`(item)
     }
 
     fun isFood(stack: ItemStack): Boolean = stack.get(DataComponents.FOOD) != null
 
     fun isRefusal(stack: ItemStack): Boolean =
-        stack.`is`(Items.POISONOUS_POTATO) || stack.`is`(ServerConfig.CONFIG.resolveReleaseItem())
+        stack.`is`(Items.POISONOUS_POTATO) || stack.`is`(ServerConfig.resolveReleaseItem())
 
     fun holdsRefusal(player: Player): Boolean =
         isRefusal(player.mainHandItem) || isRefusal(player.offhandItem)

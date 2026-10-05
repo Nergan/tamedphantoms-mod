@@ -10,40 +10,38 @@ import net.minecraft.client.sounds.SoundManager
 import net.minecraft.client.sounds.WeighedSoundEvents
 import net.minecraft.sounds.SoundSource
 import net.minecraft.world.phys.AABB
-import net.neoforged.bus.api.SubscribeEvent
-import net.neoforged.neoforge.client.event.sound.PlaySoundEvent
 
 /**
  * Громкость приручённого фантома — клиентская настройка.
  *
  * [net.minecraft.world.entity.Entity.playSound] играет звук по координатам,
- * а в сингле клиент слышит его из сетевого пакета. [PlaySoundEvent] —
- * единственная точка, через которую проходит уже готовый звук.
+ * а в сингле клиент слышит его из сетевого пакета. Подмена идёт до resolve(),
+ * поэтому громкость читается из сырых полей, а не через [SoundInstance.getVolume].
  */
 object ClientPhantomSoundHandler {
 
     private const val MATCH_RANGE = 2.5
 
-    /**
-     * [PlaySoundEvent] приходит до resolve(), и [SoundInstance.getVolume]
-     * в этот момент падает: внутренний [Sound] ещё null. Читаем сырые поля.
-     */
     private val rawVolume: java.lang.reflect.Field? = declared("volume")
     private val rawPitch: java.lang.reflect.Field? = declared("pitch")
 
-    @SubscribeEvent
-    fun onPlaySound(event: PlaySoundEvent) {
-        val sound = event.sound ?: return
-        if (sound.source != SoundSource.HOSTILE) return
+    /**
+     * @return null, если звук надо отменить; тот же экземпляр, если менять нечего;
+     * другой экземпляр — подмена.
+     */
+    fun adjust(sound: SoundInstance?): SoundInstance? {
+        if (sound == null || sound is VolumeScaledSound) return sound
+        if (sound.source != SoundSource.HOSTILE) return sound
         val volume = raw(sound, rawVolume)
         val pitch = raw(sound, rawPitch)
-        if (volume != null && pitch != null && volume >= 2.0f && pitch <= 0.7f) return
-        if (!isFromTamedPhantom(sound)) return
+        if (volume != null && pitch != null && volume >= 2.0f && pitch <= 0.7f) return sound
+        if (!isFromTamedPhantom(sound)) return sound
 
-        val mul = ClientConfig.CONFIG.tamedSoundVolume.get().toFloat().coerceIn(0.0f, 1.0f)
-        when {
-            mul <= 0.0f -> event.setSound(null)
-            mul < 1.0f -> event.setSound(VolumeScaledSound(sound, mul))
+        val mul = ClientConfig.tamedSoundVolume().toFloat()
+        return when {
+            mul <= 0.0f -> null
+            mul < 1.0f -> VolumeScaledSound(sound, mul)
+            else -> sound
         }
     }
 

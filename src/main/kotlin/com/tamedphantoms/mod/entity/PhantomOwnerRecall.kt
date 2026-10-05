@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.entity
 
+import com.tamedphantoms.mod.platform.storedData
 import com.tamedphantoms.mod.util.PhantomOwnerTeleport
 import net.minecraft.core.BlockPos
 import net.minecraft.core.registries.Registries
@@ -26,7 +27,7 @@ object PhantomOwnerRecall {
     private const val TAG_OWNED = "tamedphantoms.owned_phantoms"
 
     fun remember(player: Player, phantom: TamedPhantomEntity) {
-        val list = player.persistentData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
+        val list = player.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
         val next = ListTag()
         for (i in 0 until list.size) {
             val tag = list.getCompound(i)
@@ -41,16 +42,16 @@ object PhantomOwnerRecall {
         entry.putDouble("Y", phantom.y)
         entry.putDouble("Z", phantom.z)
         next.add(entry)
-        player.persistentData.put(TAG_OWNED, next)
+        player.storedData.put(TAG_OWNED, next)
     }
 
     fun copyTo(newPlayer: Player, oldPlayer: Player) {
-        val tag = oldPlayer.persistentData.get(TAG_OWNED) ?: return
-        newPlayer.persistentData.put(TAG_OWNED, tag.copy())
+        val tag = oldPlayer.storedData.get(TAG_OWNED) ?: return
+        newPlayer.storedData.put(TAG_OWNED, tag.copy())
     }
 
     fun forget(player: Player, phantomId: UUID) {
-        val list = player.persistentData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
+        val list = player.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
         val next = ListTag()
         for (i in 0 until list.size) {
             val tag = list.getCompound(i)
@@ -58,7 +59,7 @@ object PhantomOwnerRecall {
                 next.add(tag)
             }
         }
-        player.persistentData.put(TAG_OWNED, next)
+        player.storedData.put(TAG_OWNED, next)
     }
 
     fun tryTeleportToOwner(phantom: TamedPhantomEntity, owner: Player): Boolean {
@@ -100,7 +101,7 @@ object PhantomOwnerRecall {
                 tryTeleportToOwner(phantom, owner)
             }
         }
-        val stored = owner.persistentData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
+        val stored = owner.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
         for (i in 0 until stored.size) {
             val tag = stored.getCompound(i)
             if (!tag.hasUUID("U")) continue

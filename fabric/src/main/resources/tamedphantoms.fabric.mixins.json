@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tamedphantoms.mod.loader.fabric.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "EntityPersistentDataMixin",
+    "MobGoalAccessor",
+    "PhantomTargetMixin",
+    "PhantomGroupSpawnMixin"
+  ],
+  "client": [
+    "PhantomSoundMixin",
+    "PhantomCameraMixin",
+    "PhantomFogMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
