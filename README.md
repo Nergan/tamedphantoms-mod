@@ -78,10 +78,12 @@ NeoForge:
 
 Fabric:
 
-1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1.
-2. Download the Fabric jars from the same release.
-3. Put `tamedphantoms-fabric-1.21.1-1.0.0.jar`, Fabric API, Fabric Language Kotlin, and Cloth Config in `mods`.
+1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1. Loader 0.19.x is fine. Do not look for loader version 0.100.3: that number is not a loader.
+2. Download the Fabric jars from the same release. The release replaces its file list on each push, so old names such as `tamedphantoms-1.0.0.jar` and `tamedphantoms-fabric-1.0.0.jar` are not part of the current set.
+3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.0.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
 4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
+
+If the game says Patchouli requires **fabric** 0.100.3 or that Tamed Phantoms requires **fabric-api**, the `fabric-api-0.116.17+1.21.1.jar` file is missing. Fabric API’s id is `fabric-api`, and it also provides the id `fabric`. That is the jar from this release, not a newer Fabric Loader.
 
 The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.0-fabric`.
 

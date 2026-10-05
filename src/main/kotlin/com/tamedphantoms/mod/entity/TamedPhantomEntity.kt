@@ -362,6 +362,18 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return shown + extra
     }
 
+    /**
+     * Тангаж модели в градусах: ванильный [PhantomRenderer] крутит `xRot`,
+     * а свой рендерер добавляет интерполяцию и акробатику. Камера смотрит
+     * только [ridePitchVisual], седло должно следовать за всей моделью.
+     */
+    fun renderedBodyPitch(partial: Float): Float {
+        val crawl = this.crawlVisual(partial)
+        val shown = Mth.lerp(partial, this.xRotO, this.xRot) * (1f - crawl)
+        val acro = Mth.lerp(partial, this.acroPitchO, this.acroPitch) * (1f - crawl)
+        return if (this.isVehicle || crawl > 0f) shown + acro else this.xRot + acro
+    }
+
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
 
@@ -1442,19 +1454,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     /**
-     * Насколько седло уезжает от точки крепления, когда модель кренится и клюёт носом.
-     * При нулевом тангаже и крене сдвиг нулевой, поэтому ровный полёт не двигает игрока.
+     * Насколько визуальное седло уезжает от точки крепления.
+     * Модель крутится вокруг позиции сущности, а не вокруг точки над спиной:
+     * при наборе скорости xRot уводит седло, и игрок, сидящий в точке крепления, отстаёт.
+     * Нулевой тангаж и крен дают нулевой сдвиг.
      */
-    fun seatVisualShift(partial: Float): Vec3 {
-        val pitch = this.ridePitchVisual(partial)
+    fun seatVisualShift(passenger: Entity, partial: Float): Vec3 {
+        val pitch = this.renderedBodyPitch(partial)
         val bank = this.bankVisual(partial)
         if (pitch == 0f && bank == 0f) return Vec3.ZERO
-        val saddle = Vec3(0.0, 0.46, -0.17)
-        val pivot = Vec3(0.0, 0.85, 0.1)
-        val rad = (Math.PI / 180.0).toFloat()
-        val turned = saddle.subtract(pivot).xRot(pitch * rad).zRot(-bank * rad).add(pivot)
         val yaw = Mth.rotLerp(partial, this.yRotO, this.yRot)
-        return turned.subtract(saddle).yRot(-yaw * rad)
+        val rad = (Math.PI / 180.0).toFloat()
+        val local = passenger.position().subtract(this.position()).yRot(yaw * rad)
+        val turned = local.zRot(-bank * rad).xRot(pitch * rad)
+        return turned.subtract(local).yRot(-yaw * rad)
     }
 
     override fun travel(travelVector: Vec3) {

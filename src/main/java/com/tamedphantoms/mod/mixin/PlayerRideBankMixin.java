@@ -51,7 +51,7 @@ public class PlayerRideBankMixin {
             Mth.lerp(partialTick, player.yo, player.getY()),
             Mth.lerp(partialTick, player.zo, player.getZ())
         );
-        Vec3 seat = phantomPos.add(player.position().subtract(phantom.position())).add(phantom.seatVisualShift(partialTick));
+        Vec3 seat = phantomPos.add(player.position().subtract(phantom.position())).add(phantom.seatVisualShift(player, partialTick));
         poseStack.translate(seat.x - playerPos.x, seat.y - playerPos.y, seat.z - playerPos.z);
     }
 
@@ -79,7 +79,7 @@ public class PlayerRideBankMixin {
         if (!(player.getVehicle() instanceof TamedPhantomEntity phantom) || phantom.isOrderedToSit()) {
             return;
         }
-        float pitch = phantom.ridePitchVisual(partialTick);
+        float pitch = phantom.renderedBodyPitch(partialTick);
         float bank = phantom.bankVisual(partialTick);
         if (pitch == 0.0f && bank == 0.0f) {
             return;

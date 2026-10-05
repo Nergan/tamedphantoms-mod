@@ -10,7 +10,7 @@
     "issues": "https://github.com/Nergan/tamedphantoms-mod/issues"
   },
   "license": "MPL-2.0",
-  "icon": "logo.png",
+  "icon": "icon.png",
   "environment": "*",
   "entrypoints": {
     "main": ["com.tamedphantoms.mod.loader.fabric.TamedPhantomsFabric"],

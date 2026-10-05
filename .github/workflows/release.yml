@@ -127,6 +127,38 @@ jobs:
             "${{ steps.versions.outputs.placeholder_api_version }}"
           ls -lh release-assets
 
+      - name: Delete GitHub Release files that are no longer shipped
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="v${{ steps.versions.outputs.mod_version }}"
+          if ! gh release view "${tag}" >/dev/null 2>&1; then
+            echo "No existing release ${tag}"
+            exit 0
+          fi
+          while IFS= read -r name; do
+            [[ -z "${name}" ]] && continue
+            if [[ ! -f "release-assets/${name}" ]]; then
+              echo "Removing ${name}"
+              gh release delete-asset "${tag}" "${name}" --yes
+            fi
+          done < <(gh release view "${tag}" --json assets --jq '.assets[].name')
+
+      - name: Replace Modrinth versions
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${MODRINTH_TOKEN}" ]]; then
+            echo "MODRINTH_TOKEN is empty. Modrinth publish will not replace an existing version."
+            exit 0
+          fi
+          python3 .github/scripts/replace-modrinth-versions.py \
+            tamed-phantoms \
+            "${mod_version}" \
+            "${mod_version}-fabric"
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
