@@ -13,7 +13,9 @@
   "client": [
     "PhantomModelLookMixin",
     "PlayerRideBankMixin",
-    "MoonSkyMixin"
+    "MoonSkyMixin",
+    "KeyMappingFields",
+    "SharedPhysicalKeyMixin"
   ],
   "injectors": {
     "defaultRequire": 1
