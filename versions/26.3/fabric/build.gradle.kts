@@ -119,10 +119,7 @@ tasks.processResources {
     val version = project.version.toString()
     inputs.property("version", version)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-    exclude { details ->
-        val path = details.file.invariantSeparatorsPath
-        path.endsWith("data/tamedphantoms/recipe/phantom_guide.json") && "/fabric/" !in path
-    }
+    exclude("data/tamedphantoms/recipe/phantom_guide.json")
     filesMatching("fabric.mod.json") {
         filter { line -> line.replace("\${version}", version) }
     }

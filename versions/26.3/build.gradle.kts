@@ -284,6 +284,7 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.processResources {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    exclude("data/tamedphantoms/recipe/phantom_guide.json")
 }
 
 tasks.jar {
