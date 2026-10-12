@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.mixin;
 
 import com.tamedphantoms.mod.util.PhantomFlightAvoidance;
+import com.tamedphantoms.mod.util.PhantomFlightEscape;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Phantom;
 import org.spongepowered.asm.mixin.Mixin;
@@ -23,11 +24,24 @@ public abstract class PhantomMoveControlMixin {
         return 12.0F;
     }
 
+    @Inject(method = "tick", at = @At("HEAD"), cancellable = true)
+    private void tamedphantoms$coast(CallbackInfo ci) {
+        Mob mob = ((MoveControlMobAccessor) (Object) this).tamedphantoms$mob();
+        if (mob instanceof Phantom phantom && PhantomFlightEscape.INSTANCE.active(phantom)) {
+            PhantomFlightEscape.INSTANCE.coast(phantom);
+            ci.cancel();
+        }
+    }
+
     @Inject(method = "tick", at = @At("RETURN"))
     private void tamedphantoms$avoid(CallbackInfo ci) {
         Mob mob = ((MoveControlMobAccessor) (Object) this).tamedphantoms$mob();
-        if (mob instanceof Phantom phantom) {
-            PhantomFlightAvoidance.INSTANCE.apply(phantom);
+        if (!(mob instanceof Phantom phantom)) {
+            return;
+        }
+        PhantomFlightAvoidance.INSTANCE.apply(phantom);
+        if (phantom.horizontalCollision) {
+            PhantomFlightEscape.INSTANCE.begin(phantom);
         }
     }
 }

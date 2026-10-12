@@ -23,6 +23,11 @@ fun rewriteIdentifiers(line: String): String = rewriteFor26(line)
 fun rewriteFor26(line: String): String {
     var s = line
     val pairs = listOf(
+        // 26.3 getPixel/setPixel already speak ARGB. The 1.21.1 helpers swap ABGR and would tint twice.
+        "val native = image.getPixelRGBA(x, y)" to "val argb = image.getPixel(x, y)",
+        "val argb = nativeToArgb(native)" to "",
+        "image.setPixelRGBA(x, y, argbToNative(newArgb))" to "image.setPixel(x, y, newArgb)",
+        "image.setPixelRGBA(x, y, argbToNative(color))" to "image.setPixel(x, y, color)",
         "textures/entity/phantom_eyes.png" to "textures/entity/phantom/phantom_eyes.png",
         "textures/entity/phantom.png" to "textures/entity/phantom/phantom.png",
         "net.minecraft.resources.ResourceLocation" to "net.minecraft.resources.Identifier",
@@ -139,7 +144,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "texture-path-1")
+    inputs.property("rewriteStamp", "pixel-argb-1")
     filter { line -> rewriteIdentifiers(line) }
 }
 

@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.entity.ai
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomEffectSpeed
 import com.tamedphantoms.mod.util.PhantomFlightAvoidance
+import com.tamedphantoms.mod.util.PhantomFlightEscape
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Mob
@@ -27,6 +28,9 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl<Mob>(mob) {
     }
 
     private var currentSpeed = 0.12f
+    private var stallTicks = 0
+    private var stallX = Double.NaN
+    private var stallZ = Double.NaN
 
     override fun tick() {
         val phantom = mob as? TamedPhantomEntity
@@ -40,6 +44,10 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl<Mob>(mob) {
             operation = Operation.WAIT
             return
         }
+        if (PhantomFlightEscape.active(phantom)) {
+            PhantomFlightEscape.coast(phantom)
+            return
+        }
 
         val dx = wantedX - mob.x
         val dy = wantedY - mob.y
@@ -47,12 +55,34 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl<Mob>(mob) {
         val horiz = sqrt(dx * dx + dz * dz)
         val dist = sqrt(dx * dx + dy * dy + dz * dz)
 
+        val progressed = if (stallX.isNaN()) 1.0 else hypot(mob.x - stallX, mob.z - stallZ)
+        stallX = mob.x
+        stallZ = mob.z
+        val wedged = mob.horizontalCollision
+        if (wedged || (operation == Operation.MOVE_TO && dist > 2.0 && progressed < 0.03)) {
+            stallTicks++
+        } else {
+            stallTicks = 0
+        }
+        if (wedged || stallTicks >= 16) {
+            stallTicks = 0
+            currentSpeed = 0.2f
+            if (wedged) {
+                PhantomFlightEscape.turnAway(phantom)
+            } else {
+                mob.yRot = Mth.wrapDegrees(mob.yRot + if (mob.random.nextBoolean()) 140f else -140f)
+                mob.yBodyRot = mob.yRot
+            }
+            PhantomFlightEscape.begin(phantom)
+            return
+        }
+
         if (operation != Operation.MOVE_TO) {
             mob.deltaMovement = mob.deltaMovement.scale(0.94)
             return
         }
 
-        if (dist < 0.45) {
+        if (dist < 0.12) {
             operation = Operation.WAIT
             mob.deltaMovement = mob.deltaMovement.scale(0.86)
             return

@@ -46,6 +46,9 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
     private var landX = 0.0
     private var landY = 0.0
     private var landZ = 0.0
+    private var stuckTicks = 0
+    private var stuckX = Double.NaN
+    private var stuckZ = Double.NaN
 
     init {
         flags = EnumSet.of(Flag.MOVE)
@@ -209,6 +212,9 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
         hoverHeight += (desiredHeight - hoverHeight) * 0.05
 
         val catchingUp = dist > CATCH_UP_DISTANCE
+        if (courseIsStuck()) {
+            orbitAngle += if (phantom.random.nextBoolean()) 2.1 else -2.1
+        }
         orbitAngle += if (catchingUp) {
             (phantom.random.nextDouble() - 0.5) * 0.03
         } else {
@@ -230,6 +236,16 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
         if (!catchingUp) {
             phantom.lookControl.setLookAt(owner, 12.0f, 12.0f)
         }
+    }
+
+    private fun courseIsStuck(): Boolean {
+        val moved = if (stuckX.isNaN()) 1.0 else hypot(phantom.x - stuckX, phantom.z - stuckZ)
+        stuckX = phantom.x
+        stuckZ = phantom.z
+        if (phantom.horizontalCollision || moved < 0.03) stuckTicks++ else stuckTicks = 0
+        if (stuckTicks < 12) return false
+        stuckTicks = 0
+        return true
     }
 
     private fun landingSpot(owner: Player): DoubleArray? {

@@ -8,6 +8,7 @@ import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import java.util.EnumSet
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 
 /**
@@ -35,6 +36,9 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
     private var landCooldown = 180
     private var land = Vec3.ZERO
     private var crawl = Vec3.ZERO
+    private var stuckTicks = 0
+    private var stuckX = Double.NaN
+    private var stuckZ = Double.NaN
 
     init {
         flags = EnumSet.of(Flag.MOVE)
@@ -86,6 +90,10 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
             heading += (phantom.random.nextDouble() - 0.5) * 1.1
             climb = (phantom.random.nextDouble() - 0.42) * 0.28
         }
+        if (courseIsStuck()) {
+            heading += if (phantom.random.nextBoolean()) 2.4 else -2.4
+            this.recalcCooldown = 25
+        }
         heading += 0.016 + (phantom.random.nextDouble() - 0.5) * 0.012
         val ahead = 7.0
         val targetX = phantom.x + cos(heading) * ahead
@@ -125,6 +133,17 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
             mode = Mode.FLY
             landCooldown = 400 + phantom.random.nextInt(280)
         }
+    }
+
+    /** Курс не меняется, пока фантом почти стоит: иначе он снова и снова тычется в ту же преграду. */
+    private fun courseIsStuck(): Boolean {
+        val moved = if (stuckX.isNaN()) 1.0 else hypot(phantom.x - stuckX, phantom.z - stuckZ)
+        stuckX = phantom.x
+        stuckZ = phantom.z
+        if (phantom.horizontalCollision || moved < 0.03) stuckTicks++ else stuckTicks = 0
+        if (stuckTicks < 12) return false
+        stuckTicks = 0
+        return true
     }
 
     private fun findTemptingPlayer(): Player? {
