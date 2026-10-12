@@ -14,10 +14,9 @@ concurrency:
 permissions:
   contents: write
 
-# Пуш в main (и тег / ручной запуск) пересобирает мод и обновляет
-# GitHub Release для текущей mod_version: jar NeoForge и Fabric плюс
-# зависимости. Новый номер версии в gradle.properties → новый релиз vX.Y.Z.
-# SHA-256 у каждого файла считает сам GitHub при загрузке.
+# Пуш в main (и тег v<mod_version> / ручной запуск) пересобирает 1.21.1 и 26.3
+# и обновляет четыре страницы GitHub Release: версия Minecraft и загрузчик.
+# Patchouli только на страницах 1.21.1. CDN публикует только NeoForge 1.21.1.
 
 jobs:
   release:
@@ -61,16 +60,6 @@ jobs:
             exit 1
           fi
 
-      - name: Point version tag at this commit
-        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
-        run: |
-          set -euo pipefail
-          tag="v${{ steps.versions.outputs.mod_version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -f "${tag}" "${GITHUB_SHA}"
-          git push -f origin "refs/tags/${tag}"
-
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
@@ -83,6 +72,27 @@ jobs:
           gradle-version: "8.11"
 
       - name: Build and test
+        run: gradle build --stacktrace
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: "25"
+          distribution: "temurin"
+
+      - name: Set up Gradle 9.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.7"
+
+      - name: Build 26.3
+        working-directory: versions/26.3
         run: gradle build --stacktrace
 
       - name: Collect release jars
@@ -125,69 +135,80 @@ jobs:
             "${{ steps.versions.outputs.cloth_config_modrinth_version }}" \
             "${{ steps.versions.outputs.modmenu_version }}" \
             "${{ steps.versions.outputs.placeholder_api_version }}"
-          ls -lh release-assets
+          shopt -s nullglob
+          neo26=(versions/26.3/build/libs/tamedphantoms-neoforge-26.3-*.jar)
+          fabric26=(versions/26.3/fabric/build/libs/tamedphantoms-fabric-26.3-*.jar)
+          if [[ ${#neo26[@]} -ne 1 || ${#fabric26[@]} -ne 1 ]]; then
+            echo "Expected one NeoForge and one Fabric 26.3 jar"
+            exit 1
+          fi
+          cp -v "${neo26[0]}" "${fabric26[0]}" release-assets/
+          prop26() { grep -E "^$1=" versions/26.3/gradle.properties | cut -d= -f2- | tr -d '\r'; }
+          mkdir -p companions-26.3
+          chmod +x .github/scripts/fetch-companion-jars-26.3.sh
+          .github/scripts/fetch-companion-jars-26.3.sh \
+            companions-26.3 \
+            "$(prop26 kff_version)" \
+            "$(prop26 fabric_api_version)" \
+            "$(prop26 fabric_kotlin_version)" \
+            "$(prop26 cloth_config_modrinth_version)" \
+            "$(prop26 modmenu_version)" \
+            "$(prop26 placeholder_api_version)"
+          ls -lh release-assets companions-26.3
 
-      - name: Delete GitHub Release files that are no longer shipped
+      - name: Publish split GitHub releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LEGACY_TAG: v${{ steps.versions.outputs.mod_version }}
         run: |
           set -euo pipefail
-          tag="v${{ steps.versions.outputs.mod_version }}"
-          if ! gh release view "${tag}" >/dev/null 2>&1; then
-            echo "No existing release ${tag}"
-            exit 0
-          fi
-          while IFS= read -r name; do
-            [[ -z "${name}" ]] && continue
-            if [[ ! -f "release-assets/${name}" ]]; then
-              echo "Removing ${name}"
-              gh release delete-asset "${tag}" "${name}" --yes
-            fi
-          done < <(gh release view "${tag}" --json assets --jq '.assets[].name')
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.versions.outputs.mod_version }}
-          name: Tamed Phantoms ${{ steps.versions.outputs.mod_version }}
-          target_commitish: ${{ github.sha }}
-          make_latest: true
-          overwrite_files: true
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: |
-            release-assets/tamedphantoms-*.jar
-            release-assets/kotlinforforge-*.jar
-            release-assets/Patchouli-*.jar
-            release-assets/fabric-api-*.jar
-            release-assets/fabric-language-kotlin-*.jar
-            release-assets/cloth-config-*.jar
-            release-assets/modmenu-*.jar
-            release-assets/placeholder-api-*.jar
-          body: |
-            Minecraft **1.21.1**. Install either the NeoForge set or the Fabric set, not both.
-
-            ### NeoForge
-
-            | File | Required | Source |
-            | --- | --- | --- |
-            | `tamedphantoms-neoforge-1.21.1-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
-            | `kotlinforforge-${{ steps.versions.outputs.kff_version }}-all.jar` | Yes | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge) (LGPL-2.1) |
-            | `Patchouli-*-NEOFORGE.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
-
-            ### Fabric
-
-            | File | Required | Source |
-            | --- | --- | --- |
-            | `tamedphantoms-fabric-1.21.1-${{ steps.versions.outputs.mod_version }}.jar` | Yes | this mod |
-            | `fabric-api-*.jar` | Yes | [Fabric API](https://modrinth.com/mod/fabric-api) (Apache-2.0) |
-            | `fabric-language-kotlin-*.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin) (Apache-2.0) |
-            | `cloth-config-*.jar` | Yes, for the config screen | [Cloth Config](https://modrinth.com/mod/cloth-config) (LGPL-3.0) |
-            | `modmenu-*.jar` | No, opens the config screen | [Mod Menu](https://modrinth.com/mod/modmenu) (MIT) |
-            | `placeholder-api-*.jar` | No, required by Mod Menu | [Text Placeholder API](https://modrinth.com/mod/placeholder-api) (LGPL-3.0) |
-            | `Patchouli-*-FABRIC.jar` | No, only for the guidebook | [Patchouli](https://modrinth.com/mod/patchouli) (CC-BY-NC-SA-3.0) |
-
-            Do not install `*-sources.jar`. Companion jars are official Modrinth builds, rehosted here for a one-page install. Patchouli is redistributed for non-commercial use with attribution to VazkiiMods. GitHub shows a SHA-256 digest next to each uploaded file.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          shopt -s nullglob
+          rm -rf release-split
+          ver="${{ steps.versions.outputs.mod_version }}"
+          stage() {
+            local tag="$1"
+            local title="$2"
+            local body="$3"
+            shift 3
+            local dir="release-split/${tag}"
+            mkdir -p "${dir}"
+            printf '%s\n' "${title}" > "${dir}/title.txt"
+            printf '%s\n' "${body}" > "${dir}/body.md"
+            cp -v "$@" "${dir}/"
+          }
+          stage minecraft-1.21.1-neoforge \
+            "tamed phantoms for minecraft 1.21.1 neoforge" \
+            "Minecraft **1.21.1** / NeoForge. The mod jar and Kotlin for Forge are required. Patchouli is optional and only adds the guidebook. \`all-jars.zip\` contains every jar on this page." \
+            release-assets/tamedphantoms-neoforge-1.21.1-*.jar \
+            release-assets/kotlinforforge-*.jar \
+            release-assets/Patchouli-*-NEOFORGE.jar
+          stage minecraft-1.21.1-fabric \
+            "tamed phantoms for minecraft 1.21.1 fabric" \
+            "Minecraft **1.21.1** / Fabric. The mod jar, Fabric API, Fabric Language Kotlin, and Cloth Config are required. Mod Menu and Placeholder API open the config screen. Patchouli is optional. \`all-jars.zip\` contains every jar on this page." \
+            release-assets/tamedphantoms-fabric-1.21.1-*.jar \
+            release-assets/fabric-api-*.jar \
+            release-assets/fabric-language-kotlin-*.jar \
+            release-assets/cloth-config-*.jar \
+            release-assets/modmenu-*.jar \
+            release-assets/placeholder-api-*.jar \
+            release-assets/Patchouli-*-FABRIC.jar
+          stage minecraft-26.3-neoforge \
+            "tamed phantoms for minecraft 26.3 neoforge" \
+            "Minecraft **26.3** / NeoForge. The mod jar and Kotlin for Forge 6.4.0 are required. Patchouli has no 26.3 build. \`all-jars.zip\` contains every jar on this page." \
+            release-assets/tamedphantoms-neoforge-26.3-*.jar \
+            companions-26.3/kotlinforforge-*.jar
+          stage minecraft-26.3-fabric \
+            "tamed phantoms for minecraft 26.3 fabric" \
+            "Minecraft **26.3** / Fabric. The mod jar, Fabric API, Fabric Language Kotlin, and Cloth Config are required. Mod Menu and Placeholder API open the config screen. Patchouli has no 26.3 build. \`all-jars.zip\` contains every jar on this page." \
+            release-assets/tamedphantoms-fabric-26.3-*.jar \
+            companions-26.3/fabric-api-*.jar \
+            companions-26.3/fabric-language-kotlin-*.jar \
+            companions-26.3/cloth-config-*.jar \
+            companions-26.3/modmenu-*.jar \
+            companions-26.3/placeholder-api-*.jar
+          python3 .github/scripts/publish-split-releases.py release-split
 
       - name: Replace Modrinth versions
         id: modrinth
@@ -204,7 +225,9 @@ jobs:
           python3 .github/scripts/replace-modrinth-versions.py \
             tamed-phantoms \
             "${{ steps.versions.outputs.mod_version }}" \
-            "${{ steps.versions.outputs.mod_version }}-fabric"
+            "${{ steps.versions.outputs.mod_version }}-fabric" \
+            "${{ steps.versions.outputs.mod_version }}+26.3" \
+            "${{ steps.versions.outputs.mod_version }}+26.3-fabric"
 
       - name: Publish Modrinth
         if: steps.modrinth.outputs.ready == 'true'
@@ -212,7 +235,7 @@ jobs:
         with:
           modrinth-id: tamed-phantoms
           modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
-          modrinth-featured: true
+          modrinth-featured: false
           name: ${{ steps.versions.outputs.mod_version }}
           version: ${{ steps.versions.outputs.mod_version }}
           version-type: release
@@ -255,6 +278,54 @@ jobs:
             modmenu(optional){modrinth:mOgUt4GM}
             placeholder-api(optional){modrinth:eXts2L7r}
             patchouli(optional){modrinth:nU0bVIaL}
+
+      - name: Publish Modrinth 26.3 NeoForge
+        if: steps.modrinth.outputs.ready == 'true'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: tamed-phantoms
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: true
+          name: ${{ steps.versions.outputs.mod_version }} for 26.3
+          version: ${{ steps.versions.outputs.mod_version }}+26.3
+          version-type: release
+          changelog: |
+            Minecraft 26.3 / NeoForge. Tamed Phantoms ${{ steps.versions.outputs.mod_version }}.
+          loaders: |
+            neoforge
+          game-versions: |
+            26.3
+          java: |
+            25
+          files: release-assets/tamedphantoms-neoforge-26.3-${{ steps.versions.outputs.mod_version }}.jar
+          dependencies: |
+            kotlin-for-forge(required){modrinth:ordsPcFz}
+
+      - name: Publish Modrinth 26.3 Fabric
+        if: steps.modrinth.outputs.ready == 'true'
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: tamed-phantoms
+          modrinth-token: ${{ secrets.MODRINTH_TOKEN }}
+          modrinth-featured: false
+          name: ${{ steps.versions.outputs.mod_version }} Fabric for 26.3
+          version: ${{ steps.versions.outputs.mod_version }}+26.3-fabric
+          version-type: release
+          changelog: |
+            Minecraft 26.3 / Fabric. Tamed Phantoms ${{ steps.versions.outputs.mod_version }}.
+          loaders: |
+            fabric
+          game-versions: |
+            26.3
+          java: |
+            25
+          files: release-assets/tamedphantoms-fabric-26.3-${{ steps.versions.outputs.mod_version }}.jar
+          dependencies: |
+            fabric-api(required){modrinth:P7dR8mSH}
+            fabric-language-kotlin(required){modrinth:Ha28R6CL}
+            cloth-config(required){modrinth:9s6osm5g}
+            modmenu(optional){modrinth:mOgUt4GM}
+            placeholder-api(optional){modrinth:eXts2L7r}
 
       - name: Delete replaced Modrinth versions
         if: steps.modrinth.outputs.ready == 'true'

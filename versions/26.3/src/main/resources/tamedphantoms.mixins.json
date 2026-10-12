@@ -1,0 +1,24 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tamedphantoms.mod.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "DataFixerSchemaMixin",
+    "PhantomSitFlapMixin",
+    "PhantomMoveControlMixin",
+    "MoveControlMobAccessor",
+    "PhantomSpawnerMixin"
+  ],
+  "client": [
+    "PhantomRenderCaptureMixin",
+    "PhantomModelLookMixin",
+    "PlayerRideBankMixin",
+    "MoonFogMixin",
+    "KeyMappingFields",
+    "SharedPhysicalKeyMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

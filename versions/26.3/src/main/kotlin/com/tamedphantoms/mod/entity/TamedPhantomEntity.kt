@@ -1,0 +1,1565 @@
+package com.tamedphantoms.mod.entity
+
+import com.tamedphantoms.mod.config.ModConfig
+import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.entity.ai.TamedPhantomBodyControl
+import com.tamedphantoms.mod.entity.ai.TamedPhantomDefendGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomFollowOwnerGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomHeldItemLookGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomLeashWanderGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomLookAtPlayerGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomLookControl
+import com.tamedphantoms.mod.entity.ai.TamedPhantomMoveControl
+import com.tamedphantoms.mod.entity.ai.TamedPhantomRefuseGoal
+import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
+import com.tamedphantoms.mod.input.PilotInputAccess
+import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
+import com.tamedphantoms.mod.util.PhantomAcrobatics
+import com.tamedphantoms.mod.util.PhantomAngerLogic
+import com.tamedphantoms.mod.util.PhantomFlightPace
+import com.tamedphantoms.mod.event.ModAdvancements
+import com.tamedphantoms.mod.event.PhantomDismount
+import com.tamedphantoms.mod.util.PhantomCrawl
+import com.tamedphantoms.mod.util.PhantomEffectSpeed
+import com.tamedphantoms.mod.util.PhantomFlightAttitude
+import com.tamedphantoms.mod.util.PhantomScream
+import com.tamedphantoms.mod.util.PhantomGroundSkim
+import com.tamedphantoms.mod.util.PhantomHeadLook
+import com.tamedphantoms.mod.util.PhantomHeldLook
+import com.tamedphantoms.mod.util.PhantomHover
+import com.tamedphantoms.mod.util.PhantomShake
+import com.tamedphantoms.mod.util.PhantomWetness
+import com.tamedphantoms.mod.util.PhantomWingbeat
+import com.tamedphantoms.mod.util.PhantomAngerState
+import com.tamedphantoms.mod.util.PhantomSeatAssignment
+import com.tamedphantoms.mod.util.PhantomTamingLogic
+import net.minecraft.core.BlockPos
+import net.minecraft.core.particles.BlockParticleOption
+import net.minecraft.core.particles.ParticleTypes
+import com.tamedphantoms.mod.platform.ModNetwork
+import net.minecraft.network.syncher.EntityDataAccessor
+import net.minecraft.network.syncher.EntityDataSerializers
+import net.minecraft.network.syncher.SynchedEntityData
+import net.minecraft.network.chat.Component
+import net.minecraft.ChatFormatting
+import net.minecraft.server.level.ServerLevel
+import net.minecraft.server.level.ServerPlayer
+import net.minecraft.sounds.SoundEvents
+import net.minecraft.sounds.SoundSource
+import net.minecraft.util.Mth
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
+import net.minecraft.world.damagesource.DamageSource
+import net.minecraft.world.DifficultyInstance
+import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.LivingEntity
+import net.minecraft.world.entity.Mob
+import net.minecraft.world.entity.EntitySpawnReason
+import net.minecraft.world.entity.MoverType
+import net.minecraft.world.entity.SpawnGroupData
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier
+import net.minecraft.world.entity.ai.attributes.Attributes
+import net.minecraft.world.entity.ai.control.BodyRotationControl
+import net.minecraft.world.level.ServerLevelAccessor
+import net.minecraft.world.entity.item.ItemEntity
+import net.minecraft.world.entity.monster.Phantom
+import net.minecraft.world.entity.player.Player
+import net.minecraft.resources.ResourceKey
+import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.Items
+import net.minecraft.world.level.storage.loot.BuiltInLootTables
+import net.minecraft.world.level.storage.loot.LootTable
+import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.state.BlockState
+import net.minecraft.world.phys.Vec3
+import net.minecraft.world.level.storage.ValueInput
+import net.minecraft.world.level.storage.ValueOutput
+import java.util.UUID
+import kotlin.math.hypot
+import kotlin.math.sqrt
+
+/**
+ * Ручной фантом. Наследуется напрямую от ванильного [Phantom] (подробности
+ * — в докстринге на companion object и в README).
+ */
+class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: Level) :
+    Phantom(entityType, level) {
+
+    companion object {
+        private val DATA_TAMED: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_OWNER: EntityDataAccessor<String> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.STRING)
+        private val DATA_SITTING: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_SADDLED: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_DEFENDING: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_HEAD_PITCH: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_RIDE_HEAD: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_SHAKE: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_TRACKING: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_SCREAM_EYES: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_ACRO_PITCH: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_ACRO_ROLL: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_ACROBATIC: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_IMMORTAL: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_TAKEOFF: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+
+        var clientAfterTick: ((TamedPhantomEntity) -> Unit)? = null
+
+        private const val TAG_TAMED = "Tamed"
+        private const val TAG_OWNER = "Owner"
+        private const val TAG_SITTING = "Sitting"
+        private const val TAG_SADDLED = "Saddled"
+        private const val TAG_WET_TRACKED = "WetTracked"
+        private const val TAG_IN_WATER = "InWater"
+        private const val TAG_IN_RAIN = "InRain"
+        private const val TAG_SCREAM_COOLDOWN = "ScreamCooldown"
+        private const val TAG_IMMORTAL = "Immortal"
+
+        /**
+         * Phantom НЕ предоставляет собственный публичный статический
+         * createAttributes() — строим билдер на базе общего
+         * Mob.createMobAttributes() с явно выставленными значениями
+         * ванильного Phantom, подтверждёнными официальной вики: 20 ХП
+         * (10 сердец), урон атаки 6, дальность слежения 64 блока.
+         */
+        const val PET_MAX_HEALTH = 40.0
+        const val PET_ATTACK_DAMAGE = 12.0
+
+        @JvmStatic
+        fun createAttributes(): AttributeSupplier.Builder = Mob.createMobAttributes()
+            .add(Attributes.MAX_HEALTH, PET_MAX_HEALTH)
+            .add(Attributes.ATTACK_DAMAGE, PET_ATTACK_DAMAGE)
+            .add(Attributes.FOLLOW_RANGE, 64.0)
+
+        /**
+         * Ванильный размер фантома: визуал и хитбокс масштабируются как
+         * `1.0 + 0.15 * size`. size=3 даёт примерно ×1.45.
+         */
+        const val PET_PHANTOM_SIZE = 3
+
+        /** 11 секунд. Ванильный HUD мигает, когда осталось ≤10 с (200 тиков). */
+        private const val NIGHT_VISION_DURATION_TICKS = 220
+
+        /** Насколько голова кивает вверх/вниз при наборе и снижении верхом, градусы. */
+        private const val RIDE_HEAD_DEGREES = 32f
+    }
+
+    init {
+        this.moveControl = TamedPhantomMoveControl(this)
+        this.lookControl = TamedPhantomLookControl(this)
+        this.setPhantomSize(PET_PHANTOM_SIZE)
+    }
+
+    private var angerState: PhantomAngerState = PhantomAngerState.NONE
+    private var repelCooldown: Int = 0
+
+    /**
+     * Состояние клавиш "Взлёт"/"Снижение" ВЛАДЕЛЬЦА, приходит сетевым
+     * пакетом от клиента (см. `network/PhantomInputPayload.kt` и
+     * `network/ModNetworking.kt`) — сознательно НЕ читается напрямую из
+     * полей пассажира (`pilot.isJumping`/`pilot.isShiftKeyDown`), так как
+     * при верховой езде "красться" конфликтует со спешиванием в ванильной
+     * механике (это и было причиной бага "Ctrl не работает"). Не
+     * синхронизируется клиентам — нужно только на сервере, где реально
+     * считается движение.
+     */
+    private var pilotAscending: Boolean = false
+    private var pilotDescending: Boolean = false
+    private var pilotForward: Float = 0f
+    private var pilotStrafe: Float = 0f
+
+    override fun defineSynchedData(builder: SynchedEntityData.Builder) {
+        super.defineSynchedData(builder)
+        builder.define(DATA_TAMED, false)
+        builder.define(DATA_OWNER, "")
+        builder.define(DATA_SITTING, false)
+        builder.define(DATA_SADDLED, false)
+        builder.define(DATA_DEFENDING, false)
+        builder.define(DATA_HEAD_PITCH, 0f)
+        builder.define(DATA_RIDE_HEAD, 0f)
+        builder.define(DATA_SHAKE, 0)
+        builder.define(DATA_TRACKING, false)
+        builder.define(DATA_SCREAM_EYES, 0)
+        builder.define(DATA_ACRO_PITCH, 0f)
+        builder.define(DATA_ACRO_ROLL, 0f)
+        builder.define(DATA_ACROBATIC, false)
+        builder.define(DATA_IMMORTAL, false)
+        builder.define(DATA_TAKEOFF, 0)
+    }
+
+    /**
+     * Абсолютный тангаж взгляда головы, градусы. Не путать с [xRot]:
+     * тот наклоняет всё тело в полёте.
+     */
+    var headLookPitch: Float
+        get() = this.entityData.get(DATA_HEAD_PITCH)
+        set(value) = this.entityData.set(DATA_HEAD_PITCH, value)
+
+    /** Предыдущий и текущий тангаж для плавного кадра. Пишет только клиентский тик. */
+    var clientHeadPitchO: Float = 0f
+    var clientHeadPitch: Float = 0f
+
+    /** Кивок головы верхом: минус — вверх, плюс — вниз. Пишет сервер по клавишам пилота. */
+    var rideHeadPitch: Float
+        get() = this.entityData.get(DATA_RIDE_HEAD)
+        set(value) = this.entityData.set(DATA_RIDE_HEAD, value)
+
+    var clientRideHeadO: Float = 0f
+    var clientRideHead: Float = 0f
+
+    /** Сколько тиков ещё трястись после воды или дождя. */
+    var shakeTicks: Int
+        get() = this.entityData.get(DATA_SHAKE)
+        set(value) = this.entityData.set(DATA_SHAKE, value)
+
+    /** Сколько тиков глаза ещё горят красным от крика. 0 — обычный цвет. */
+    var screamEyeTicks: Int
+        get() = this.entityData.get(DATA_SCREAM_EYES)
+        set(value) = this.entityData.set(DATA_SCREAM_EYES, value)
+
+    private var screamCooldown: Int = 0
+    private var screamTicks: Int = 0
+    private var screamFears: Boolean = false
+    var trackingLook: Boolean
+        get() = this.entityData.get(DATA_TRACKING)
+        set(value) = this.entityData.set(DATA_TRACKING, value)
+
+    /** Насколько yRot изменился за последний клиентский тик. Для изгиба хвоста. */
+    var turnYawDelta: Float = 0f
+
+    private var wetMemory: PhantomWetness.Memory = PhantomWetness.Memory()
+
+    /**
+     * 0 — летит, 1 — завис, пятится или снижается без хода вперёд и вбок.
+     * У пилота считается по клавишам, у остальных клиентов — по скорости.
+     */
+    var hoverBlend: Float = 0f
+
+    /** Крен в градусах. Положительный — влево. Сглаживается на клиенте. */
+    var bank: Float = 0f
+    var bankO: Float = 0f
+
+    /** Поворот головы в сторону крена, градусы. Не больше [PhantomFlightAttitude.HEAD_YAW]. */
+    var headBankYaw: Float = 0f
+    var headBankYawO: Float = 0f
+
+    /** Тангаж хвоста, градусы. Вверх при снижении, вниз при наборе. */
+    var tailPitch: Float = 0f
+    var tailPitchO: Float = 0f
+
+    /** 0 — воздух, 1 — глаза под водой. */
+    var swimBlend: Float = 0f
+    var swimBlendO: Float = 0f
+
+    private var bankTarget: Float = 0f
+    private var headYawTarget: Float = 0f
+
+    /**
+     * Накопленная фаза взмаха. Скорость зависит от режима полёта.
+     * NaN — ещё не тикали на клиенте.
+     */
+    var wingPhase: Float = Float.NaN
+
+    /** Сглаженные множители взмаха для кадра. Пишет только клиентский тик. */
+    var wingFlapRate: Float = 1f
+    var wingFlapRateO: Float = 1f
+    var wingFlapAmp: Float = 1f
+    var wingFlapAmpO: Float = 1f
+    var wingDroop: Float = 0f
+    var wingDroopO: Float = 0f
+    var wingTipHang: Float = 0f
+    var wingTipHangO: Float = 0f
+
+    /** 1 — ползёт у земли: без крена и тангажа, крылья шагают. */
+    var wingCrawl: Float = 0f
+    var wingCrawlO: Float = 0f
+    var crawlPhase: Float = 0f
+    var crawlPhaseO: Float = 0f
+
+    private var wingGroundBlend: Float = 0f
+    var wingTakeoffBlend: Float = 0f
+    var wingTakeoffO: Float = 0f
+    private var wingGlideBlend: Float = 0f
+    private var wingTouchedGround: Boolean = false
+    private var crawlLock: Boolean = false
+    private var skimLatched: Boolean = false
+    private var skimGroundTicks: Int = 0
+    private var skimAirTicks: Int = 0
+    private var takeoffQueued: Boolean = false
+    private var diveEnergy: Double = 0.0
+    private var riderTakeoffHold: Int = 0
+    private var takeoffRamp: Double = 1.0
+    private var takeoffArmed: Boolean = false
+    private var crawlPlant: Int = 0
+    private var lastFeedTick: Int = -100
+    var cameraPitch: Float = 0f
+    var cameraPitchO: Float = 0f
+    var cameraRoll: Float = 0f
+    var cameraRollO: Float = 0f
+    var refuseVisual: Int = 0
+    var nodVisual: Int = 0
+
+    /** Куда смотреть головой, пока идёт мотание или кивок. Считает клиентский тик. */
+    var offerAimYaw: Float = 0f
+    var offerAimPitch: Float = 0f
+
+    var takeoffHoldTicks: Int
+        get() = this.entityData.get(DATA_TAKEOFF)
+        set(value) = this.entityData.set(DATA_TAKEOFF, value)
+
+    fun crawlVisual(partial: Float): Float =
+        Mth.lerp(partial, this.wingCrawlO, this.wingCrawl).coerceIn(0f, 1f)
+
+    fun bankVisual(partial: Float): Float =
+        Mth.lerp(partial, this.bankO, this.bank) * (1f - this.crawlVisual(partial))
+
+    /** Лишний тангаж сверх позы полёта. Копится, пока держат набор или снижение. */
+    var acroPitch: Float = 0f
+    var acroPitchO: Float = 0f
+    private var acroRoll: Float = 0f
+    private var loopProgress: Float = 0f
+
+    /** Летит вперёд или вбок: камера и модель могут крутиться дальше фиксированного наклона. */
+    var acrobatic: Boolean = false
+
+    var immortal: Boolean
+        get() = this.entityData.get(DATA_IMMORTAL)
+        set(value) {
+            this.entityData.set(DATA_IMMORTAL, value)
+            if (value) this.setGlowingTag(true)
+        }
+
+    var boltTicks: Int = 0
+    private var boltMotion: Vec3 = Vec3.ZERO
+
+    fun takeBoltMotion(): Vec3? = if (this.boltTicks > 0) this.boltMotion else null
+
+    fun acroPitchVisual(partial: Float): Float =
+        Mth.lerp(partial, this.acroPitchO, this.acroPitch) * (1f - this.crawlVisual(partial))
+
+    fun ridePitchVisual(partial: Float): Float {
+        val crawl = this.crawlVisual(partial)
+        val extra = Mth.lerp(partial, this.acroPitchO, this.acroPitch) * (1f - crawl)
+        if (!this.acrobatic) return extra
+        val shown = Mth.lerp(partial, this.xRotO, this.xRot) * (1f - crawl)
+        return shown + extra
+    }
+
+    /**
+     * Тангаж модели в градусах: ванильный [PhantomRenderer] крутит `xRot`,
+     * а свой рендерер добавляет интерполяцию и акробатику. Камера смотрит
+     * только [ridePitchVisual], седло должно следовать за всей моделью.
+     */
+    fun renderedBodyPitch(partial: Float): Float {
+        val crawl = this.crawlVisual(partial)
+        val shown = Mth.lerp(partial, this.xRotO, this.xRot) * (1f - crawl)
+        val acro = Mth.lerp(partial, this.acroPitchO, this.acroPitch) * (1f - crawl)
+        return if (this.isVehicle || crawl > 0f) shown + acro else this.xRot + acro
+    }
+
+    /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
+    var glanceTarget: LivingEntity? = null
+
+    /** Пока фантом замер на еду или отказ, другие цели взгляда не перебивают [glanceTarget]. */
+    var offeringLock: Boolean = false
+
+    var tamed: Boolean
+        get() = this.entityData.get(DATA_TAMED)
+        set(value) = this.entityData.set(DATA_TAMED, value)
+
+    var ownerUUID: UUID?
+        get() = this.entityData.get(DATA_OWNER).ifEmpty { null }?.let(UUID::fromString)
+        set(value) = this.entityData.set(DATA_OWNER, value?.toString() ?: "")
+
+    fun isOrderedToSit(): Boolean = this.entityData.get(DATA_SITTING)
+
+    fun setOrderedToSit(value: Boolean, playEffects: Boolean = true) {
+        val changed = value != this.isOrderedToSit()
+        this.entityData.set(DATA_SITTING, value)
+        this.setNoGravity(!value)
+        if (value) {
+            this.navigation.stop()
+            if (this.isVehicle) {
+                this.ejectPassengers()
+            }
+            this.deltaMovement = Vec3(0.0, this.deltaMovement.y.coerceAtMost(0.0), 0.0)
+        }
+        if (changed && playEffects) {
+            this.spawnGustParticles()
+        }
+    }
+
+    fun isDefending(): Boolean = this.entityData.get(DATA_DEFENDING)
+
+    private fun setDefending(value: Boolean) {
+        this.entityData.set(DATA_DEFENDING, value, true)
+    }
+
+    var saddled: Boolean
+        get() = this.entityData.get(DATA_SADDLED)
+        private set(value) = this.entityData.set(DATA_SADDLED, value)
+
+    fun isOwnedBy(entity: LivingEntity): Boolean = entity.uuid == this.ownerUUID
+
+    /** Вызывается из обработчика сетевого пакета на сервере (только для владельца-пилота). */
+    fun setPilotInput(ascending: Boolean, descending: Boolean, forward: Float = 0f, strafe: Float = 0f) {
+        this.pilotAscending = ascending
+        this.pilotDescending = descending
+        this.pilotForward = forward
+        this.pilotStrafe = strafe
+    }
+
+    // =====================================================================
+    // Сохранение/загрузка
+    // =====================================================================
+
+    override fun addAdditionalSaveData(output: ValueOutput) {
+        super.addAdditionalSaveData(output)
+        output.putBoolean(TAG_TAMED, this.tamed)
+        output.putBoolean(TAG_SITTING, this.isOrderedToSit())
+        output.putBoolean(TAG_SADDLED, this.saddled)
+        val owner = this.ownerUUID
+        if (owner != null) {
+            output.putString(TAG_OWNER, owner.toString())
+        }
+        output.putBoolean(TAG_WET_TRACKED, this.wetMemory.tracked)
+        output.putBoolean(TAG_IN_WATER, this.wetMemory.inWater)
+        output.putBoolean(TAG_IN_RAIN, this.wetMemory.inRain)
+        output.putInt(TAG_SCREAM_COOLDOWN, this.screamCooldown)
+        output.putBoolean(TAG_IMMORTAL, this.immortal)
+    }
+
+    override fun readAdditionalSaveData(input: ValueInput) {
+        super.readAdditionalSaveData(input)
+        this.tamed = input.getBooleanOr(TAG_TAMED, false)
+        this.setOrderedToSit(input.getBooleanOr(TAG_SITTING, false), playEffects = false)
+        this.saddled = input.getBooleanOr(TAG_SADDLED, false)
+        this.ownerUUID = input.getString(TAG_OWNER).orElse("").ifEmpty { null }?.let(UUID::fromString)
+        this.applyConfiguredSize()
+        this.applyPetStats()
+        this.setNoGravity(!this.isOrderedToSit())
+        if (input.getBooleanOr(TAG_WET_TRACKED, false)) {
+            this.wetMemory = PhantomWetness.Memory(
+                tracked = true,
+                inWater = input.getBooleanOr(TAG_IN_WATER, false),
+                inRain = input.getBooleanOr(TAG_IN_RAIN, false),
+            )
+        }
+        this.screamCooldown = input.getIntOr(TAG_SCREAM_COOLDOWN, 0).coerceAtLeast(0)
+        this.immortal = input.getBooleanOr(TAG_IMMORTAL, false)
+    }
+
+    override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
+        super.onSyncedDataUpdated(key)
+        this.applyPetStats()
+    }
+
+    override fun finalizeSpawn(
+        level: ServerLevelAccessor,
+        difficulty: DifficultyInstance,
+        spawnType: EntitySpawnReason,
+        spawnGroupData: SpawnGroupData?,
+    ): SpawnGroupData? {
+        val data = super.finalizeSpawn(level, difficulty, spawnType, spawnGroupData)
+        this.applyConfiguredSize()
+        this.applyPetStats()
+        return data
+    }
+
+    private fun applyConfiguredSize() {
+        val size = ServerConfig.phantomSize().coerceIn(0, 64)
+        if (this.phantomSize != size) {
+            this.setPhantomSize(size)
+        }
+    }
+
+    private fun applyPetStats() {
+        this.getAttribute(Attributes.MAX_HEALTH)?.baseValue = PET_MAX_HEALTH
+        this.getAttribute(Attributes.ATTACK_DAMAGE)?.baseValue = PET_ATTACK_DAMAGE
+    }
+
+    override fun decreaseAirSupply(currentAir: Int): Int = currentAir
+
+    override fun canBeLeashed(): Boolean = this.isAlive
+
+    fun boltFromLeash(from: Entity, dropLead: Boolean = true) {
+        var dx = this.x - from.x
+        var dz = this.z - from.z
+        if (dx * dx + dz * dz < 0.04) {
+            val ang = this.random.nextFloat() * Mth.TWO_PI
+            dx = com.tamedphantoms.mod.compat.FloatMath.cos(ang.toDouble()).toDouble()
+            dz = com.tamedphantoms.mod.compat.FloatMath.sin(ang.toDouble()).toDouble()
+        }
+        val len = hypot(dx, dz).coerceAtLeast(0.1)
+        val side = if (this.random.nextBoolean()) 1.0 else -1.0
+        val sx = -dz / len * side * 0.9 + dx / len * 0.25
+        val sz = dx / len * side * 0.9 + dz / len * 0.25
+        val slen = hypot(sx, sz).coerceAtLeast(0.1)
+        val speed = 0.14
+        this.boltMotion = Vec3(sx / slen * speed, 0.02, sz / slen * speed)
+        this.deltaMovement = this.boltMotion
+        this.yRot = (Mth.atan2(sz, sx) * Mth.RAD_TO_DEG).toFloat() - 90f
+        this.yRotO = this.yRot
+        this.boltTicks = 46
+        this.navigation.stop()
+        this.spawnAngryParticles()
+        if (this.isLeashed) {
+            this.dropLeash()
+        }
+    }
+
+    override fun leashTooFarBehaviour() {
+        if (this.isOrderedToSit()) {
+            this.dropLeash()
+            return
+        }
+        super.leashTooFarBehaviour()
+    }
+
+    // =====================================================================
+    // ИИ / цели
+    // =====================================================================
+
+    override fun createBodyControl(): BodyRotationControl = TamedPhantomBodyControl(this)
+
+    override fun registerGoals() {
+        this.goalSelector.addGoal(1, TamedPhantomDefendGoal(this))
+        this.goalSelector.addGoal(2, TamedPhantomRefuseGoal(this))
+        this.goalSelector.addGoal(3, TamedPhantomFollowOwnerGoal(this))
+        this.goalSelector.addGoal(4, TamedPhantomLeashWanderGoal(this))
+        this.goalSelector.addGoal(5, TamedPhantomWanderGoal(this))
+        this.goalSelector.addGoal(6, TamedPhantomHeldItemLookGoal(this))
+        this.goalSelector.addGoal(7, TamedPhantomLookAtPlayerGoal(this))
+    }
+
+    override fun canAttack(target: LivingEntity): Boolean = target === this.getDefendTarget()
+
+    override fun isPersistenceRequired(): Boolean = true
+
+    // =====================================================================
+    // Урон / самозащита
+    // =====================================================================
+
+    fun startDefending(attackerId: UUID) {
+        this.setOrderedToSit(false, playEffects = false)
+        this.angerState = PhantomAngerLogic.onHurtBy(attackerId, ServerConfig.defendDurationTicks())
+        this.setDefending(true)
+    }
+
+    fun getDefendTarget(): LivingEntity? {
+        if (!this.angerState.isActive) return null
+        val id = this.angerState.targetId ?: return null
+        val level = this.level()
+        if (level !is ServerLevel) return null
+        return level.getEntity(id) as? LivingEntity
+    }
+
+    // =====================================================================
+    // Приручение / кормление / освобождение / седло
+    // =====================================================================
+
+    fun tameTo(player: Player) {
+        this.tamed = true
+        this.ownerUUID = player.uuid
+        this.setOrderedToSit(false, playEffects = false)
+        this.angerState = PhantomAngerState.NONE
+        this.setDefending(false)
+        PhantomOwnerRecall.remember(player, this)
+        this.playTameSound()
+        this.spawnHeartParticles()
+    }
+
+    fun release() {
+        val previousOwner = this.findOwnerPlayer()
+        this.tamed = false
+        this.ownerUUID = null
+        this.setOrderedToSit(false, playEffects = false)
+        this.angerState = PhantomAngerState.NONE
+        this.setDefending(false)
+        if (previousOwner != null) {
+            PhantomOwnerRecall.forget(previousOwner, this.uuid)
+        }
+        this.dropSaddleIfPresent()
+        this.playTameSound()
+        this.spawnAngryParticles()
+    }
+
+    fun healWithFood(nutrition: Int): Boolean {
+        if (this.tickCount == this.lastFeedTick) return false
+        if (!PhantomTamingLogic.canHeal(this.health, this.maxHealth)) return false
+        val healAmount = PhantomTamingLogic.healAmount(nutrition, this.health, this.maxHealth)
+        if (healAmount <= 0f) return false
+        this.lastFeedTick = this.tickCount
+        this.heal(healAmount)
+        this.playTameSound()
+        this.spawnHappyParticles()
+        return true
+    }
+
+    /** Снимает седло (по запросу ножницами) — падает на землю, как и при освобождении. Возвращает true, если седло реально было. */
+    fun removeSaddle(): Boolean {
+        if (!this.saddled) return false
+        this.dropSaddleIfPresent()
+        this.playSound(SoundEvents.SHEEP_SHEAR, 1.0f, 1.0f)
+        return true
+    }
+
+    private fun dropSaddleIfPresent() {
+        if (!this.saddled) return
+        this.saddled = false
+        val level = this.level()
+        if (level is ServerLevel) {
+            val drop = ItemEntity(level, this.x, this.y + this.bbHeight * 0.5, this.z, ItemStack(Items.SADDLE))
+            drop.setDefaultPickUpDelay()
+            level.addFreshEntity(drop)
+        }
+    }
+
+    private fun playTameSound() {
+        this.playSound(SoundEvents.PHANTOM_BITE, 1.0f, 0.9f + this.random.nextFloat() * 0.2f)
+    }
+
+    private fun spawnHeartParticles() {
+        val level = this.level()
+        if (level !is ServerLevel) return
+        repeat(6) {
+            val dx = this.random.nextGaussian() * 0.15
+            val dy = this.random.nextDouble() * 0.5
+            val dz = this.random.nextGaussian() * 0.15
+            level.sendParticles(ParticleTypes.HEART, this.x, this.y + this.bbHeight * 0.5 + 0.2, this.z, 1, dx, dy, dz, 0.0)
+        }
+    }
+
+    private fun spawnHappyParticles() {
+        val level = this.level()
+        if (level !is ServerLevel) return
+        repeat(8) {
+            val dx = this.random.nextGaussian() * 0.2
+            val dy = this.random.nextDouble() * 0.6
+            val dz = this.random.nextGaussian() * 0.2
+            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, this.x, this.y + this.bbHeight * 0.5 + 0.2, this.z, 1, dx, dy, dz, 0.0)
+        }
+    }
+
+    fun rejectOffering(from: Player) {
+        if (!this.isVehicle) {
+            this.glanceTarget = from
+            val yaw = PhantomHeadLook.yawDegrees(this.x, this.z, from.x, from.z)
+            this.yRot = yaw
+            this.yBodyRot = yaw
+            this.yHeadRot = yaw
+        }
+        this.spawnAngryParticles()
+    }
+
+    private fun spawnAngryParticles() {
+        val level = this.level()
+        if (level !is ServerLevel) return
+        level.sendParticles(
+            ParticleTypes.ANGRY_VILLAGER,
+            this.x,
+            this.y + this.bbHeight * 0.7 + 0.25,
+            this.z,
+            10,
+            0.45,
+            0.35,
+            0.45,
+            0.0,
+        )
+    }
+
+    private fun spawnGustParticles() {
+        val level = this.level()
+        if (level !is ServerLevel) return
+        level.sendParticles(
+            ParticleTypes.SMALL_GUST,
+            this.x,
+            this.y + this.bbHeight * 0.45,
+            this.z,
+            12,
+            0.4,
+            0.2,
+            0.4,
+            0.0,
+        )
+    }
+
+    fun isSaddleable(): Boolean = this.tamed && this.isAlive
+
+    override fun isSaddled(): Boolean = this.saddled
+
+    fun equipSaddle(stack: ItemStack, soundSource: SoundSource?) {
+        this.saddled = true
+        this.playSound(SoundEvents.PHANTOM_BITE, 0.7f, 1.2f)
+    }
+
+    // =====================================================================
+    // Езда верхом
+    // =====================================================================
+
+    override fun canAddPassenger(passenger: Entity): Boolean {
+        if (!this.saddled || !this.tamed || this.isOrderedToSit()) return false
+        if (this.passengers.size >= 2) return false
+        val mountingIsOwner = passenger is Player && this.isOwnedBy(passenger)
+        val pilotTaken = this.passengers.any { it is Player && this.isOwnedBy(it) }
+        val passengerTaken = this.passengers.any { !(it is Player && this.isOwnedBy(it)) }
+        return PhantomSeatAssignment.assignSeat(mountingIsOwner, pilotTaken, passengerTaken) != null
+    }
+
+    override fun getControllingPassenger(): LivingEntity? {
+        val owner = this.ownerUUID ?: return null
+        return this.passengers.firstOrNull { it is Player && it.uuid == owner } as? LivingEntity
+    }
+
+    // =====================================================================
+    // Основной тик
+    // =====================================================================
+
+    override fun tick() {
+        if (this.level().isClientSide) {
+            this.clientHeadPitchO = this.clientHeadPitch
+            this.clientHeadPitch = this.headLookPitch
+            this.clientRideHeadO = this.clientRideHead
+            this.clientRideHead = this.rideHeadPitch
+            this.wingFlapRateO = this.wingFlapRate
+            this.wingFlapAmpO = this.wingFlapAmp
+            this.wingDroopO = this.wingDroop
+            this.wingTipHangO = this.wingTipHang
+            this.wingTakeoffO = this.wingTakeoffBlend
+            this.bankO = this.bank
+            this.acroPitchO = this.acroPitch
+            this.headBankYawO = this.headBankYaw
+            this.tailPitchO = this.tailPitch
+            this.swimBlendO = this.swimBlend
+            this.wingCrawlO = this.wingCrawl
+            this.crawlPhaseO = this.crawlPhase
+            this.cameraPitchO = this.cameraPitch
+            this.cameraRollO = this.cameraRoll
+            if (this.isVehicle && !this.isLocalInstanceAuthoritative) {
+                this.acroPitch = this.entityData.get(DATA_ACRO_PITCH)
+                this.bank = this.entityData.get(DATA_ACRO_ROLL)
+                this.acrobatic = this.entityData.get(DATA_ACROBATIC)
+            }
+        }
+        val yawBefore = this.yRot
+        if (this.isOrderedToSit()) {
+            this.xRot = 0.0f
+        }
+
+        super.tick()
+
+        if (this.level().isClientSide) {
+            this.turnYawDelta = PhantomHeadLook.wrapDegrees(this.yRot - yawBefore)
+            this.tickFlightVisuals()
+            this.advanceWingPhase()
+            this.spawnShakeDroplets()
+            this.spawnSwimTrail()
+            this.spawnCrawlFootprints()
+            this.tickCameraFollow()
+            this.tickRefuseVisual()
+            clientAfterTick?.invoke(this)
+        }
+
+        if (this.isOrderedToSit()) {
+            this.xRot = 0.0f
+            this.setNoGravity(false)
+        }
+        this.airSupply = this.maxAirSupply
+
+        val level = this.level()
+        if (level !is ServerLevel) {
+            return
+        }
+
+        this.applyConfiguredSize()
+        this.tickWetExit()
+        this.tickRideHead()
+        this.tickAngerTimer()
+        this.tickScream(level)
+        this.tickAcrobatics()
+        if (this.takeoffHoldTicks > 0) {
+            this.takeoffHoldTicks--
+        }
+        if (this.boltTicks > 0) {
+            this.boltTicks--
+        }
+        if (this.immortal) {
+            this.setGlowingTag(true)
+            if (this.health < this.maxHealth) {
+                this.health = this.maxHealth
+            }
+            if (this.y < level.dimensionType().minY()) {
+                this.teleportTo(this.x, (level.dimensionType().minY() + 8).toDouble(), this.z)
+                this.deltaMovement = Vec3.ZERO
+            }
+        }
+
+        if (this.tamed) {
+            this.tickRepelWildPhantoms(level)
+            this.tickOwnerRecall()
+
+            if (this.isVehicle() && this.controllingPassenger != null) {
+                this.tickRiderNightVision()
+            } else {
+                this.pilotAscending = false
+                this.pilotDescending = false
+                this.pilotForward = 0f
+                this.pilotStrafe = 0f
+            }
+        }
+    }
+
+    private fun tickWetExit() {
+        val inWater = this.isInWater
+        val inRain = this.isInWaterOrRain && !inWater
+        val (next, shake) = PhantomWetness.step(this.wetMemory, inWater, inRain)
+        this.wetMemory = next
+        if (shake) {
+            this.shakeTicks = PhantomShake.LENGTH
+            this.playSound(SoundEvents.PLAYER_SPLASH, 0.65f, 1.2f)
+        }
+        if (this.shakeTicks > 0) {
+            this.shakeTicks--
+        }
+    }
+
+    private fun tickRideHead() {
+        val riding = this.isVehicle && this.controllingPassenger != null
+        val target = if (!riding) {
+            0f
+        } else when {
+            this.pilotAscending && !this.pilotDescending -> -RIDE_HEAD_DEGREES
+            this.pilotDescending && !this.pilotAscending -> RIDE_HEAD_DEGREES
+            else -> 0f
+        }
+        this.rideHeadPitch = PhantomHeadLook.approachDegrees(this.rideHeadPitch, target, 6f)
+    }
+
+    private fun spawnShakeDroplets() {
+        if (this.shakeTicks <= 0 || this.tickCount % 2 != 0) return
+        val level = this.level()
+        repeat(4) {
+            val dx = (this.random.nextDouble() - 0.5) * 1.6
+            val dz = (this.random.nextDouble() - 0.5) * 1.6
+            level.addParticle(
+                ParticleTypes.SPLASH,
+                this.x + dx,
+                this.y + 0.35,
+                this.z + dz,
+                dx * 0.15,
+                0.12,
+                dz * 0.15,
+            )
+        }
+    }
+
+    private fun spawnSwimTrail() {
+        if (!this.isInWater) return
+        val moved = hypot(this.x - this.xo, hypot(this.y - this.yo, this.z - this.zo))
+        val turned = kotlin.math.abs(Mth.wrapDegrees(this.yRot - this.yRotO)) +
+            kotlin.math.abs(this.xRot - this.xRotO)
+        if (moved < 0.006 && turned < 0.4f) return
+        val level = this.level()
+        val motion = this.deltaMovement
+        for (side in doubleArrayOf(-1.0, 1.0)) {
+            val tip = this.wingTip(side, onGround = false)
+            level.addParticle(
+                ParticleTypes.BUBBLE,
+                tip.x,
+                tip.y,
+                tip.z,
+                -motion.x * 0.2,
+                0.03,
+                -motion.z * 0.2,
+            )
+            if (this.random.nextFloat() < 0.35f) {
+                level.addParticle(ParticleTypes.BUBBLE_POP, tip.x, tip.y + 0.08, tip.z, 0.0, 0.02, 0.0)
+            }
+        }
+    }
+
+    private fun spawnCrawlFootprints() {
+        if (this.wingCrawl < 0.55f || this.isInWater) return
+        if (hypot(this.x - this.xo, this.z - this.zo) < 0.01) return
+        val step = com.tamedphantoms.mod.compat.FloatMath.sin(this.crawlPhase)
+        val plant = when {
+            step > 0.78f -> 1
+            step < -0.78f -> -1
+            else -> 0
+        }
+        if (plant == 0) {
+            this.crawlPlant = 0
+            return
+        }
+        if (plant == this.crawlPlant) return
+        this.crawlPlant = plant
+        val tip = this.wingTip(if (plant > 0) -1.0 else 1.0, onGround = true)
+        val level = this.level()
+        var at = BlockPos.containing(tip.x, this.y - 0.02, tip.z)
+        var state = level.getBlockState(at)
+        if (state.getCollisionShape(level, at).isEmpty) {
+            at = at.below()
+            state = level.getBlockState(at)
+        }
+        if (state.getCollisionShape(level, at).isEmpty) return
+        val particle = BlockParticleOption(ParticleTypes.BLOCK, state)
+        repeat(4) {
+            level.addParticle(
+                particle,
+                tip.x + (this.random.nextDouble() - 0.5) * 0.16,
+                this.y + 0.08,
+                tip.z + (this.random.nextDouble() - 0.5) * 0.16,
+                (this.random.nextDouble() - 0.5) * 0.02,
+                0.012,
+                (this.random.nextDouble() - 0.5) * 0.02,
+            )
+        }
+    }
+
+    /** Кончик крыла: side −1 левый, +1 правый. */
+    private fun wingTip(side: Double, onGround: Boolean): Vec3 {
+        val yaw = this.yRot * Mth.DEG_TO_RAD
+        val scale = 1.0 + 0.15 * this.phantomSize
+        val reach = 1.35 * scale
+        val rightX = com.tamedphantoms.mod.compat.FloatMath.cos(yaw).toDouble()
+        val rightZ = com.tamedphantoms.mod.compat.FloatMath.sin(yaw).toDouble()
+        val forwardX = -com.tamedphantoms.mod.compat.FloatMath.sin(yaw).toDouble()
+        val forwardZ = com.tamedphantoms.mod.compat.FloatMath.cos(yaw).toDouble()
+        val along = if (onGround) 0.15 * scale else 0.35 * scale
+        val py = if (onGround) this.y + 0.06 else this.y + 0.34 * scale
+        return Vec3(
+            this.x + rightX * side * reach + forwardX * along,
+            py,
+            this.z + rightZ * side * reach + forwardZ * along,
+        )
+    }
+
+    private fun updateSkim(pressed: Boolean): Boolean {
+        if (pressed) {
+            this.skimAirTicks = 0
+            this.skimGroundTicks++
+            if (this.skimGroundTicks >= 2) this.skimLatched = true
+        } else {
+            this.skimGroundTicks = 0
+            if (this.skimLatched) {
+                this.skimAirTicks++
+                if (this.skimAirTicks == 1 && this.wingTakeoffBlend < 0.25f) this.takeoffQueued = true
+                if (this.skimAirTicks >= 5) this.skimLatched = false
+            } else {
+                this.skimAirTicks = 0
+            }
+        }
+        return this.skimLatched
+    }
+
+    private fun flattenGroundAttitude() {
+        this.acroPitch = 0f
+        this.acroRoll = 0f
+        this.loopProgress = 0f
+        this.bank = 0f
+        this.bankTarget = 0f
+        this.headYawTarget = 0f
+        this.acrobatic = false
+        this.diveEnergy = 0.0
+    }
+
+    /**
+     * Разгон с земли примерно за 6 тиков: сразу отрыв, скорость до полной.
+     * Возвращает долю целевой скорости, 1 — обычный полёт.
+     */
+    private fun surfaceTakeoffScale(wantedY: Double): Double {
+        val skimming = (this.crawlLock || this.wingGroundBlend > 0.45f) && !this.isInWater
+        val justArmed = wantedY > 0.0 && skimming && !this.takeoffArmed && this.riderTakeoffHold <= 0
+        if (justArmed) {
+            this.takeoffArmed = true
+            this.takeoffRamp = 0.28
+            this.riderTakeoffHold = 6
+            this.takeoffQueued = true
+        }
+        if (wantedY <= 0.0) this.takeoffArmed = false
+        val lifting = this.riderTakeoffHold > 0 && wantedY > 0.0
+        if (this.riderTakeoffHold > 0) {
+            this.riderTakeoffHold--
+            if (lifting && !justArmed) {
+                this.takeoffRamp = (this.takeoffRamp + 0.12).coerceAtMost(1.0)
+            }
+        } else {
+            this.takeoffRamp = 1.0
+        }
+        return if (lifting) this.takeoffRamp else 1.0
+    }
+
+    fun diveWindActive(): Boolean {
+        if (!this.isVehicle || this.isInWater || this.isUnderWater) return false
+        val dy = this.y - this.yo
+        val horizontal = hypot(this.x - this.xo, this.z - this.zo)
+        return dy < -0.22 && horizontal > 0.28
+    }
+
+    fun beginSurfaceTakeoff() {
+        if (this.takeoffHoldTicks > 0) return
+        this.takeoffHoldTicks = 6
+    }
+
+    private fun tickCameraFollow() {
+        val targetPitch = this.ridePitchVisual(1f)
+        val targetRoll = this.bankVisual(1f)
+        this.cameraPitch += (targetPitch - this.cameraPitch) * 0.12f
+        this.cameraRoll += (targetRoll - this.cameraRoll) * 0.12f
+    }
+
+    private fun tickRefuseVisual() {
+        if (!this.tamed || this.isVehicle) {
+            this.refuseVisual = 0
+            this.nodVisual = 0
+            return
+        }
+        val found = PhantomHeldLook.nearestOffer(
+            this,
+            this.ownerUUID,
+            PhantomTamingLogic.canHeal(this.health, this.maxHealth),
+        )
+        val player = found?.player
+        if (found == null || player == null) {
+            this.refuseVisual = 0
+            this.nodVisual = 0
+            return
+        }
+        this.offerAimYaw = PhantomHeadLook.yawDegrees(this.x, this.z, player.x, player.z)
+        this.offerAimPitch = PhantomHeadLook.pitchDegrees(
+            this.x, this.eyeY, this.z, player.x, player.eyeY, player.z,
+        )
+        when (found.offering) {
+            PhantomHeldLook.Offering.SHAKE -> {
+                this.refuseVisual = 1
+                this.nodVisual = 0
+            }
+            PhantomHeldLook.Offering.NOD -> {
+                this.nodVisual = 1
+                this.refuseVisual = 0
+            }
+        }
+    }
+
+    private fun findOwnerPlayer(): Player? {
+        val id = this.ownerUUID ?: return null
+        val level = this.level()
+        if (level is ServerLevel) {
+            return level.getServer()?.playerList?.getPlayer(id)
+        }
+        return level.players().firstOrNull { it.uuid == id }
+    }
+
+    private fun tickOwnerRecall() {
+        val owner = this.findOwnerPlayer() ?: return
+        if (this.tickCount % 20 == 0) {
+            PhantomOwnerRecall.remember(owner, this)
+        }
+        PhantomOwnerRecall.tryTeleportToOwner(this, owner)
+    }
+
+    private fun tickAngerTimer() {
+        this.angerState = PhantomAngerLogic.tick(this.angerState)
+        this.setDefending(this.angerState.isActive)
+    }
+
+    private fun tickRepelWildPhantoms(level: ServerLevel) {
+        if (this.repelCooldown-- > 0) return
+        this.repelCooldown = ModConfig.REPEL_PUSH_INTERVAL_TICKS
+
+        val box = this.boundingBox.inflate(ServerConfig.repelRadius())
+        val nearby = level.getEntitiesOfClass(Phantom::class.java, box) { candidate ->
+            candidate !== this && !(candidate is TamedPhantomEntity && candidate.tamed)
+        }
+        for (wild in nearby) {
+            val dx = wild.x - this.x
+            val dz = wild.z - this.z
+            val distSq = dx * dx + dz * dz
+            if (distSq < 0.01) continue
+            val dist = sqrt(distSq)
+            val push = 0.12
+            wild.push(dx / dist * push, 0.0, dz / dist * push)
+        }
+    }
+
+    fun tryOwnerScream(player: Player) {
+        if (player.vehicle !== this || !this.isOwnedBy(player)) return
+        val serverPlayer = player as? ServerPlayer ?: return
+        if (this.screamCooldown > 0) {
+            val seconds = (this.screamCooldown + 19) / 20
+            serverPlayer.sendSystemMessage(
+                Component.translatable("tamedphantoms.scream.cooldown", seconds).withStyle(ChatFormatting.RED),
+                true,
+            )
+            return
+        }
+        val level = this.level()
+        if (level is ServerLevel) {
+            this.beginScream(level, redEyes = true, blindness = true, awardOwner = serverPlayer)
+        }
+    }
+
+    private fun tickScream(level: ServerLevel) {
+        if (this.screamCooldown > 0) {
+            this.screamCooldown--
+        }
+        if (this.screamTicks > 0) {
+            PhantomScream.frighten(level, this, this.screamFears)
+            this.screamTicks--
+            if (this.screamTicks <= 0) {
+                this.screamEyeTicks = 0
+                this.screamFears = false
+            }
+            return
+        }
+        if (this.screamCooldown > 0 || !this.isAlive) return
+        if (this.isDefending()) {
+            this.beginScream(level, redEyes = true, blindness = true, awardOwner = null)
+            return
+        }
+        if (!this.tamed && this.tickCount % 20 == 0 &&
+            PhantomScream.isFullMoonNight(level) &&
+            this.random.nextFloat() < 0.12f
+        ) {
+            this.beginScream(level, redEyes = false, blindness = false, awardOwner = null, moonPulse = true)
+        }
+    }
+
+    private fun beginScream(level: ServerLevel, redEyes: Boolean, blindness: Boolean, awardOwner: ServerPlayer?, moonPulse: Boolean = false) {
+        val seconds = ServerConfig.screamCooldownSeconds().coerceAtLeast(1)
+        this.screamCooldown = seconds * 20
+        this.screamTicks = PhantomScream.EFFECT_TICKS
+        this.screamFears = blindness
+        this.screamEyeTicks = if (redEyes) PhantomScream.EFFECT_TICKS else 0
+        this.addEffect(MobEffectInstance(MobEffects.GLOWING, PhantomScream.EFFECT_TICKS, 0, false, false, false))
+        PhantomScream.play(level, this)
+        PhantomScream.frighten(level, this, blindness)
+        if (moonPulse) {
+            ModNetwork.sendToDimension(level, PhantomMoonPulsePayload)
+            for (listener in PhantomScream.listeners(level, this)) {
+                ModAdvancements.grantSickMoon(listener)
+            }
+        }
+        if (awardOwner != null) {
+            ModAdvancements.grantWingedBeast(awardOwner)
+        }
+    }
+
+    private fun tickAcrobatics() {
+        val ridden = this.isVehicle && this.controllingPassenger is Player
+        val crawling = ridden && this.updateSkim(PhantomGroundSkim.pressed(this))
+        if (crawling) {
+            this.flattenGroundAttitude()
+            this.entityData.set(DATA_ACRO_PITCH, 0f)
+            this.entityData.set(DATA_ACRO_ROLL, 0f)
+            this.entityData.set(DATA_ACROBATIC, false)
+            return
+        }
+        val acrobatic = PhantomAcrobatics.allows(
+            this.pilotForward.toDouble(),
+            this.pilotStrafe.toDouble(),
+            crawling,
+            this.isOrderedToSit(),
+            ridden,
+        )
+        val climb = when {
+            this.pilotAscending && !this.pilotDescending -> 1f
+            this.pilotDescending && !this.pilotAscending -> -1f
+            else -> 0f
+        }
+        val stepped = PhantomAcrobatics.step(
+            this.acroPitch,
+            this.acroRoll,
+            this.loopProgress,
+            acrobatic,
+            climb,
+            this.pilotStrafe,
+            PhantomAcrobatics.configuredStep(),
+        )
+        this.acroPitch = stepped.pitch
+        this.acroRoll = stepped.roll
+        this.loopProgress = stepped.loop
+        this.acrobatic = acrobatic
+        this.entityData.set(DATA_ACRO_PITCH, stepped.pitch)
+        this.entityData.set(DATA_ACRO_ROLL, stepped.roll)
+        this.entityData.set(DATA_ACROBATIC, acrobatic)
+        if (stepped.completedLoop) {
+            this.becomeImmortal()
+        }
+    }
+
+    var loopReadyToReport: Boolean = false
+
+    fun tryOwnerLoop(player: Player) {
+        if (player.vehicle !== this || !this.isOwnedBy(player)) return
+        if (kotlin.math.abs(this.loopProgress) < 270f && kotlin.math.abs(this.acroPitch) < 270f) return
+        this.becomeImmortal()
+    }
+
+    private fun becomeImmortal() {
+        val first = !this.immortal
+        this.immortal = true
+        if (!first) return
+        val rider = this.controllingPassenger as? ServerPlayer ?: return
+        ModAdvancements.grantDeadLoop(rider)
+    }
+
+    private fun tickFlightVisuals() {
+        this.crawlLock = this.updateSkim(PhantomGroundSkim.pressed(this))
+        if (this.crawlLock) {
+            this.flattenGroundAttitude()
+        }
+        if (this.isOrderedToSit() || this.crawlLock) {
+            this.bankTarget = 0f
+            this.headYawTarget = 0f
+        }
+        val vertical = this.y - this.yo
+        val (forward, strafe) = PhantomFlightAttitude.split(this.yRot, this.x - this.xo, this.z - this.zo)
+        val localRide = this.isLocalInstanceAuthoritative && this.controllingPassenger is Player
+        val remoteRide = this.isVehicle && !localRide
+        if (!localRide && !this.isOrderedToSit() && !remoteRide) {
+            val moving = !PhantomFlightAttitude.wantsHover(forward, strafe)
+            this.hoverBlend = PhantomHover.step(this.hoverBlend, moving)
+            val pose = PhantomFlightAttitude.pose(forward, strafe, vertical, this.hoverBlend)
+            this.bankTarget = pose.bank
+            this.headYawTarget = pose.headYaw
+        }
+        if (!this.isVehicle || this.crawlLock) {
+            this.headYawTarget = 0f
+        }
+        if (this.crawlLock) {
+            this.bankTarget = 0f
+            if (localRide) {
+                val flatten = this.wingGroundBlend.coerceIn(0f, 1f)
+                this.xRot *= 1f - flatten
+                this.setRot(this.yRot, this.xRot)
+            }
+        }
+        if (localRide) {
+            val pilot = this.controllingPassenger as Player
+            val (ascending, descending) = PilotInputAccess.read(
+                this.level().isClientSide,
+                this.pilotAscending,
+                this.pilotDescending,
+            )
+            val climb = when {
+                ascending && !descending -> 1f
+                descending && !ascending -> -1f
+                else -> 0f
+            }
+            val acrobatic = PhantomAcrobatics.allows(
+                pilot.zza.toDouble(),
+                pilot.xxa.toDouble(),
+                crawling = this.crawlLock,
+                sitting = this.isOrderedToSit(),
+                ridden = true,
+            )
+            val stepped = PhantomAcrobatics.step(
+                this.acroPitch,
+                this.bank,
+                this.loopProgress,
+                acrobatic,
+                climb,
+                pilot.xxa,
+                PhantomAcrobatics.configuredStep(),
+            )
+            this.acroPitch = stepped.pitch
+            this.loopProgress = stepped.loop
+            this.acrobatic = acrobatic
+            if (acrobatic) {
+                this.bank = stepped.roll
+                this.bankTarget = stepped.roll
+            }
+            if (stepped.completedLoop && this.isOwnedBy(pilot)) {
+                this.loopReadyToReport = true
+            }
+        }
+        if (!remoteRide && !(localRide && this.acrobatic)) {
+            this.bank = PhantomHeadLook.approachDegrees(this.bank, this.bankTarget, 6f)
+        }
+        val yawTarget = this.headYawTarget.coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
+        this.headBankYaw = PhantomHeadLook.approachDegrees(this.headBankYaw, yawTarget, 3.5f)
+            .coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
+        this.tailPitch = PhantomHeadLook.approachDegrees(
+            this.tailPitch,
+            PhantomFlightAttitude.tailPitchDegrees(vertical),
+            4.5f,
+        )
+        this.swimBlend = if (this.isUnderWater) {
+            (this.swimBlend + 0.07f).coerceAtMost(1f)
+        } else {
+            (this.swimBlend - 0.05f).coerceAtLeast(0f)
+        }
+    }
+
+    private fun advanceWingPhase() {
+        val vertical = this.y - this.yo
+        val horizontal = hypot(this.x - this.xo, this.z - this.zo)
+        val skimming = this.crawlLock
+        val launch = (this.takeoffQueued && this.wingGroundBlend > 0.35f) ||
+            this.riderTakeoffHold > 0 ||
+            this.takeoffHoldTicks > 0
+        this.takeoffQueued = false
+        this.wingTouchedGround = skimming
+        this.wingTakeoffBlend = PhantomWingbeat.stepTakeoff(this.wingTakeoffBlend, launch)
+        this.wingGroundBlend = PhantomWingbeat.stepGround(this.wingGroundBlend, skimming)
+        val hover = this.hoverBlend.coerceIn(0f, 1f)
+        val descending = PhantomWingbeat.descending(vertical, hover, this.wingGroundBlend)
+        this.wingGlideBlend = PhantomWingbeat.stepGlide(this.wingGlideBlend, descending)
+        val pose = PhantomWingbeat.pose(
+            vertical,
+            horizontal,
+            hover,
+            this.wingGroundBlend,
+            this.wingTakeoffBlend,
+            this.wingGlideBlend,
+            this.swimBlend,
+        )
+        this.wingFlapRate = pose.rate
+        this.wingFlapAmp = pose.amplitude
+        this.wingDroop = pose.droop
+        this.wingTipHang = pose.tipHang
+        if (this.wingPhase.isNaN()) {
+            this.wingPhase = (this.tickCount - 1).toFloat()
+        }
+        this.wingPhase += pose.rate
+        this.wingCrawl = this.wingGroundBlend * (1f - this.wingTakeoffBlend)
+        if (skimming) {
+            val multiple = PhantomFlightPace.pace(this) * PhantomFlightPace.BASELINE
+            this.crawlPhase += PhantomCrawl.advance(horizontal, multiple)
+        }
+    }
+
+    private fun tickRiderNightVision() {
+        for (passenger in this.passengers) {
+            if (passenger is LivingEntity) {
+                passenger.addEffect(
+                    MobEffectInstance(MobEffects.NIGHT_VISION, NIGHT_VISION_DURATION_TICKS, 0, true, false, true),
+                )
+            }
+        }
+    }
+
+    override fun dropCustomDeathLoot(level: ServerLevel, damageSource: DamageSource, recentlyHit: Boolean) {
+        super.dropCustomDeathLoot(level, damageSource, recentlyHit)
+        val count = 1 + this.random.nextInt(12)
+        this.spawnAtLocation(level, ItemStack(Items.PHANTOM_MEMBRANE, count), 0.5f)
+    }
+
+    /** Снять пассажира, не проходя проверку «два Shift». Только для восстановления ссылки. */
+    internal fun detachPassengerNow(passenger: Entity) {
+        super.removePassenger(passenger)
+    }
+
+    override fun removePassenger(passenger: Entity) {
+        if (PhantomDismount.bypassing()) {
+            super.removePassenger(passenger)
+            return
+        }
+        val player = passenger as? Player
+        if (player == null) {
+            super.removePassenger(passenger)
+            return
+        }
+        val keepMounted = PhantomDismount.shouldKeepMounted(player, this)
+        try {
+            if (keepMounted) {
+                PhantomDismount.restore(player, this)
+                return
+            }
+            if (player is ServerPlayer) {
+                PhantomDismount.allowClient(player)
+            }
+            super.removePassenger(passenger)
+            val effect = player.getEffect(MobEffects.NIGHT_VISION)
+            if (effect != null && effect.duration <= NIGHT_VISION_DURATION_TICKS && effect.amplifier == 0) {
+                player.removeEffect(MobEffects.NIGHT_VISION)
+            }
+        } finally {
+            PhantomDismount.finish()
+        }
+    }
+
+    // =====================================================================
+    // Управляемый полёт
+    // =====================================================================
+
+    override fun causeFallDamage(fallDistance: Double, multiplier: Float, source: DamageSource): Boolean = false
+
+    override fun hurtServer(level: ServerLevel, source: DamageSource, amount: Float): Boolean {
+        if (this.immortal) return false
+        return super.hurtServer(level, source, amount)
+    }
+
+    override fun isInvulnerableTo(level: ServerLevel, source: DamageSource): Boolean {
+        if (this.immortal) return true
+        return super.isInvulnerableTo(level, source)
+    }
+
+    override fun kill(level: ServerLevel) {
+        if (this.immortal) return
+        super.kill(level)
+    }
+
+    override fun checkFallDamage(y: Double, onGround: Boolean, state: BlockState, pos: BlockPos) {
+        if (this.isOrderedToSit()) {
+            if (onGround) {
+                this.resetFallDistance()
+            } else if (y < 0.0) {
+                this.fallDistance -= y.toFloat()
+            }
+            return
+        }
+        super.checkFallDamage(y, onGround, state, pos)
+    }
+
+    override fun positionRider(passenger: Entity, callback: Entity.MoveFunction) {
+        super.positionRider(passenger, callback)
+        if (this.isOrderedToSit()) return
+        val offset = passenger.position().subtract(this.position())
+        val previous = Vec3(this.xo, this.yo, this.zo).add(offset)
+        passenger.xo = previous.x
+        passenger.yo = previous.y
+        passenger.zo = previous.z
+        passenger.xOld = previous.x
+        passenger.yOld = previous.y
+        passenger.zOld = previous.z
+    }
+
+    /**
+     * Насколько визуальное седло уезжает от точки крепления.
+     * Модель крутится вокруг позиции сущности, а не вокруг точки над спиной:
+     * при наборе скорости xRot уводит седло, и игрок, сидящий в точке крепления, отстаёт.
+     * Нулевой тангаж и крен дают нулевой сдвиг.
+     */
+    fun seatVisualShift(passenger: Entity, partial: Float): Vec3 {
+        val pitch = this.renderedBodyPitch(partial)
+        val bank = this.bankVisual(partial)
+        if (pitch == 0f && bank == 0f) return Vec3.ZERO
+        val yaw = Mth.rotLerp(partial, this.yRotO, this.yRot)
+        val rad = (Math.PI / 180.0).toFloat()
+        val local = passenger.position().subtract(this.position()).yRot(yaw * rad)
+        val turned = local.zRot(-bank * rad).xRot(pitch * rad)
+        return turned.subtract(local).yRot(-yaw * rad)
+    }
+
+    override fun travel(travelVector: Vec3) {
+        if (this.isOrderedToSit()) {
+            this.travelSitting()
+            return
+        }
+        val controller = this.controllingPassenger
+        if (this.tamed && this.isVehicle() && controller is Player && this.isLocalInstanceAuthoritative()) {
+            this.travelControlled(controller)
+            return
+        }
+        super.travel(travelVector)
+    }
+
+    private fun travelSitting() {
+        if (!this.isLocalInstanceAuthoritative) {
+            this.calculateEntityAnimation(false)
+            return
+        }
+        var motion = this.deltaMovement
+        if (!this.isNoGravity) {
+            motion = motion.add(0.0, -0.08, 0.0)
+        }
+        motion = Vec3(motion.x * 0.12, motion.y, motion.z * 0.12)
+        this.move(MoverType.SELF, motion)
+        this.deltaMovement = if (this.onGround()) {
+            Vec3.ZERO
+        } else {
+            motion.multiply(0.91, 0.98, 0.91)
+        }
+        this.calculateEntityAnimation(false)
+    }
+
+    private fun travelControlled(pilot: Player) {
+        val forwardInput = pilot.zza
+        val strafeInput = pilot.xxa
+        val (ascending, descending) = PilotInputAccess.read(
+            this.level().isClientSide,
+            this.pilotAscending,
+            this.pilotDescending,
+        )
+        val wantedY = when {
+            ascending && !descending -> 1.0
+            descending && !ascending -> -1.0
+            else -> 0.0
+        }
+        val climbY = wantedY
+        val lift = this.surfaceTakeoffScale(wantedY)
+        val reversing = forwardInput < -1.0E-4f
+        val flyingForward = forwardInput > 1.0E-4f
+        this.hoverBlend = PhantomHover.step(this.hoverBlend, flyingForward)
+        val attitude = PhantomFlightAttitude.pose(
+            forwardInput.toDouble(),
+            strafeInput.toDouble(),
+            climbY * 0.4,
+            this.hoverBlend,
+        )
+        this.bankTarget = attitude.bank
+        this.headYawTarget = attitude.headYaw
+
+        this.yRot = pilot.yRot
+        this.yRotO = this.yRot
+        this.xRot = attitude.pitch
+        this.setRot(this.yRot, this.xRot)
+        this.yBodyRot = this.yRot
+        this.yHeadRot = this.yBodyRot
+
+        val yawRad = Math.toRadians(this.yRot.toDouble())
+        val sin = Math.sin(yawRad)
+        val cos = Math.cos(yawRad)
+
+        val forwardX = -sin * forwardInput
+        val forwardZ = cos * forwardInput
+        val strafeX = cos * strafeInput
+        val strafeZ = sin * strafeInput
+
+        var wantedX = forwardX + strafeX
+        var wantedZ = forwardZ + strafeZ
+        val horizontalLenSq = wantedX * wantedX + wantedZ * wantedZ
+        if (horizontalLenSq > 1.0) {
+            val norm = 1.0 / sqrt(horizontalLenSq)
+            wantedX *= norm
+            wantedZ *= norm
+        }
+
+        var speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK *
+            PhantomFlightPace.pace(this).toDouble() *
+            PhantomFlightPace.waterScale(this.isUnderWater) *
+            PhantomEffectSpeed.scale(this) *
+            PhantomEffectSpeed.scale(pilot)
+        if (reversing) speed *= PhantomHover.REVERSE_SPEED
+        if (climbY < 0.0 && !this.crawlLock) {
+            this.diveEnergy = (this.diveEnergy + 0.016).coerceAtMost(1.0)
+        } else {
+            this.diveEnergy = (this.diveEnergy - 0.04).coerceAtLeast(0.0)
+        }
+        val dive = 1.0 + this.diveEnergy * 0.9
+        val diveVertical = 1.0 + this.diveEnergy * 0.45
+        val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR * diveVertical
+        val targetVelocity = Vec3(wantedX * speed * dive, climbY * vSpeed * lift, wantedZ * speed * dive)
+        val accel = if (lift < 0.999) 0.55 else ModConfig.FLIGHT_ACCELERATION
+
+        this.deltaMovement = this.deltaMovement.lerp(targetVelocity, accel)
+        this.move(MoverType.SELF, this.deltaMovement)
+    }
+}
