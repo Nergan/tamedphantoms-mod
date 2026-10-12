@@ -86,10 +86,11 @@ jobs:
           java-version: "25"
           distribution: "temurin"
 
-      - name: Set up Gradle 9.7
+      - name: Set up Gradle 9.7.0
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.7"
+          # services.gradle.org publishes 9.7.0, not the short form 9.7.
+          gradle-version: "9.7.0"
 
       - name: Build 26.3
         working-directory: versions/26.3
