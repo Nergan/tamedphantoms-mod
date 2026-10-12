@@ -89,8 +89,9 @@ sourceSets.named("main") {
     java.srcDir(file("src/main/java"))
     resources.srcDir("src/main/resources")
     resources.srcDir(rootProject.file("src/main/resources"))
-    resources.srcDir(rootProject.file("../src/main/resources"))
-    resources.srcDir(rootProject.file("../fabric/src/main/resources"))
+    // fabric/ is a subproject of versions/26.3, so the mod root is two levels up.
+    resources.srcDir(rootProject.file("../../src/main/resources"))
+    resources.srcDir(rootProject.file("../../fabric/src/main/resources"))
     resources.exclude("**/*.bbmodel")
 }
 

@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.mixin;
 
+import com.tamedphantoms.mod.client.render.PhantomRenderCapture;
 import com.tamedphantoms.mod.entity.TamedPhantomEntity;
 import com.tamedphantoms.mod.util.PhantomHeadLook;
 import com.tamedphantoms.mod.util.PhantomHeldLook;
