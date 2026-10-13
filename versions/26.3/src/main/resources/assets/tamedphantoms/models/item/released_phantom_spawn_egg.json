@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "minecraft:item/phantom_spawn_egg"
+    "layer0": "tamedphantoms:item/released_phantom_spawn_egg"
   }
 }
