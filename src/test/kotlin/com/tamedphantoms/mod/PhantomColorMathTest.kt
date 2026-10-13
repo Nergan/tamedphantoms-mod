@@ -92,8 +92,8 @@ class PhantomColorMathTest {
         Color.RGBtoHSB(r, g, b, hsb)
 
         assertTrue(r > g * 4 && r > b * 3, "Кровь должна быть красной, а не оранжевой: r=$r g=$g b=$b")
-        assertTrue(g < 16 && b < 24, "Зелёный и синий должны остаться почти чёрными, были g=$g b=$b")
-        assertTrue(hsb[2] in 0.20f..0.45f, "Сама кровь тёмная, свечение рисуется отдельным слоем, было: ${hsb[2]}")
+        assertTrue(g < 40 && b < 56, "Зелёный и синий не должны уводить цвет в розовый, были g=$g b=$b")
+        assertTrue(hsb[2] >= 0.7f, "На прозрачном слое глаз 26.3 тёмная кровь выглядит чёрной, было: ${hsb[2]}")
         assertEquals(255, (recolored ushr 24) and 0xFF)
     }
 
@@ -106,6 +106,6 @@ class PhantomColorMathTest {
         val bloodBri = Color.RGBtoHSB((blood ushr 16) and 0xFF, (blood ushr 8) and 0xFF, blood and 0xFF, null)[2]
         val glowBri = Color.RGBtoHSB((glow ushr 16) and 0xFF, (glow ushr 8) and 0xFF, glow and 0xFF, null)[2]
         assertTrue(glowBri < bloodBri, "Свечение должно быть темнее крови: glow=$glowBri blood=$bloodBri")
-        assertTrue(((glow ushr 8) and 0xFF) < 12, "У свечения почти не должно быть зелёного")
+        assertTrue(((glow ushr 8) and 0xFF) < 20, "У свечения почти не должно быть зелёного")
     }
 }

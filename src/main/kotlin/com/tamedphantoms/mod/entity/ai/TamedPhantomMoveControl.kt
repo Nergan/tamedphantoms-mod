@@ -97,12 +97,11 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
             mob.yBodyRot = mob.yRot
         }
 
-        // Близкая точка не должна ставить клюв вертикально: горизонт для угла не короче 3 блоков.
-        val pitchHoriz = horiz.coerceAtLeast(3.0)
-        val rawPitch = (-(Mth.atan2(-dy, pitchHoriz) * (180.0 / Math.PI))).toFloat()
-        val pitchLimit = if (horiz < 2.0) 10f else 32f
-        val pitchStep = if (horiz < 2.0) 4f else PITCH_STEP
-        mob.xRot = rotlerp(mob.xRot, rawPitch.coerceIn(-pitchLimit, pitchLimit), pitchStep)
+        // Клюв следует за реальной вертикальной скоростью, а не за углом на точку маршрута.
+        val climb = mob.deltaMovement.y
+        val vertical = if (kotlin.math.abs(climb) < 0.04) 0.0 else climb
+        val speedPitch = Math.toDegrees(kotlin.math.atan2(vertical, 0.65)).toFloat()
+        mob.xRot = rotlerp(mob.xRot, speedPitch.coerceIn(-12f, 12f), 1.5f)
 
         val ease = (dist / 4.0).coerceIn(0.28, 1.0)
         val pace = PhantomFlightPace.pace(phantom)

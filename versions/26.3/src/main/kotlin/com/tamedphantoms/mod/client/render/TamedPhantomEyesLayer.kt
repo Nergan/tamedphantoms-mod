@@ -26,21 +26,7 @@ class TamedPhantomEyesLayer(
         val pet = (state as? TamedPhantomRenderState)?.phantom as? TamedPhantomEntity ?: return
         val defending = pet.isDefending() || pet.screamEyeTicks > 0
         val texture = PhantomTextureProcessor.eyesTexture(pet.tamed, defending)
-        val glow = if (defending) PhantomTextureProcessor.redEyesGlowTexture() else null
         val ordered = collector.order(1)
-        if (defending && glow != null) {
-            repeat(3) {
-                ordered.submitModel(
-                    this.parentModel,
-                    state,
-                    poseStack,
-                    RenderTypes.eyes(glow),
-                    FULL_BRIGHT,
-                    OverlayTexture.NO_OVERLAY,
-                    -1,
-                )
-            }
-        }
         ordered.submitModel(
             this.parentModel,
             state,

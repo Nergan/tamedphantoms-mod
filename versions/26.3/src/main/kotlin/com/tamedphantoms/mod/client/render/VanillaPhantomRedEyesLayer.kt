@@ -26,12 +26,7 @@ class VanillaPhantomRedEyesLayer(
         val entity = (state as? TamedPhantomRenderState)?.phantom
         if (entity is TamedPhantomEntity) return
         val texture = PhantomTextureProcessor.eyesTexture(tamed = false, defending = true)
-        val glow = PhantomTextureProcessor.redEyesGlowTexture() ?: return
-        val ordered = collector.order(1)
-        repeat(3) {
-            ordered.submitModel(parentModel, state, poseStack, RenderTypes.eyes(glow), FULL_BRIGHT, OverlayTexture.NO_OVERLAY, -1)
-        }
-        ordered.submitModel(parentModel, state, poseStack, RenderTypes.eyes(texture), FULL_BRIGHT, OverlayTexture.NO_OVERLAY, -1)
+        collector.order(1).submitModel(parentModel, state, poseStack, RenderTypes.eyes(texture), FULL_BRIGHT, OverlayTexture.NO_OVERLAY, -1)
     }
 
     private companion object {

@@ -31,16 +31,17 @@ object PhantomColorMath {
     private const val EYE_MIN_SATURATION = 0.95f
     private const val EYE_GLOW_BRIGHTNESS = 1.0f
     /**
-     * Кровь для слоя глаз. Тот же оттенок, что уже одобрен в игре.
-     * Свечение рисуется отдельной более тёмной текстурой, не более ярким RGB.
+     * Кровь для одного прохода слоя глаз. В 26.3 `RenderType.eyes` — обычная
+     * прозрачность, не сложение, поэтому тёмный RGB выглядит чёрным.
+     * Это уже итоговый цвет, а не заготовка под несколько аддитивных проходов.
      */
-    private const val BLOOD_R = 0x5C
-    private const val BLOOD_G = 0x08
-    private const val BLOOD_B = 0x10
-    /** Темнее крови: несколько аддитивных проходов дают «неон», не уходя в алый. */
-    private const val BLOOD_GLOW_R = 0x28
-    private const val BLOOD_GLOW_G = 0x04
-    private const val BLOOD_GLOW_B = 0x08
+    private const val BLOOD_R = 0xD0
+    private const val BLOOD_G = 0x12
+    private const val BLOOD_B = 0x24
+    /** Темнее крови: запас для ореола, если слой всё же складывает цвет. */
+    private const val BLOOD_GLOW_R = 0x68
+    private const val BLOOD_GLOW_G = 0x08
+    private const val BLOOD_GLOW_B = 0x10
 
     /**
      * Перекрашивает один пиксель основной текстуры тела: синевато-серые участки

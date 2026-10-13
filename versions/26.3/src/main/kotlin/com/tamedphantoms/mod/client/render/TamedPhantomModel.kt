@@ -207,10 +207,11 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         } else {
             netHeadYaw
         }
-        // Без цели взгляд совпадает с корпусом. Иначе голова догоняет xRot и клюёт.
-        val relativePitch = if (offering || pet.trackingLook) lookPitch - bodyPitch else 0f
+        // Взгляд на игрока крутит только голову вбок. Наклон вниз оставлен еде и обороне.
+        val aimPitch = offering || pet.isDefending()
+        val relativePitch = if (aimPitch) lookPitch - bodyPitch else 0f
         head.yRot = PhantomHeadLook.modelYawDegrees(relativeYaw, upsideDown) * Mth.DEG_TO_RAD
-        head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, offering || pet.trackingLook)
+        head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, aimPitch)
         head.zRot = 0f
         if (pet.refuseVisual > 0) {
             head.yRot += com.tamedphantoms.mod.compat.FloatMath.sin(ageInTicks * 0.85f) * 0.42f
