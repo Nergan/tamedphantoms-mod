@@ -49,7 +49,12 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         }
         if (pet != null) {
             poseTailFlight(pet, ageInTicks, upsideDown)
-            poseHead(pet, ageInTicks, 0f, state.xRot, upsideDown)
+            val partial = (ageInTicks - pet.tickCount).coerceIn(0f, 1f)
+            val bodyYaw = Mth.rotLerp(partial, pet.yBodyRotO, pet.yBodyRot)
+            val headYaw = Mth.rotLerp(partial, pet.yHeadRotO, pet.yHeadRot)
+            val netYaw = PhantomHeadLook.wrapDegrees(headYaw - bodyYaw)
+                .coerceIn(-PhantomHeadLook.MAX_YAW_DEGREES, PhantomHeadLook.MAX_YAW_DEGREES)
+            poseHead(pet, ageInTicks, netYaw, state.xRot, upsideDown)
             poseShake(pet, ageInTicks)
         }
     }
@@ -202,7 +207,8 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         } else {
             netHeadYaw
         }
-        val relativePitch = lookPitch - bodyPitch
+        // Без цели взгляд совпадает с корпусом. Иначе голова догоняет xRot и клюёт.
+        val relativePitch = if (offering || pet.trackingLook) lookPitch - bodyPitch else 0f
         head.yRot = PhantomHeadLook.modelYawDegrees(relativeYaw, upsideDown) * Mth.DEG_TO_RAD
         head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, offering || pet.trackingLook)
         head.zRot = 0f

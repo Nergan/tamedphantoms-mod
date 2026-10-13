@@ -204,7 +204,8 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         } else {
             netHeadYaw
         }
-        val relativePitch = lookPitch - bodyPitch
+        // Без цели взгляд совпадает с корпусом. Иначе голова догоняет xRot и клюёт.
+        val relativePitch = if (offering || pet.trackingLook) lookPitch - bodyPitch else 0f
         head.yRot = PhantomHeadLook.modelYawDegrees(relativeYaw, upsideDown) * Mth.DEG_TO_RAD
         head.xRot = PhantomHeadLook.headPitchRadians(relativePitch, upsideDown, offering || pet.trackingLook)
         head.zRot = 0f

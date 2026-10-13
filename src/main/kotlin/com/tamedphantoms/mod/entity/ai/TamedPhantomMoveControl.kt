@@ -46,6 +46,7 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         }
         if (PhantomFlightEscape.active(phantom)) {
             PhantomFlightEscape.coast(phantom)
+            mob.xRot = rotlerp(mob.xRot, 0f, PITCH_STEP)
             return
         }
 
@@ -59,14 +60,16 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         stallX = mob.x
         stallZ = mob.z
         val wedged = mob.horizontalCollision
-        if (wedged || (operation == Operation.MOVE_TO && dist > 2.0 && progressed < 0.03)) {
+        val barelyMoving = operation == Operation.MOVE_TO && dist > 2.0 && progressed < 0.03
+        if (wedged || barelyMoving) {
             stallTicks++
         } else {
             stallTicks = 0
         }
-        if (wedged || stallTicks >= 16) {
+        if (stallTicks >= 16) {
             stallTicks = 0
             currentSpeed = 0.2f
+            mob.xRot = rotlerp(mob.xRot, 0f, PITCH_STEP)
             if (wedged) {
                 PhantomFlightEscape.turnAway(phantom)
             } else {
@@ -94,8 +97,12 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
             mob.yBodyRot = mob.yRot
         }
 
-        val pitch = (-(Mth.atan2(-dy, horiz.coerceAtLeast(1.0E-4)) * (180.0 / Math.PI))).toFloat()
-        mob.xRot = rotlerp(mob.xRot, pitch.coerceIn(-32.0f, 32.0f), PITCH_STEP)
+        // Близкая точка не должна ставить клюв вертикально: горизонт для угла не короче 3 блоков.
+        val pitchHoriz = horiz.coerceAtLeast(3.0)
+        val rawPitch = (-(Mth.atan2(-dy, pitchHoriz) * (180.0 / Math.PI))).toFloat()
+        val pitchLimit = if (horiz < 2.0) 10f else 32f
+        val pitchStep = if (horiz < 2.0) 4f else PITCH_STEP
+        mob.xRot = rotlerp(mob.xRot, rawPitch.coerceIn(-pitchLimit, pitchLimit), pitchStep)
 
         val ease = (dist / 4.0).coerceIn(0.28, 1.0)
         val pace = PhantomFlightPace.pace(phantom)
