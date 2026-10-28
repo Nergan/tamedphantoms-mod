@@ -91,6 +91,7 @@ val patchKotlinRefmap by tasks.registering {
             "com/tamedphantoms/mod/mixin/VanillaPhantomBufferMixin" to mapOf(
                 "getCompleteBuffer" to "Lnet/minecraft/class_4237;method_19743(Lnet/minecraft/class_2960;)Ljava/util/concurrent/CompletableFuture;",
                 "getStream" to "Lnet/minecraft/class_4237;method_19744(Lnet/minecraft/class_2960;Z)Ljava/util/concurrent/CompletableFuture;",
+                "clear" to "Lnet/minecraft/class_4237;method_19738()V",
             ),
         )
         fun putAll(target: MutableMap<String, Any?>) {

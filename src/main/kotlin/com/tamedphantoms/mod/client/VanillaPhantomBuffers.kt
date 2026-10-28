@@ -31,6 +31,12 @@ object VanillaPhantomBuffers {
         return future
     }
 
+    /** Номер буфера OpenAL живёт только до перезапуска звукового движка. */
+    fun clear() {
+        cache.values.forEach { future -> future.thenAccept { it.discardAlBuffer() } }
+        cache.clear()
+    }
+
     fun stream(location: ResourceLocation, looping: Boolean): CompletableFuture<AudioStream>? {
         val vanilla = vanillaFile(location) ?: return null
         return CompletableFuture.supplyAsync({

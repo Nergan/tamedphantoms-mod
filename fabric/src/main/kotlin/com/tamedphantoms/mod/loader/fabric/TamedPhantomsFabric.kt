@@ -18,6 +18,7 @@ import net.fabricmc.api.ModInitializer
 import net.fabricmc.fabric.api.entity.event.v1.ServerEntityWorldChangeEvents
 import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents
 import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
+import net.fabricmc.fabric.api.event.Event
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
@@ -93,7 +94,11 @@ class TamedPhantomsFabric : ModInitializer {
     }
 
     private fun registerEvents() {
-        UseEntityCallback.EVENT.register { player, _, hand, entity, _ ->
+        // Fabric зовёт UseEntityCallback из обработчика пакета, до Player.interactOn.
+        // Слушатель фазы по умолчанию, загруженный раньше (Carry On), забирает shift + ПКМ первым.
+        val beforeOtherMods = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "before_other_mods")
+        UseEntityCallback.EVENT.addPhaseOrdering(beforeOtherMods, Event.DEFAULT_PHASE)
+        UseEntityCallback.EVENT.register(beforeOtherMods) { player, _, hand, entity, _ ->
             PhantomInteractionHandler.onEntityInteract(player, entity, hand) ?: InteractionResult.PASS
         }
         UseItemCallback.EVENT.register { player, _, hand ->

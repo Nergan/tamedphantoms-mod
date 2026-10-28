@@ -13,7 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 /**
  * Чужой мод может забрать ПКМ раньше нашего события и вернуть успех.
  * Для бессмертного фантома это оставляет его лежать: клик до посадки не доходит.
- * Здесь действие выполняется в начале метода, до чужих слушателей.
+ * На NeoForge событие EntityInteract вызывается внутри interactOn, поэтому действие здесь идёт раньше него.
+ * На Fabric UseEntityCallback срабатывает до interactOn, там порядок задаёт ранняя фаза события.
  */
 @Mixin(value = [Player::class], priority = 2000)
 abstract class PhantomInteractMixin {

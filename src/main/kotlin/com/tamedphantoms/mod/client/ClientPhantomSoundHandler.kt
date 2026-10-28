@@ -34,9 +34,11 @@ object ClientPhantomSoundHandler {
      */
     fun adjust(sound: SoundInstance?): SoundInstance? {
         if (sound == null || sound is VolumeScaledSound || sound is VanillaFileSound) return sound
+        val phantomEvent = isPhantomEvent(sound)
+        if (!phantomEvent && sound.source != SoundSource.HOSTILE) return sound
         val phantom = nearestPhantom(sound)
         var next: SoundInstance = sound
-        if (phantom != null && isPhantomEvent(sound)) {
+        if (phantom != null && phantomEvent) {
             next = VanillaFileSound(sound)
         }
         if (sound.source != SoundSource.HOSTILE) return next

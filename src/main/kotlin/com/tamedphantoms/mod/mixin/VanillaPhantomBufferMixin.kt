@@ -7,6 +7,7 @@ import net.minecraft.resources.ResourceLocation
 import org.spongepowered.asm.mixin.Mixin
 import org.spongepowered.asm.mixin.injection.At
 import org.spongepowered.asm.mixin.injection.Inject
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable
 import java.util.concurrent.CompletableFuture
 
@@ -29,5 +30,10 @@ abstract class VanillaPhantomBufferMixin {
     ) {
         val future = VanillaPhantomBuffers.stream(location, looping) ?: return
         callback.returnValue = future
+    }
+
+    @Inject(method = ["clear"], at = [At("HEAD")])
+    private fun tamedphantomsClearVanillaBuffers(callback: CallbackInfo) {
+        VanillaPhantomBuffers.clear()
     }
 }
