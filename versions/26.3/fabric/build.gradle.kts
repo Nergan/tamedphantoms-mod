@@ -34,6 +34,8 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/client/ClientPhantomInputSender.kt",
     "com/tamedphantoms/mod/client/ModKeyMappings.kt",
     "com/tamedphantoms/mod/client/ClientPhantomSoundHandler.kt",
+    "com/tamedphantoms/mod/client/VanillaPhantomBuffers.kt",
+    "com/tamedphantoms/mod/mixin/VanillaPhantomBufferMixin.kt",
     "com/tamedphantoms/mod/loader/fabric/TamedPhantomsFabric.kt",
     "com/tamedphantoms/mod/loader/fabric/TamedPhantomsFabricClient.kt",
     "com/tamedphantoms/mod/loader/fabric/FabricNetworking.kt",

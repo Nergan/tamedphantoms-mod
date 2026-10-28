@@ -3,10 +3,10 @@ package com.tamedphantoms.mod.client.texture
 import com.mojang.blaze3d.platform.NativeImage
 import com.tamedphantoms.mod.TamedPhantomsMod
 import com.tamedphantoms.mod.util.PhantomColorMath
+import com.tamedphantoms.mod.client.render.VanillaPackFiles
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.ResourceLocation
-import net.minecraft.server.packs.PackType
 import java.io.InputStream
 
 /**
@@ -241,11 +241,7 @@ object PhantomTextureProcessor {
         }
     }
 
-    private fun openVanilla(location: ResourceLocation): InputStream? {
-        val supplier = Minecraft.getInstance().vanillaPackResources.getResource(PackType.CLIENT_RESOURCES, location)
-            ?: return null
-        return supplier.get()
-    }
+    private fun openVanilla(location: ResourceLocation): InputStream? = VanillaPackFiles.open(location)
 
     private fun detectForeignLook(): Boolean {
         return try {
