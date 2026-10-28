@@ -12,7 +12,8 @@ import java.lang.reflect.Field
  */
 object PhantomMoveTargetAccess {
 
-    private val moveTargetField: Field? = findField("moveTargetPoint")
+    // Боевой Fabric 1.21.1 держит промежуточное имя, NeoForge и 26.3 — имя Mojang.
+    private val moveTargetField: Field? = findField("moveTargetPoint", "field_7314")
     private var warned = false
 
     fun set(phantom: Phantom, target: Vec3): Boolean {
@@ -36,11 +37,7 @@ object PhantomMoveTargetAccess {
         }
     }
 
-    private fun findField(name: String): Field? {
-        return try {
-            Phantom::class.java.getDeclaredField(name).apply { isAccessible = true }
-        } catch (_: Throwable) {
-            null
-        }
+    private fun findField(vararg names: String): Field? = names.firstNotNullOfOrNull { name ->
+        runCatching { Phantom::class.java.getDeclaredField(name).apply { isAccessible = true } }.getOrNull()
     }
 }

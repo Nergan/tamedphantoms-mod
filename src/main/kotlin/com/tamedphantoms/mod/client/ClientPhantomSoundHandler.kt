@@ -25,8 +25,9 @@ object ClientPhantomSoundHandler {
 
     private const val MATCH_RANGE = 2.5
 
-    private val rawVolume: java.lang.reflect.Field? = declared("volume")
-    private val rawPitch: java.lang.reflect.Field? = declared("pitch")
+    // Боевой Fabric 1.21.1 держит промежуточные имена, NeoForge — имена Mojang.
+    private val rawVolume: java.lang.reflect.Field? = declared("volume", "field_5442")
+    private val rawPitch: java.lang.reflect.Field? = declared("pitch", "field_5441")
 
     /**
      * @return null, если звук надо отменить; тот же экземпляр, если менять нечего;
@@ -134,10 +135,12 @@ object ClientPhantomSoundHandler {
         }
     }
 
-    private fun declared(name: String): java.lang.reflect.Field? = try {
-        AbstractSoundInstance::class.java.getDeclaredField(name).apply { isAccessible = true }
-    } catch (_: ReflectiveOperationException) {
-        null
+    private fun declared(vararg names: String): java.lang.reflect.Field? = names.firstNotNullOfOrNull { name ->
+        try {
+            AbstractSoundInstance::class.java.getDeclaredField(name).apply { isAccessible = true }
+        } catch (_: ReflectiveOperationException) {
+            null
+        }
     }
 
     private fun raw(sound: SoundInstance, field: java.lang.reflect.Field?): Float? {

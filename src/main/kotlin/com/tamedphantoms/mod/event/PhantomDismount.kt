@@ -42,10 +42,9 @@ object PhantomDismount {
     /** Выставляет клиент. На сервере остаётся «никто», чтобы не тянуть клиентские классы. */
     var isLocalPlayer: (Player) -> Boolean = { false }
 
-    private val vehicleField = try {
-        Entity::class.java.getDeclaredField("vehicle").apply { isAccessible = true }
-    } catch (_: Throwable) {
-        null
+    // Боевой Fabric 1.21.1 держит промежуточное имя, NeoForge и 26.3 — имя Mojang.
+    private val vehicleField = listOf("vehicle", "field_6034").firstNotNullOfOrNull { name ->
+        runCatching { Entity::class.java.getDeclaredField(name).apply { isAccessible = true } }.getOrNull()
     }
 
     fun bypassing(): Boolean = bypassDepth.get() > 0
