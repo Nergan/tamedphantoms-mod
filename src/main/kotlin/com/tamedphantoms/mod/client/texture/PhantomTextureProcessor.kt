@@ -6,6 +6,8 @@ import com.tamedphantoms.mod.util.PhantomColorMath
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.server.packs.PackType
+import java.io.InputStream
 
 /**
  * Генерирует перекрашенные варианты ванильных текстур фантома ЦЕЛИКОМ в
@@ -38,6 +40,7 @@ object PhantomTextureProcessor {
     private val SADDLE_TEX = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle")
 
     private var bodyReady = false
+    private var foreignLook: Boolean? = null
     private var eyesReady = false
     private var yellowEyesReady = false
     private var redEyesReady = false
@@ -52,6 +55,7 @@ object PhantomTextureProcessor {
 
     fun resetGeneratedTextures() {
         bodyReady = false
+        foreignLook = null
         eyesReady = false
         yellowEyesReady = false
         redEyesReady = false
@@ -64,7 +68,18 @@ object PhantomTextureProcessor {
         ensureYellowEyes()
         ensureRedEyes()
         ensureRedEyesGlow()
-        suppressVanillaEyes()
+        if (!foreignPhantomLook()) suppressVanillaEyes()
+    }
+
+    /**
+     * Другой мод подменил текстуру или CEM фантома.
+     * Красные глаза и пустая текстура глаз тогда остаются только у ванили без этой подмены.
+     */
+    fun foreignPhantomLook(): Boolean {
+        foreignLook?.let { return it }
+        val detected = detectForeignLook()
+        foreignLook = detected
+        return detected
     }
 
     fun redEyesGlowTexture(): ResourceLocation? {
@@ -152,7 +167,9 @@ object PhantomTextureProcessor {
 
     private fun ensureBody() {
         if (bodyReady) return
-        bodyReady = tryGenerate(VANILLA_BODY, RECOLORED_BODY) { argb -> PhantomColorMath.recolorBodyPixel(argb) }
+        bodyReady = tryGenerate(VANILLA_BODY, RECOLORED_BODY, fromVanillaPack = true) { argb ->
+            PhantomColorMath.recolorBodyPixel(argb)
+        }
     }
 
     private fun ensureEyes() {
@@ -179,10 +196,10 @@ object PhantomTextureProcessor {
         val manager = Minecraft.getInstance().resourceManager ?: return false
         return try {
             val custom = manager.getResource(EYE_SOURCE)
-            if (custom.isPresent && tryGenerate(EYE_SOURCE, destination, transform)) {
+            if (custom.isPresent && tryGenerate(EYE_SOURCE, destination, transform = transform)) {
                 return true
             }
-            tryGenerate(VANILLA_EYES, destination, transform)
+            tryGenerate(VANILLA_EYES, destination, fromVanillaPack = true, transform = transform)
         } catch (t: Throwable) {
             TamedPhantomsMod.LOGGER.warn("Не удалось прочитать текстуру глаз фантома.", t)
             false
@@ -192,17 +209,23 @@ object PhantomTextureProcessor {
     private fun tryGenerate(
         source: ResourceLocation,
         destination: ResourceLocation,
+        fromVanillaPack: Boolean = false,
         transform: (Int) -> Int,
     ): Boolean {
         return try {
             val minecraft = Minecraft.getInstance()
-            val resourceOpt = minecraft.resourceManager.getResource(source)
-            if (resourceOpt.isEmpty) {
+            val stream = if (fromVanillaPack) {
+                openVanilla(source)
+            } else {
+                val resourceOpt = minecraft.resourceManager.getResource(source)
+                if (resourceOpt.isEmpty) null else resourceOpt.get().open()
+            }
+            if (stream == null) {
                 TamedPhantomsMod.LOGGER.warn("Ванильная текстура {} не найдена — перекраска пропущена.", source)
                 return false
             }
-            resourceOpt.get().open().use { stream ->
-                val image = NativeImage.read(stream)
+            stream.use { input ->
+                val image = NativeImage.read(input)
                 recolor(image, transform)
                 minecraft.textureManager.register(destination, DynamicTexture(image))
             }
@@ -214,6 +237,28 @@ object PhantomTextureProcessor {
                 source,
                 t,
             )
+            false
+        }
+    }
+
+    private fun openVanilla(location: ResourceLocation): InputStream? {
+        val supplier = Minecraft.getInstance().vanillaPackResources.getResource(PackType.CLIENT_RESOURCES, location)
+            ?: return null
+        return supplier.get()
+    }
+
+    private fun detectForeignLook(): Boolean {
+        return try {
+            val manager = Minecraft.getInstance().resourceManager
+            fun overridden(location: ResourceLocation): Boolean {
+                val found = manager.getResource(location)
+                return found.isPresent && found.get().sourcePackId() != "vanilla"
+            }
+            overridden(VANILLA_BODY) ||
+                overridden(VANILLA_EYES) ||
+                manager.getResource(ResourceLocation.fromNamespaceAndPath("minecraft", "optifine/cem/phantom.jem")).isPresent
+        } catch (t: Throwable) {
+            TamedPhantomsMod.LOGGER.warn("Не удалось проверить подмену облика фантома.", t)
             false
         }
     }

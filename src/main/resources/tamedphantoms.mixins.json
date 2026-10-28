@@ -8,10 +8,12 @@
     "PhantomSitFlapMixin",
     "PhantomMoveControlMixin",
     "MoveControlMobAccessor",
-    "PhantomSpawnerMixin"
+    "PhantomSpawnerMixin",
+    "PhantomInteractMixin"
   ],
   "client": [
     "PhantomModelLookMixin",
+    "VanillaPhantomBufferMixin",
     "PlayerRideBankMixin",
     "MoonSkyMixin",
     "KeyMappingFields",

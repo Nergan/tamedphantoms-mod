@@ -41,7 +41,8 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
             poseSittingWings(ageInTicks)
             wagTail(ageInTicks)
         } else {
-            super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch)
+            // Своя копия ванильного взмаха: вызов super попал бы в миксин чужого мода на PhantomModel.
+            vanillaFlap(entity, ageInTicks)
             tailBase.yRot = 0f
             tailTip.yRot = 0f
             if (pet != null) {
@@ -54,6 +55,18 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
             poseHead(pet, ageInTicks, netHeadYaw, headPitch, upsideDown)
             poseShake(pet, ageInTicks)
         }
+    }
+
+    private fun vanillaFlap(entity: Phantom, ageInTicks: Float) {
+        val flap = (entity.uniqueFlapTickOffset.toFloat() + ageInTicks) * WING_SPEED_DEG * Mth.DEG_TO_RAD
+        val roll = Mth.cos(flap) * WING_AMPLITUDE_DEG * Mth.DEG_TO_RAD
+        leftWingBase.zRot = roll
+        leftWingTip.zRot = roll
+        rightWingBase.zRot = -roll
+        rightWingTip.zRot = -roll
+        val tail = -(5.0f + Mth.cos(flap * 2.0f) * 5.0f) * Mth.DEG_TO_RAD
+        tailBase.xRot = tail
+        tailTip.xRot = tail
     }
 
     private fun bendTail(entity: Phantom, ageInTicks: Float) {

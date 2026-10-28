@@ -4,9 +4,10 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import com.tamedphantoms.mod.client.texture.PhantomTextureProcessor
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
-import net.minecraft.client.model.geom.ModelLayers
+import net.minecraft.client.model.PhantomModel
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.PhantomRenderer
+import net.minecraft.client.renderer.entity.layers.PhantomEyesLayer
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.monster.Phantom
@@ -39,15 +40,12 @@ import net.minecraft.world.entity.monster.Phantom
  */
 class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRenderer(context) {
 
+    private val ownModel = TamedPhantomModel(PhantomModel.createBodyLayer().bakeRoot())
+
     init {
-        // Своя модель на ванильной сетке: взгляд головы, сложенные крылья и хвост.
-        // Слои читают модель через getModel(), поэтому подмена видна и глазам, и седлу.
-        this.model = TamedPhantomModel(context.bakeLayer(ModelLayers.PHANTOM))
-        // Ванильный PhantomRenderer уже добавил свой собственный слой глаз
-        // (обычных, зелёно-жёлтых) в своём конструкторе, который только что
-        // отработал (super(context) выше). Безопасного публичного способа
-        // убрать уже добавленный слой нет, поэтому добавляем свой
-        // перекрашенный слой ПОВЕРХ — рисуется позже, визуально доминирует.
+        // Сетка собирается кодом ванили, а не из общего слоя: чужой CEM его подменяет.
+        this.model = ownModel
+        this.layers.removeAll { it is PhantomEyesLayer<*> }
         this.addLayer(TamedPhantomEyesLayer(this))
         this.addLayer(TamedPhantomSaddleLayer(this))
     }
@@ -67,6 +65,7 @@ class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRen
         partialTick: Float,
         scale: Float,
     ) {
+        if (this.model !== ownModel) this.model = ownModel
         super.setupRotations(entity, poseStack, bob, yBodyRot, partialTick, scale)
         if (entity !is TamedPhantomEntity || entity.isOrderedToSit()) return
         val shown = Mth.lerp(partialTick, entity.xRotO, entity.xRot)

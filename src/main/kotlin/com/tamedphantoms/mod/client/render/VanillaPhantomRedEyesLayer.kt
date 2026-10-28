@@ -29,6 +29,7 @@ class VanillaPhantomRedEyesLayer(parent: RenderLayerParent<Phantom, PhantomModel
         headPitch: Float,
     ) {
         if (entity is TamedPhantomEntity) return
+        if (PhantomTextureProcessor.foreignPhantomLook()) return
         val texture = PhantomTextureProcessor.eyesTexture(tamed = false, defending = true)
         PhantomEyeLayers.render(
             poseStack,
