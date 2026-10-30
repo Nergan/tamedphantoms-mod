@@ -1708,10 +1708,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     override fun getDefaultLootTable(): ResourceKey<LootTable> = BuiltInLootTables.EMPTY
 
+    override fun dropAllDeathLoot(level: ServerLevel, damageSource: DamageSource) {
+        this.dropSaddleIfPresent()
+        super.dropAllDeathLoot(level, damageSource)
+    }
+
     override fun dropCustomDeathLoot(level: ServerLevel, damageSource: DamageSource, recentlyHit: Boolean) {
         val owner = this.findOwnerPlayer()
         if (owner != null) PhantomOwnerRecall.forget(owner, this.uuid)
         super.dropCustomDeathLoot(level, damageSource, recentlyHit)
+        this.dropSaddleIfPresent()
         val count = 1 + this.random.nextInt(12)
         this.spawnAtLocation(ItemStack(Items.PHANTOM_MEMBRANE, count), 0.5f)
     }
