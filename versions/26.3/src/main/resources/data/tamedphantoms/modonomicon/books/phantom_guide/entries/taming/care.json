@@ -37,6 +37,12 @@
       "id": "p5",
       "title": "",
       "text": "tamedphantoms.guide.page.care.5"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p6",
+      "title": "",
+      "text": "tamedphantoms.guide.page.care.6"
     }
   ]
 }

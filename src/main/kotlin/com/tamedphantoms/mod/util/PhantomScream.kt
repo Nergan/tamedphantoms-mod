@@ -3,11 +3,15 @@ package com.tamedphantoms.mod.util
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.ModEntities
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.core.registries.Registries
+import net.minecraft.resources.ResourceKey
+import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
 import net.minecraft.sounds.SoundSource
+import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.FlyingMob
@@ -75,9 +79,8 @@ object PhantomScream {
         val radius = ServerConfig.screamRadius()
         val reach = radius * radius
         val box = phantom.boundingBox.inflate(radius)
-        val riding = phantom.passengers.filterIsInstance<Player>().map { it.uuid }.toSet()
         val players = level.getEntitiesOfClass(Player::class.java, box) { player ->
-            player.isAlive && player.uuid !in riding && player.distanceToSqr(phantom) <= reach
+            player.isAlive && !immune(level, phantom, player) && player.distanceToSqr(phantom) <= reach
         }
         for (player in players) {
             hear(playerHits, player.uuid, kotlin.math.sqrt(player.distanceToSqr(phantom)), radius, phantom)
@@ -105,10 +108,8 @@ object PhantomScream {
             player.addEffect(MobEffectInstance(MobEffects.BLINDNESS, ticks, 0, false, false, false))
             val closest = hits.maxOf { PhantomScreamStack.closeness(it.distance, it.radius) }
             val amount = PhantomScreamStack.playerDamage(hits.size, closest)
-            if (amount > 0.0) {
-                val damage = amount.toFloat()
-                player.hurt(player.damageSources().magic(), damage)
-            }
+            val world = player.level() as? ServerLevel ?: continue
+            strike(world, player, amount.toFloat())
         }
         for (level in server.allLevels) {
             for ((id, hits) in mobHits) {
@@ -118,6 +119,8 @@ object PhantomScream {
                 mob.addEffect(MobEffectInstance(MobEffects.BLINDNESS, ticks, 0, false, false, false))
                 val from = hits.minBy { it.distance }
                 shove(mob, from.x, from.z, PhantomScreamStack.fleeBlocks(hits.size))
+                val closest = hits.maxOf { PhantomScreamStack.closeness(it.distance, it.radius) }
+                strike(level, mob, PhantomScreamStack.playerDamage(hits.size, closest).toFloat())
             }
         }
         playerHits.clear()
@@ -139,14 +142,36 @@ object PhantomScream {
             shove(mob, phantom.x, phantom.z, 10.0)
         }
         if (blindness) {
-            val riding = phantom.passengers.filterIsInstance<Player>().toSet()
             val players = level.getEntitiesOfClass(Player::class.java, box) { player ->
-                player.isAlive && player !in riding && player.distanceToSqr(phantom) <= reach
+                player.isAlive && !immune(level, phantom, player) && player.distanceToSqr(phantom) <= reach
             }
             for (player in players) {
                 blindOnce(player)
             }
         }
+    }
+
+    /**
+     * Седок этого фантома не слышит его.
+     * Хозяин, сидящий хотя бы на одном своём фантоме, и его попутчики не слышат ни одного его фантома.
+     */
+    private fun immune(level: ServerLevel, phantom: TamedPhantomEntity, player: Player): Boolean {
+        if (phantom.passengers.any { it.uuid == player.uuid }) return true
+        val ownerId = phantom.ownerUUID ?: return false
+        val owner = level.players().firstOrNull { it.uuid == ownerId } ?: return false
+        val mount = owner.vehicle as? TamedPhantomEntity ?: return false
+        if (!mount.tamed || mount.ownerUUID != ownerId) return false
+        return player.uuid == ownerId || mount.passengers.any { it.uuid == player.uuid }
+    }
+
+    /** Урон крика не режется бронёй и защитой и не пропадает из-за недавнего удара. */
+    private fun strike(level: ServerLevel, living: LivingEntity, amount: Float) {
+        if (amount <= 0f) return
+        val id = ResourceLocation.fromNamespaceAndPath("tamedphantoms", "scream")
+        val key = ResourceKey.create(Registries.DAMAGE_TYPE, id)
+        val holder = level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(key)
+        living.invulnerableTime = 0
+        living.hurt(DamageSource(holder), amount)
     }
 
     private fun hear(into: HashMap<UUID, MutableList<Hit>>, id: UUID, distance: Double, radius: Double, phantom: TamedPhantomEntity) {

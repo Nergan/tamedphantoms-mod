@@ -101,13 +101,13 @@ object PhantomInteractionHandler {
         }
         val releaseItem = ServerConfig.resolveReleaseItem()
         if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return null
-        val treat = stack.`is`(Items.POTION) || stack.get(DataComponents.FOOD) != null
+        val treat = stack.`is`(Items.POTION) || stack.`is`(Items.MILK_BUCKET) || stack.get(DataComponents.FOOD) != null
         if (!treat) return null
         if (player.level().isClientSide) return InteractionResult.SUCCESS
-        val used = if (stack.`is`(Items.POTION)) {
-            PhantomTreats.tryPotion(player, phantom, stack)
-        } else {
-            PhantomTreats.tryFood(player, phantom, stack)
+        val used = when {
+            stack.`is`(Items.MILK_BUCKET) -> PhantomTreats.tryMilk(player, phantom, stack)
+            stack.`is`(Items.POTION) -> PhantomTreats.tryPotion(player, phantom, stack)
+            else -> PhantomTreats.tryFood(player, phantom, stack)
         }
         return if (used) InteractionResult.CONSUME else null
     }
@@ -233,6 +233,7 @@ object PhantomInteractionHandler {
             return
         }
 
+        if (PhantomTreats.tryMilk(player, phantom, stack)) return
         if (PhantomTreats.tryPotion(player, phantom, stack)) return
         if (stack.get(DataComponents.FOOD) != null || stack.get(DataComponents.SUSPICIOUS_STEW_EFFECTS) != null) {
             PhantomTreats.tryFood(player, phantom, stack)

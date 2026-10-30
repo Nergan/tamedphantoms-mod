@@ -153,6 +153,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         /** Отряхивание без брызг. */
         const val SHAKE_DRY = -2
 
+        /** Отряхивание искрами лавы. */
+        const val SHAKE_LAVA = -3
+
         var clientAfterTick: ((TamedPhantomEntity) -> Unit)? = null
 
         private const val TAG_TAMED = "Tamed"
@@ -284,7 +287,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.entityData.set(DATA_SHAKE_STYLE, style)
         this.shakeTicks = PhantomShake.LENGTH
         if (sound) {
-            this.playSound(SoundEvents.PLAYER_SPLASH, 0.65f, 1.2f)
+            val shakeSound = if (style == SHAKE_LAVA) SoundEvents.LAVA_EXTINGUISH else SoundEvents.PLAYER_SPLASH
+            this.playSound(shakeSound, 0.65f, 1.2f)
         }
     }
 
@@ -364,6 +368,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var turnYawDelta: Float = 0f
 
     private var wetMemory: PhantomWetness.Memory = PhantomWetness.Memory()
+    private var wasInLava: Boolean = false
 
     /**
      * 0 — летит, 1 — завис, пятится или снижается без хода вперёд и вбок.
@@ -1014,6 +1019,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
         this.applyConfiguredSize()
         this.tickWetExit()
+        this.tickLavaExit()
         this.tickRideHead()
         this.tickAngerTimer()
         this.tickWeaknessFlip()
@@ -1066,6 +1072,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    private fun tickLavaExit() {
+        val lava = this.isInLava
+        if (this.wasInLava && !lava) {
+            this.startShake(SHAKE_LAVA)
+        }
+        this.wasInLava = lava
+    }
+
     private fun tickRideHead() {
         val riding = this.isVehicle && this.controllingPassenger != null
         val target = if (!riding) {
@@ -1082,7 +1096,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.shakeTicks <= 0 || this.tickCount % 2 != 0) return
         val style = this.shakeStyle
         if (style == SHAKE_DRY) return
-        val particle = if (style == SHAKE_WATER) ParticleTypes.SPLASH else dustOf(style, 1.1f)
+        val particle = when (style) {
+            SHAKE_WATER -> ParticleTypes.SPLASH
+            SHAKE_LAVA -> ParticleTypes.LAVA
+            else -> dustOf(style, 1.1f)
+        }
         val level = this.level()
         repeat(4) {
             val dx = (this.random.nextDouble() - 0.5) * 1.6
@@ -1792,9 +1810,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
         var motion = this.deltaMovement
         if (!this.isNoGravity) {
-            motion = motion.add(0.0, -0.08, 0.0)
+            val drop = if (this.hasEffect(MobEffects.SLOW_FALLING)) 0.01 else 0.08
+            motion = motion.add(0.0, -drop, 0.0)
         }
-        motion = Vec3(motion.x * 0.12, motion.y, motion.z * 0.12)
+        motion = Vec3(motion.x * 0.12, PhantomEffectSpeed.adjustVertical(this, motion.y), motion.z * 0.12)
         this.move(MoverType.SELF, motion)
         this.deltaMovement = if (this.onGround()) {
             Vec3.ZERO
@@ -1806,18 +1825,22 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun travelControlled(pilot: Player) {
         val client = this.level().isClientSide
-        val forwardInput = if (client && this.clientCruise) 1f else pilot.zza
-        val strafeInput = pilot.xxa
+        val hungry = this.hasEffect(MobEffects.HUNGER)
+        val forwardInput = PhantomEffectSpeed.axis(if (client && this.clientCruise) 1f else pilot.zza, hungry)
+        val strafeInput = PhantomEffectSpeed.axis(pilot.xxa, hungry)
         val (ascending, descending) = PilotInputAccess.read(
             client,
             this.pilotAscending,
             this.pilotDescending,
         )
-        val wantedY = when {
-            ascending && !descending -> 1.0
-            descending && !ascending -> -1.0
-            else -> 0.0
-        }
+        val wantedY = PhantomEffectSpeed.axis(
+            when {
+                ascending && !descending -> 1.0
+                descending && !ascending -> -1.0
+                else -> 0.0
+            },
+            hungry,
+        )
         val lift = this.surfaceTakeoffScale(wantedY)
 
         // Курс догоняет взгляд седока плавно: рывки мыши за тик не дёргают корпус и крен.
@@ -1832,7 +1855,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             PhantomFlightPace.pace(this).toDouble() *
             PhantomFlightPace.waterScale(this.isUnderWater) *
             PhantomEffectSpeed.scale(this) *
-            PhantomEffectSpeed.scale(pilot)
+            PhantomEffectSpeed.scale(pilot) *
+            PhantomEffectSpeed.dolphin(this)
         this.cruiseSpeedUsed = cruiseSpeed
         val medium = when {
             this.isUnderWater -> PhantomFlightModel.Medium.WATER
@@ -1889,7 +1913,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val cos = Math.cos(yawRad)
         val target = Vec3(
             -sin * out.forward + cos * out.lateral,
-            out.vertical,
+            PhantomEffectSpeed.adjustVertical(this, out.vertical),
             cos * out.forward + sin * out.lateral,
         )
         // На большой скорости разворот вписывается дугой: скорость доворачивает за курсом не сразу.

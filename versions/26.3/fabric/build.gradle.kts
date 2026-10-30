@@ -50,7 +50,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(rootProject.file("../../fabric/src/main/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "recall-scream-2")
+    inputs.property("rewriteStamp", "ride-effects-4")
     filter { line -> rewriteFor26(line) }
 }
 

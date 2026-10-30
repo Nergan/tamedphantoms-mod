@@ -113,7 +113,8 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         val pace = PhantomFlightPace.pace(phantom)
         val targetSpeed = ((0.16 + speedModifier * 0.52) * ease).toFloat().coerceIn(0.08f, 1.55f) *
             pace * PhantomFlightPace.waterScale(phantom.isUnderWater).toFloat() *
-            PhantomEffectSpeed.scale(phantom).toFloat()
+            PhantomEffectSpeed.scale(phantom).toFloat() *
+            PhantomEffectSpeed.dolphin(phantom).toFloat()
         val takeoff = phantom.takeoffHoldTicks
         val ramp = if (takeoff > 0) {
             (0.28f + (6 - takeoff) * 0.12f).coerceIn(0.28f, 1f)
@@ -135,6 +136,7 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
                 mob.yBodyRot = mob.yRot
             }
         }
-        mob.deltaMovement = mob.deltaMovement.lerp(steered, 0.12)
+        val lifted = Vec3(steered.x, PhantomEffectSpeed.adjustVertical(phantom, steered.y), steered.z)
+        mob.deltaMovement = mob.deltaMovement.lerp(lifted, 0.12)
     }
 }

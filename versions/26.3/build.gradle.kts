@@ -101,6 +101,16 @@ fun rewriteFor26(line: String): String {
             "val server = (owner as? net.minecraft.server.level.ServerPlayer)?.level()?.getServer() ?: return emptyList()",
         "player.hurt(player.damageSources().magic(), damage)" to
             "player.hurtServer(player.level() as net.minecraft.server.level.ServerLevel, player.damageSources().magic(), damage)",
+        "level.registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getHolderOrThrow(key)" to
+            "level.registryAccess().lookupOrThrow(Registries.DAMAGE_TYPE).getOrThrow(key)",
+        "living.invulnerableTime = 0" to "living.setInvulnerableTime(0)",
+        "living.hurt(DamageSource(holder), amount)" to
+            "living.hurtServer(level, DamageSource(holder), amount)",
+        "player.drop(leftover, false)" to
+            "player.drop(leftover, false, net.minecraft.util.Prediction.SERVER_ONLY)",
+        "MobEffects.MOVEMENT_SPEED" to "MobEffects.SPEED",
+        "MobEffects.MOVEMENT_SLOWDOWN" to "MobEffects.SLOWNESS",
+        "MobEffects.JUMP" to "MobEffects.JUMP_BOOST",
         "if (!player.addItem(bottle)) player.drop(bottle, false)" to
             "if (!player.addItem(bottle)) player.drop(bottle, false, net.minecraft.util.Prediction.SERVER_ONLY)",
         "MobEffects.HEAL ->" to "MobEffects.INSTANT_HEALTH ->",
@@ -161,7 +171,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "recall-scream-2")
+    inputs.property("rewriteStamp", "ride-effects-4")
     filter { line -> rewriteIdentifiers(line) }
 }
 

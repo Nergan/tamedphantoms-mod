@@ -5,9 +5,11 @@ import com.tamedphantoms.mod.event.ModAdvancements
 import net.minecraft.core.component.DataComponents
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
+import net.minecraft.world.InteractionHand
 import net.minecraft.world.effect.MobEffectInstance
 import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import java.util.WeakHashMap
@@ -25,8 +27,22 @@ object PhantomTreats {
         if (!once(phantom)) return false
         val food = stack.get(DataComponents.FOOD)
         PhantomTreatApply.applyFood(level, phantom, stack)
+        if (stack.`is`(Items.GLOW_BERRIES)) {
+            phantom.addEffect(MobEffectInstance(MobEffects.GLOWING, 8 * 20, 0, false, true, true))
+        }
         if (food != null) phantom.healWithFood(food.nutrition())
-        if (!player.abilities.instabuild) stack.shrink(1)
+        consume(player, stack, containerOf(stack))
+        return true
+    }
+
+    /** Молоко снимает эффекты. Ведро остаётся в руке, фантом кивает, как на еду. */
+    fun tryMilk(player: Player, phantom: TamedPhantomEntity, stack: ItemStack): Boolean {
+        if (!stack.`is`(Items.MILK_BUCKET) || !phantom.tamed) return false
+        val level = phantom.level() as? ServerLevel ?: return false
+        if (!once(phantom)) return false
+        phantom.removeAllEffects()
+        consume(player, stack, Items.BUCKET)
+        level.playSound(null, phantom.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_DRINK, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6f, 1.0f)
         return true
     }
 
@@ -64,13 +80,30 @@ object PhantomTreats {
             if (flipped) ModAdvancements.grantEnough(player)
             if (inverted) ModAdvancements.grantOverload(player)
         }
-        if (!player.abilities.instabuild) {
-            stack.shrink(1)
-            val bottle = ItemStack(Items.GLASS_BOTTLE)
-            if (!player.addItem(bottle)) player.drop(bottle, false)
-        }
+        consume(player, stack, Items.GLASS_BOTTLE)
         level.playSound(null, phantom.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_DRINK, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6f, 1.0f)
         return true
+    }
+
+    private fun containerOf(stack: ItemStack): Item? = when {
+        stack.`is`(Items.HONEY_BOTTLE) -> Items.GLASS_BOTTLE
+        stack.`is`(Items.MUSHROOM_STEW) || stack.`is`(Items.RABBIT_STEW) ||
+            stack.`is`(Items.BEETROOT_SOUP) || stack.`is`(Items.SUSPICIOUS_STEW) -> Items.BOWL
+        else -> null
+    }
+
+    /** Пустой остаток — тарелка, бутылочка или ведро — встаёт в ту же руку. */
+    private fun consume(player: Player, stack: ItemStack, leftoverItem: Item?) {
+        if (player.abilities.instabuild) return
+        val hand = if (player.offhandItem === stack) InteractionHand.OFF_HAND else InteractionHand.MAIN_HAND
+        stack.shrink(1)
+        if (leftoverItem == null) return
+        val leftover = ItemStack(leftoverItem)
+        if (stack.isEmpty) {
+            player.setItemInHand(hand, leftover)
+        } else if (!player.addItem(leftover)) {
+            player.drop(leftover, false)
+        }
     }
 
     private fun once(phantom: TamedPhantomEntity): Boolean {

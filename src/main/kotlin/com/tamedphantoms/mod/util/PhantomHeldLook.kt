@@ -43,7 +43,10 @@ object PhantomHeldLook {
     }
 
     fun holdsFood(player: Player): Boolean =
-        isFood(player.mainHandItem) || isFood(player.offhandItem)
+        isFood(player.mainHandItem) || isFood(player.offhandItem) || holdsMilk(player)
+
+    fun holdsMilk(player: Player): Boolean =
+        player.mainHandItem.`is`(Items.MILK_BUCKET) || player.offhandItem.`is`(Items.MILK_BUCKET)
 
     fun holdsTameItem(player: Player): Boolean {
         val item = ServerConfig.resolveTameItem()
@@ -84,7 +87,8 @@ object PhantomHeldLook {
             val dist = phantom.distanceToSqr(player)
             if (dist > reach) continue
             val kind = offering(player)
-            val shown = if (kind == Offering.NOD && !canNod) null else kind
+            val milk = holdsMilk(player)
+            val shown = if (kind == Offering.NOD && !canNod && !milk) null else kind
             when (shown) {
                 Offering.SHAKE -> {
                     if (ownerId != null && player.uuid == ownerId) ownerShake = player
