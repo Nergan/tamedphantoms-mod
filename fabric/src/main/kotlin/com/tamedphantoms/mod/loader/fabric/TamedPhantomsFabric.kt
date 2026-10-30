@@ -153,7 +153,9 @@ class TamedPhantomsFabric : ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register { server ->
             for (player in server.playerList.players) {
                 PhantomDismount.onPlayerTick(player)
+                PhantomOwnerRecallHandler.onPlayerTick(player)
             }
+            com.tamedphantoms.mod.util.PhantomScream.flush(server)
             if (server.tickCount % SETTINGS_CHECK_TICKS == 0 && FabricSettings.reloadIfChanged()) {
                 for (player in server.playerList.players) {
                     FabricNetworking.sendSettings(player)

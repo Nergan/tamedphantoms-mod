@@ -85,6 +85,13 @@ object FabricConfigScreen {
         category.addEntry(whole(entries, "tamedphantoms.configuration.scream.scream_cooldown_seconds", server.screamCooldown, 4, 1, 600, remote) {
             server.screamCooldown = it
         })
+        category.addEntry(
+            entries.startBooleanToggle(Component.translatable("tamedphantoms.configuration.scream.stacked_screams"), server.stackedScreams)
+                .setDefaultValue(true)
+                .setTooltip(Component.translatable("tamedphantoms.configuration.scream.stacked_screams.tooltip"))
+                .setSaveConsumer { if (!remote) server.stackedScreams = it }
+                .build(),
+        )
     }
 
     private fun addSpawning(category: ConfigCategory, entries: ConfigEntryBuilder, server: FabricSettings.ServerValues, remote: Boolean) {
@@ -100,6 +107,7 @@ object FabricConfigScreen {
         category.addEntry(decimal(entries, "tamedphantoms.configuration.sound.tamed_sound_volume", client.soundVolume, 0.5, 0.0, 1.0, false) {
             client.soundVolume = it
         })
+        RosterEntry.add(category)
     }
 
     private fun text(

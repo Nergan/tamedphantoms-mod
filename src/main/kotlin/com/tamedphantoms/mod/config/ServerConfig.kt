@@ -22,6 +22,7 @@ object ServerConfig {
         fun flightSpeed(): Double
         fun screamRadius(): Double
         fun screamCooldownSeconds(): Int
+        fun stackedScreams(): Boolean
         fun insomniaDays(): Int
         fun phantomGroupMultiplier(): Double
         fun phantomSize(): Int
@@ -38,6 +39,7 @@ object ServerConfig {
     fun flightSpeed(): Double = settings.flightSpeed()
     fun screamRadius(): Double = settings.screamRadius()
     fun screamCooldownSeconds(): Int = settings.screamCooldownSeconds()
+    fun stackedScreams(): Boolean = settings.stackedScreams()
 
     @JvmStatic
     fun insomniaDays(): Int = settings.insomniaDays()
@@ -112,6 +114,7 @@ object ServerConfig {
         override fun flightSpeed() = 1.25
         override fun screamRadius() = 32.0
         override fun screamCooldownSeconds() = 4
+        override fun stackedScreams() = true
         override fun insomniaDays() = 1
         override fun phantomGroupMultiplier() = 2.0
         override fun phantomSize() = 3

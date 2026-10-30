@@ -2,12 +2,14 @@ package com.tamedphantoms.mod.loader.fabric
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDismount
+import com.tamedphantoms.mod.event.PhantomRoster
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
 import com.tamedphantoms.mod.network.PhantomDismountTapPayload
 import com.tamedphantoms.mod.network.PhantomFlightSpeedPayload
 import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
+import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
@@ -20,6 +22,7 @@ object FabricNetworking {
         PayloadTypeRegistry.playC2S().register(PhantomInputPayload.TYPE, PhantomInputPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomFlightSpeedPayload.TYPE, PhantomFlightSpeedPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomScreamPayload.TYPE, PhantomScreamPayload.STREAM_CODEC)
+        PayloadTypeRegistry.playC2S().register(PhantomRosterPayload.TYPE, PhantomRosterPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomLoopPayload.TYPE, PhantomLoopPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomDismountTapPayload.TYPE, PhantomDismountTapPayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomMoonPulsePayload.TYPE, PhantomMoonPulsePayload.STREAM_CODEC)
@@ -39,6 +42,11 @@ object FabricNetworking {
         ServerPlayNetworking.registerGlobalReceiver(PhantomFlightSpeedPayload.TYPE) { payload, context ->
             context.server().execute {
                 OwnerFlightSpeed.set(context.player().uuid, payload.speed.toDouble())
+            }
+        }
+        ServerPlayNetworking.registerGlobalReceiver(PhantomRosterPayload.TYPE) { _, context ->
+            context.server().execute {
+                PhantomRoster.report(context.player())
             }
         }
         ServerPlayNetworking.registerGlobalReceiver(PhantomScreamPayload.TYPE) { _, context ->

@@ -16,6 +16,7 @@
     "VanillaPhantomBufferMixin",
     "PlayerRideBankMixin",
     "MoonSkyMixin",
+    "NightInvertMixin",
     "KeyMappingFields",
     "SharedPhysicalKeyMixin"
   ],

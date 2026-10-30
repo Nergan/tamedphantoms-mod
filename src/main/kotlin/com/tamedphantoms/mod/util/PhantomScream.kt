@@ -1,7 +1,9 @@
 package com.tamedphantoms.mod.util
 
 import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.entity.ModEntities
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
@@ -14,6 +16,7 @@ import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.PathfinderMob
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
+import java.util.UUID
 import kotlin.math.hypot
 
 /** Крик: громкий низкий ambient, свечение, разбег мобов. */
@@ -23,6 +26,16 @@ object PhantomScream {
 
     /** Громкость слоя, по которой ваниль считает дистанцию слышимости: 16 × громкость. */
     private const val HEAR_VOLUME = 14f
+
+    private class Hit(
+        val x: Double,
+        val z: Double,
+        val distance: Double,
+        val radius: Double,
+    )
+
+    private val playerHits = HashMap<UUID, MutableList<Hit>>()
+    private val mobHits = HashMap<UUID, MutableList<Hit>>()
 
     fun isFullMoonNight(level: ServerLevel): Boolean = level.moonPhase == 0 && level.isNight
 
@@ -41,18 +54,89 @@ object PhantomScream {
         level.playSound(null, pos, SoundEvents.PHANTOM_AMBIENT, SoundSource.HOSTILE, 11f, 0.34f)
     }
 
+    /**
+     * Другие прирученные фантомы этого хозяина, которые слышат крик, кричат сами.
+     * Их крик новый круг не поднимает.
+     */
+    fun echo(level: ServerLevel, source: TamedPhantomEntity, owner: Player) {
+        val reach = hearDistance()
+        val reachSq = reach * reach
+        val others = level.getEntities(ModEntities.TAMED_PHANTOM.get(), source.boundingBox.inflate(reach)) { mate ->
+            mate !== source && mate.isAlive && mate.tamed && mate.isOwnedBy(owner) && mate.distanceToSqr(source) <= reachSq
+        }
+        for (mate in others) {
+            mate.answerScream()
+        }
+    }
+
+    /** Один крик, один раз за жест. Повторные тики жеста сюда не заходят. */
+    fun note(level: ServerLevel, phantom: TamedPhantomEntity, blindness: Boolean) {
+        if (!blindness || !ServerConfig.stackedScreams()) return
+        val radius = ServerConfig.screamRadius()
+        val reach = radius * radius
+        val box = phantom.boundingBox.inflate(radius)
+        val riding = phantom.passengers.filterIsInstance<Player>().map { it.uuid }.toSet()
+        val players = level.getEntitiesOfClass(Player::class.java, box) { player ->
+            player.isAlive && player.uuid !in riding && player.distanceToSqr(phantom) <= reach
+        }
+        for (player in players) {
+            hear(playerHits, player.uuid, kotlin.math.sqrt(player.distanceToSqr(phantom)), radius, phantom)
+        }
+        val mobs = level.getEntitiesOfClass(Mob::class.java, box) { mob ->
+            mob !== phantom && mob !is TamedPhantomEntity &&
+                mob.isAlive && mob.distanceToSqr(phantom) <= reach
+        }
+        for (mob in mobs) {
+            hear(mobHits, mob.uuid, kotlin.math.sqrt(mob.distanceToSqr(phantom)), radius, phantom)
+        }
+    }
+
+    fun flush(server: MinecraftServer) {
+        if (playerHits.isEmpty() && mobHits.isEmpty()) return
+        if (!ServerConfig.stackedScreams()) {
+            playerHits.clear()
+            mobHits.clear()
+            return
+        }
+        for ((id, hits) in playerHits) {
+            val player = server.playerList.getPlayer(id) ?: continue
+            if (!player.isAlive || hits.isEmpty()) continue
+            val ticks = PhantomScreamStack.blindnessTicks(hits.size)
+            player.addEffect(MobEffectInstance(MobEffects.BLINDNESS, ticks, 0, false, false, false))
+            val closest = hits.maxOf { PhantomScreamStack.closeness(it.distance, it.radius) }
+            val amount = PhantomScreamStack.playerDamage(hits.size, closest)
+            if (amount > 0.0) {
+                val damage = amount.toFloat()
+                player.hurt(player.damageSources().magic(), damage)
+            }
+        }
+        for (level in server.allLevels) {
+            for ((id, hits) in mobHits) {
+                val mob = level.getEntity(id) as? Mob ?: continue
+                if (!mob.isAlive || mob is TamedPhantomEntity || hits.isEmpty()) continue
+                val ticks = PhantomScreamStack.blindnessTicks(hits.size)
+                mob.addEffect(MobEffectInstance(MobEffects.BLINDNESS, ticks, 0, false, false, false))
+                val from = hits.minBy { it.distance }
+                shove(mob, from.x, from.z, PhantomScreamStack.fleeBlocks(hits.size))
+            }
+        }
+        playerHits.clear()
+        mobHits.clear()
+    }
+
     fun frighten(level: ServerLevel, phantom: TamedPhantomEntity, blindness: Boolean) {
+        if (ServerConfig.stackedScreams()) return
         val radius = ServerConfig.screamRadius()
         val reach = radius * radius
         val box = phantom.boundingBox.inflate(radius)
         val mobs = level.getEntitiesOfClass(Mob::class.java, box) { mob ->
-            mob !== phantom && mob.isAlive && mob.distanceToSqr(phantom) <= reach
+            mob !== phantom && mob !is TamedPhantomEntity && mob.isAlive && mob.distanceToSqr(phantom) <= reach
         }
         for (mob in mobs) {
             if (blindness && mob !is Player) {
                 blindOnce(mob)
             }
-            shoveAway(phantom, mob)
+            shove(mob, phantom.x, phantom.z, 10.0)
         }
         if (blindness) {
             val riding = phantom.passengers.filterIsInstance<Player>().toSet()
@@ -65,17 +149,21 @@ object PhantomScream {
         }
     }
 
+    private fun hear(into: HashMap<UUID, MutableList<Hit>>, id: UUID, distance: Double, radius: Double, phantom: TamedPhantomEntity) {
+        into.getOrPut(id) { ArrayList() }.add(Hit(phantom.x, phantom.z, distance, radius))
+    }
+
     private fun blindOnce(target: LivingEntity) {
         if (target.getEffect(MobEffects.BLINDNESS) != null) return
         target.addEffect(MobEffectInstance(MobEffects.BLINDNESS, EFFECT_TICKS, 0, false, false, false))
     }
 
-    private fun shoveAway(phantom: TamedPhantomEntity, mob: Mob) {
-        val dx = mob.x - phantom.x
-        val dz = mob.z - phantom.z
+    private fun shove(mob: Mob, fromX: Double, fromZ: Double, blocks: Double) {
+        val dx = mob.x - fromX
+        val dz = mob.z - fromZ
         val len = hypot(dx, dz).coerceAtLeast(0.1)
         if (mob is PathfinderMob) {
-            mob.navigation.moveTo(mob.x + dx / len * 10.0, mob.y, mob.z + dz / len * 10.0, 1.5)
+            mob.navigation.moveTo(mob.x + dx / len * blocks, mob.y, mob.z + dz / len * blocks, 1.5)
         }
         if (mob is FlyingMob || mob !is PathfinderMob) {
             mob.deltaMovement = Vec3(dx / len * 0.55, mob.deltaMovement.y, dz / len * 0.55)

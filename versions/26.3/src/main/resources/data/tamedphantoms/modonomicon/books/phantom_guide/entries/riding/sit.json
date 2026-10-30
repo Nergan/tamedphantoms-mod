@@ -19,6 +19,12 @@
       "id": "p2",
       "title": "",
       "text": "tamedphantoms.guide.page.sit.2"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p3",
+      "title": "",
+      "text": "tamedphantoms.guide.page.sit.3"
     }
   ]
 }

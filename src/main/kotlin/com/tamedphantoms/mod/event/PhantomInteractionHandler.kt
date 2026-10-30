@@ -7,6 +7,7 @@ import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomHeldLook
 import com.tamedphantoms.mod.util.PhantomHitParts
 import com.tamedphantoms.mod.util.PhantomTamingLogic
+import com.tamedphantoms.mod.util.PhantomTreats
 import net.minecraft.world.phys.Vec3
 import java.util.WeakHashMap
 import net.minecraft.core.component.DataComponents
@@ -100,10 +101,15 @@ object PhantomInteractionHandler {
         }
         val releaseItem = ServerConfig.resolveReleaseItem()
         if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return null
-        if (stack.get(DataComponents.FOOD) == null) return null
-        if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return null
+        val treat = stack.`is`(Items.POTION) || stack.get(DataComponents.FOOD) != null
+        if (!treat) return null
         if (player.level().isClientSide) return InteractionResult.SUCCESS
-        return if (tryHeal(player, phantom, stack)) InteractionResult.CONSUME else null
+        val used = if (stack.`is`(Items.POTION)) {
+            PhantomTreats.tryPotion(player, phantom, stack)
+        } else {
+            PhantomTreats.tryFood(player, phantom, stack)
+        }
+        return if (used) InteractionResult.CONSUME else null
     }
 
     /** Инструмент аддона верхом: клик по той части фантома, куда смотрит седок, см. [TamedPhantomsApi.RiderTool]. */
@@ -227,9 +233,9 @@ object PhantomInteractionHandler {
             return
         }
 
-        val food = stack.get(DataComponents.FOOD)
-        if (food != null) {
-            tryHeal(player, phantom, stack)
+        if (PhantomTreats.tryPotion(player, phantom, stack)) return
+        if (stack.get(DataComponents.FOOD) != null || stack.get(DataComponents.SUSPICIOUS_STEW_EFFECTS) != null) {
+            PhantomTreats.tryFood(player, phantom, stack)
             return
         }
 
@@ -256,13 +262,4 @@ object PhantomInteractionHandler {
         }
     }
 
-    /** Обычную еду принимает кто угодно. Картошку и предмет освобождения — только хозяин. */
-    private fun tryHeal(player: Player, phantom: TamedPhantomEntity, stack: ItemStack): Boolean {
-        if (!phantom.tamed) return false
-        if (PhantomHeldLook.isRefusal(stack) && !phantom.isOwnedBy(player)) return false
-        val food = stack.get(DataComponents.FOOD) ?: return false
-        if (!phantom.healWithFood(food.nutrition())) return false
-        if (!player.abilities.instabuild) stack.shrink(1)
-        return true
-    }
 }

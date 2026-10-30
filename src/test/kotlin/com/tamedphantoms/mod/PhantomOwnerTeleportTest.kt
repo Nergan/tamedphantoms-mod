@@ -37,5 +37,6 @@ class PhantomOwnerTeleportTest {
         assertFalse(PhantomOwnerTeleport.isSafeSpace(inWorldBorder = true, noCollision = false, inLava = false))
         assertFalse(PhantomOwnerTeleport.isSafeSpace(inWorldBorder = false, noCollision = true, inLava = false))
         assertFalse(PhantomOwnerTeleport.isSafeSpace(inWorldBorder = true, noCollision = true, inLava = true))
+        assertFalse(PhantomOwnerTeleport.isSafeSpace(inWorldBorder = true, noCollision = true, inLava = false, harmful = true))
     }
 }

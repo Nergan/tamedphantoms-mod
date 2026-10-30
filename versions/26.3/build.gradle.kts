@@ -96,6 +96,17 @@ fun rewriteFor26(line: String): String {
             "PhantomInteractionHandler.onEntityInteract(event.entity, event.target, event.hand, event.target.position().add(event.location))",
         "night = !level.isDay," to "night = level.isDarkOutside,",
         "moonPhase = level.moonPhase," to "moonPhase = ((level.getOverworldClockTime() / 24000L) % 8L).toInt(),",
+        "tag.getBoolean(\"S\")" to "tag.getBooleanOr(\"S\", false)",
+        "val server = owner.server ?: return emptyList()" to
+            "val server = (owner as? net.minecraft.server.level.ServerPlayer)?.level()?.getServer() ?: return emptyList()",
+        "player.hurt(player.damageSources().magic(), damage)" to
+            "player.hurtServer(player.level() as net.minecraft.server.level.ServerLevel, player.damageSources().magic(), damage)",
+        "if (!player.addItem(bottle)) player.drop(bottle, false)" to
+            "if (!player.addItem(bottle)) player.drop(bottle, false, net.minecraft.util.Prediction.SERVER_ONLY)",
+        "MobEffects.HEAL ->" to "MobEffects.INSTANT_HEALTH ->",
+        "MobEffects.HARM ->" to "MobEffects.INSTANT_DAMAGE ->",
+        "net.minecraft.sounds.SoundEvents.GENERIC_DRINK" to "net.minecraft.sounds.SoundEvents.GENERIC_DRINK.value()",
+        "phantom.fallDistance = 0.0f" to "phantom.fallDistance = 0.0",
     )
     for ((from, to) in pairs) {
         s = s.replace(from, to)
@@ -139,6 +150,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/mixin/PhantomFlapMixin.kt",
     "com/tamedphantoms/mod/mixin/PlayerRideBankMixin.kt",
     "com/tamedphantoms/mod/client/FlightAwareSectionScreen.kt",
+    "com/tamedphantoms/mod/util/PhantomTreatApply.kt",
     "com/tamedphantoms/mod/client/ClientModEvents.kt",
     "com/tamedphantoms/mod/TamedPhantomsNeoForge.kt",
     "com/tamedphantoms/mod/loader/NeoForgeRegistries.kt",
@@ -149,7 +161,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "guide-book-2")
+    inputs.property("rewriteStamp", "recall-scream-2")
     filter { line -> rewriteIdentifiers(line) }
 }
 
@@ -162,6 +174,7 @@ val sharedJava by tasks.registering(Sync::class) {
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",
+        "com/tamedphantoms/mod/mixin/NightInvertMixin.java",
     )
 }
 

@@ -19,6 +19,18 @@
       "id": "p2",
       "title": "",
       "text": "tamedphantoms.guide.md.page.scream.2"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p3",
+      "title": "",
+      "text": "tamedphantoms.guide.page.scream.3"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p4",
+      "title": "",
+      "text": "tamedphantoms.guide.page.scream.4"
     }
   ]
 }

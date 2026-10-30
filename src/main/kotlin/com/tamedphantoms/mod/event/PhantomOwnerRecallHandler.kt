@@ -22,6 +22,11 @@ object PhantomOwnerRecallHandler {
         PhantomOwnerRecall.recallOwned(player)
     }
 
+    fun onPlayerTick(player: Player) {
+        if (player.level().isClientSide || player.tickCount % 20 != 0) return
+        PhantomOwnerRecall.recallUnloaded(player)
+    }
+
     fun onClone(newPlayer: Player, oldPlayer: Player) {
         PhantomOwnerRecall.copyTo(newPlayer, oldPlayer)
         PhantomGuideHandler.copyTo(newPlayer, oldPlayer)

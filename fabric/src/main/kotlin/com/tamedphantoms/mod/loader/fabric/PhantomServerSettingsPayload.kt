@@ -20,6 +20,7 @@ data class PhantomServerSettingsPayload(
     val phantomGroupMultiplier: Double,
     val phantomSize: Int,
     val immortalPhantoms: Boolean,
+    val stackedScreams: Boolean,
 ) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
@@ -42,6 +43,7 @@ data class PhantomServerSettingsPayload(
                 buf.writeDouble(payload.phantomGroupMultiplier)
                 buf.writeVarInt(payload.phantomSize)
                 buf.writeBoolean(payload.immortalPhantoms)
+                buf.writeBoolean(payload.stackedScreams)
             },
             { buf ->
                 PhantomServerSettingsPayload(
@@ -56,6 +58,7 @@ data class PhantomServerSettingsPayload(
                     buf.readVarInt(),
                     buf.readDouble(),
                     buf.readVarInt(),
+                    buf.readBoolean(),
                     buf.readBoolean(),
                 )
             },

@@ -41,6 +41,8 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/loader/fabric/TamedPhantomsFabric.kt",
     "com/tamedphantoms/mod/loader/fabric/TamedPhantomsFabricClient.kt",
     "com/tamedphantoms/mod/loader/fabric/FabricNetworking.kt",
+    "com/tamedphantoms/mod/loader/fabric/RosterEntry.kt",
+    "com/tamedphantoms/mod/util/PhantomTreatApply.kt",
 )
 
 val sharedKotlin by tasks.registering(Sync::class) {
@@ -48,7 +50,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(rootProject.file("../../fabric/src/main/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "guide-book-2")
+    inputs.property("rewriteStamp", "recall-scream-2")
     filter { line -> rewriteFor26(line) }
 }
 
@@ -66,6 +68,7 @@ val sharedJava by tasks.registering(Sync::class) {
         "com/tamedphantoms/mod/loader/fabric/mixin/PhantomFogMixin.java",
         "com/tamedphantoms/mod/loader/fabric/mixin/PhantomCameraMixin.java",
         "com/tamedphantoms/mod/loader/fabric/mixin/PhantomSoundMixin.java",
+        "com/tamedphantoms/mod/mixin/NightInvertMixin.java",
     )
 }
 

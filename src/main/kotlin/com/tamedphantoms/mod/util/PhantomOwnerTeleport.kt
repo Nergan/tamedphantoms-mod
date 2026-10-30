@@ -44,6 +44,6 @@ object PhantomOwnerTeleport {
         return result
     }
 
-    fun isSafeSpace(inWorldBorder: Boolean, noCollision: Boolean, inLava: Boolean): Boolean =
-        inWorldBorder && noCollision && !inLava
+    fun isSafeSpace(inWorldBorder: Boolean, noCollision: Boolean, inLava: Boolean, harmful: Boolean = false): Boolean =
+        inWorldBorder && noCollision && !inLava && !harmful
 }

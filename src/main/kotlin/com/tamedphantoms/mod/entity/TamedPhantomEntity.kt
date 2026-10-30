@@ -170,6 +170,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private const val TAG_BODY_DYE = "BodyDye"
         private const val TAG_SADDLE_DYE = "SaddleDye"
         private const val TAG_GLOW = "Glow"
+        private const val TAG_WEAKNESS_FLIP = "WeaknessFlip"
 
         /**
          * Phantom НЕ предоставляет собственный публичный статический
@@ -297,6 +298,27 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.playSound(SoundEvents.PHANTOM_HURT, 1.0f, 0.55f + this.random.nextFloat() * 0.1f)
     }
 
+    /** Зелье мгновенного исцеления злит только этого фантома, без стаи. */
+    fun scorn(player: Player) {
+        this.defend(player.uuid)
+        this.spawnAngryParticles()
+        this.playSound(SoundEvents.PHANTOM_HURT, 1.0f, 0.55f + this.random.nextFloat() * 0.1f)
+    }
+
+    /** Зелье слабости от хозяина: на спине, пока действует зелье. Седоков сбрасывает. */
+    fun flipFromWeakness(ticks: Int) {
+        this.weaknessFlip = true
+        this.addEffect(MobEffectInstance(MobEffects.WEAKNESS, ticks.coerceAtLeast(1), 0, false, true, true))
+        this.setOrderedToSit(true)
+    }
+
+    /** Ответ на крик хозяина. Новый круг ответов не поднимает. */
+    fun answerScream() {
+        val level = this.level() as? ServerLevel ?: return
+        if (!this.isAlive || !this.tamed) return
+        this.beginScream(level, redEyes = true, blindness = true, awardOwner = null)
+    }
+
     /** Взмах крыльев в этом кадре виден у пилота: тугость сложенных крыльев и сила взмаха. */
     var flightTuck: Float = 0f
     var flightTuckO: Float = 0f
@@ -334,6 +356,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         set(value) = this.entityData.set(DATA_SCREAM_EYES, value)
 
     private var screamCooldown: Int = 0
+    private var weaknessFlip: Boolean = false
     private var screamTicks: Int = 0
     private var screamFears: Boolean = false
     var trackingLook: Boolean
@@ -513,6 +536,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (changed && playEffects) {
             this.spawnGustParticles()
         }
+        if (changed && !this.level().isClientSide) {
+            val owner = this.findOwnerPlayer()
+            if (owner != null) PhantomOwnerRecall.remember(owner, this)
+        }
     }
 
     fun isDefending(): Boolean = this.entityData.get(DATA_DEFENDING)
@@ -592,6 +619,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         tag.putInt(TAG_BODY_DYE, this.bodyDye)
         tag.putInt(TAG_SADDLE_DYE, this.saddleDye)
         tag.putBoolean(TAG_GLOW, this.luminous)
+        tag.putBoolean(TAG_WEAKNESS_FLIP, this.weaknessFlip)
     }
 
     override fun readAdditionalSaveData(tag: CompoundTag) {
@@ -615,6 +643,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.bodyDye = if (tag.contains(TAG_BODY_DYE)) tag.getInt(TAG_BODY_DYE) else NO_DYE
         this.saddleDye = if (tag.contains(TAG_SADDLE_DYE)) tag.getInt(TAG_SADDLE_DYE) else NO_DYE
         this.luminous = tag.getBoolean(TAG_GLOW)
+        this.weaknessFlip = tag.getBoolean(TAG_WEAKNESS_FLIP)
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
@@ -1005,6 +1034,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.tickWetExit()
         this.tickRideHead()
         this.tickAngerTimer()
+        this.tickWeaknessFlip()
         this.tickScream(level)
         this.tickAcrobatics()
         if (this.takeoffHoldTicks > 0) {
@@ -1303,6 +1333,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.setDefending(this.angerState.isActive)
     }
 
+    private fun tickWeaknessFlip() {
+        if (!this.weaknessFlip) return
+        if (this.hasEffect(MobEffects.WEAKNESS)) {
+            if (!this.isOrderedToSit()) this.setOrderedToSit(true, playEffects = false)
+            return
+        }
+        this.weaknessFlip = false
+        if (this.isOrderedToSit()) this.setOrderedToSit(false, playEffects = false)
+    }
+
     fun tryOwnerScream(player: Player) {
         if (player.vehicle !== this || !this.isOwnedBy(player)) return
         val serverPlayer = player as? ServerPlayer ?: return
@@ -1317,6 +1357,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val level = this.level()
         if (level is ServerLevel) {
             this.beginScream(level, redEyes = true, blindness = true, awardOwner = serverPlayer)
+            PhantomScream.echo(level, this, serverPlayer)
         }
     }
 
@@ -1370,6 +1411,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.screamEyeTicks = if (redEyes) PhantomScream.EFFECT_TICKS else 0
         this.addEffect(MobEffectInstance(MobEffects.GLOWING, PhantomScream.EFFECT_TICKS, 0, false, false, false))
         PhantomScream.play(level, this)
+        PhantomScream.note(level, this, blindness)
         PhantomScream.frighten(level, this, blindness)
         if (moonPulse) {
             ModNetwork.sendToDimension(level, PhantomMoonPulsePayload)
@@ -1649,6 +1691,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     override fun getDefaultLootTable(): ResourceKey<LootTable> = BuiltInLootTables.EMPTY
 
     override fun dropCustomDeathLoot(level: ServerLevel, damageSource: DamageSource, recentlyHit: Boolean) {
+        val owner = this.findOwnerPlayer()
+        if (owner != null) PhantomOwnerRecall.forget(owner, this.uuid)
         super.dropCustomDeathLoot(level, damageSource, recentlyHit)
         val count = 1 + this.random.nextInt(12)
         this.spawnAtLocation(ItemStack(Items.PHANTOM_MEMBRANE, count), 0.5f)

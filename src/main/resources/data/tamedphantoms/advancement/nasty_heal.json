@@ -1,0 +1,15 @@
+{
+  "parent": "tamedphantoms:tame_phantom",
+  "display": {
+    "icon": { "id": "minecraft:potion", "components": { "minecraft:potion_contents": { "potion": "minecraft:harming" } } },
+    "title": { "translate": "advancements.tamedphantoms.nasty_heal.title" },
+    "description": { "translate": "advancements.tamedphantoms.nasty_heal.description" },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "fed_harming": { "trigger": "minecraft:impossible" }
+  }
+}

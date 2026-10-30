@@ -52,6 +52,7 @@ object ClientModEvents {
             event.pitch = angles.pitch
             event.roll = angles.roll
         }
+        bus.addListener(::onConfigScreenInit)
         bus.addListener { event: ViewportEvent.ComputeFogColor ->
             val tint = PhantomMoonLight.tint(event.red, event.green, event.blue) ?: return@addListener
             event.red = tint.red

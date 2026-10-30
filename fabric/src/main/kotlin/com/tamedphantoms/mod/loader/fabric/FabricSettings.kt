@@ -94,6 +94,7 @@ object FabricSettings {
         server.groupMultiplier,
         server.size,
         server.immortal,
+        server.stackedScreams,
     )
 
     fun apply(payload: PhantomServerSettingsPayload) {
@@ -109,6 +110,7 @@ object FabricSettings {
         server.groupMultiplier = payload.phantomGroupMultiplier
         server.size = payload.phantomSize
         server.immortal = payload.immortalPhantoms
+        server.stackedScreams = payload.stackedScreams
     }
 
     private fun clientFile(): Path = FabricLoader.getInstance().configDir.resolve("tamedphantoms-client.toml")
@@ -175,6 +177,7 @@ object FabricSettings {
         var groupMultiplier: Double = 2.0
         var size: Int = 3
         var immortal: Boolean = false
+        var stackedScreams: Boolean = true
 
         override fun tameItemId() = tameItem
         override fun releaseItemId() = releaseItem
@@ -188,6 +191,7 @@ object FabricSettings {
         override fun phantomGroupMultiplier() = groupMultiplier
         override fun phantomSize() = size
         override fun immortalPhantoms() = immortal
+        override fun stackedScreams() = stackedScreams
 
         fun read(values: Map<String, String>) {
             tameItem = values["taming.tame_item"] ?: tameItem
@@ -200,6 +204,7 @@ object FabricSettings {
             flightSpeedValue = values.double("flight.flight_speed", flightSpeedValue)
             screamRadiusValue = values.double("scream.scream_radius", screamRadiusValue)
             screamCooldown = values.int("scream.scream_cooldown_seconds", screamCooldown)
+            stackedScreams = values.bool("scream.stacked_screams", stackedScreams)
             insomnia = values.int("spawning.insomnia_days", insomnia)
             groupMultiplier = values.double("spawning.phantom_group_multiplier", groupMultiplier)
         }
@@ -222,6 +227,7 @@ object FabricSettings {
             [scream]
             scream_radius = $screamRadiusValue
             scream_cooldown_seconds = $screamCooldown
+            stacked_screams = $stackedScreams
 
             [spawning]
             insomnia_days = $insomnia

@@ -19,6 +19,10 @@
     {
       "type": "patchouli:text",
       "text": "tamedphantoms.guide.page.care.2"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.care.5"
     }
   ]
 }

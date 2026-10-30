@@ -9,6 +9,7 @@ import com.tamedphantoms.mod.event.PhantomOwnerRecallHandler
 import com.tamedphantoms.mod.event.PhantomSpawnScaler
 import com.tamedphantoms.mod.event.PhantomTemptHandler
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import com.tamedphantoms.mod.util.PhantomScream
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.Mob
@@ -21,6 +22,7 @@ import net.neoforged.neoforge.event.entity.living.LivingDamageEvent
 import net.neoforged.neoforge.event.entity.player.PlayerEvent
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
 import net.neoforged.neoforge.event.tick.PlayerTickEvent
+import net.neoforged.neoforge.event.tick.ServerTickEvent
 
 object NeoForgeGameEvents {
 
@@ -38,6 +40,7 @@ object NeoForgeGameEvents {
         bus.addListener(::onClone)
         bus.addListener(::onFinalizeSpawn)
         bus.addListener(::onTick)
+        bus.addListener(::onServerTick)
         bus.addListener(::onLogout)
     }
 
@@ -99,6 +102,11 @@ object NeoForgeGameEvents {
 
     private fun onTick(event: PlayerTickEvent.Post) {
         PhantomDismount.onPlayerTick(event.entity)
+        PhantomOwnerRecallHandler.onPlayerTick(event.entity)
+    }
+
+    private fun onServerTick(event: ServerTickEvent.Post) {
+        PhantomScream.flush(event.server)
     }
 
     private fun onLogout(event: PlayerEvent.PlayerLoggedOutEvent) {

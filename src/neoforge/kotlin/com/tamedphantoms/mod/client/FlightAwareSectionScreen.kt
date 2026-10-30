@@ -2,6 +2,8 @@ package com.tamedphantoms.mod.client
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig
 import com.tamedphantoms.mod.config.NeoForgeServerConfig
+import com.tamedphantoms.mod.network.PhantomRosterPayload
+import com.tamedphantoms.mod.platform.ModNetwork
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.client.gui.components.AbstractSliderButton
 import net.minecraft.client.gui.components.Button
@@ -34,8 +36,12 @@ fun modConfigurationScreen(mod: ModContainer, parent: Screen): Screen = Configur
  */
 class FlightAwareSectionScreen : ConfigurationScreen.ConfigurationSectionScreen {
 
+    private var showRoster = false
+
     constructor(parent: Screen, type: ModConfig.Type, modConfig: ModConfig, title: Component) :
-        super(parent, type, modConfig, title)
+        super(parent, type, modConfig, title) {
+        showRoster = type == ModConfig.Type.CLIENT
+    }
 
     constructor(
         parentContext: Context,
@@ -45,6 +51,16 @@ class FlightAwareSectionScreen : ConfigurationScreen.ConfigurationSectionScreen 
         entrySet: Set<UnmodifiableConfig.Entry>,
         title: Component,
     ) : super(parentContext, parent, valueSpecs, key, entrySet, title)
+
+    override fun init() {
+        super.init()
+        if (!showRoster) return
+        addRenderableWidget(
+            Button.builder(Component.translatable("tamedphantoms.configuration.roster")) {
+                ModNetwork.sendToServer(PhantomRosterPayload)
+            }.bounds(this.width / 2 - 100, this.height - 52, 200, 20).build(),
+        )
+    }
 
     @Suppress("DEPRECATION")
     override fun createSection(

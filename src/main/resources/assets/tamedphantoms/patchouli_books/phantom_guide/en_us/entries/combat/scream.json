@@ -11,6 +11,14 @@
     {
       "type": "patchouli:text",
       "text": "tamedphantoms.guide.page.scream.2"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.scream.3"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.scream.4"
     }
   ]
 }

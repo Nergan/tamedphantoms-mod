@@ -2,6 +2,8 @@ package com.tamedphantoms.mod.network
 
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDismount
+import com.tamedphantoms.mod.event.PhantomRoster
+import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import net.minecraft.server.level.ServerPlayer
@@ -15,7 +17,7 @@ object ModNetworking {
     }
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
-        val registrar = event.registrar("5")
+        val registrar = event.registrar("6")
 
         registrar.playToServer(
             PhantomInputPayload.TYPE,
@@ -35,6 +37,14 @@ object ModNetworking {
             PhantomFlightSpeedPayload.STREAM_CODEC,
         ) { payload, context ->
             OwnerFlightSpeed.set(context.player().uuid, payload.speed.toDouble())
+        }
+
+        registrar.playToServer(
+            PhantomRosterPayload.TYPE,
+            PhantomRosterPayload.STREAM_CODEC,
+        ) { _, context ->
+            val player = context.player() as? net.minecraft.server.level.ServerPlayer ?: return@playToServer
+            PhantomRoster.report(player)
         }
 
         registrar.playToServer(
