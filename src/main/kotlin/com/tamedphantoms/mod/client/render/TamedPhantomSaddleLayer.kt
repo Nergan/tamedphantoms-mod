@@ -46,7 +46,7 @@ class TamedPhantomSaddleLayer(parent: RenderLayerParent<Phantom, PhantomModel<Ph
 
         poseStack.pushPose()
         parentModel.root().getChild("body").translateAndRotate(poseStack)
-        val consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(PhantomTextureProcessor.saddleTexture()))
+        val consumer = buffer.getBuffer(RenderType.entityCutoutNoCull(PhantomTextureProcessor.saddleTexture(entity.saddleDye)))
         saddleRoot.render(poseStack, consumer, packedLight, OverlayTexture.NO_OVERLAY, NO_TINT)
         poseStack.popPose()
     }

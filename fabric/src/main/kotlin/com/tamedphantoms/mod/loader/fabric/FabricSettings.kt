@@ -18,6 +18,7 @@ object FabricSettings {
     val server = ServerValues()
     val client = ClientValues()
     var worldFile: Path? = null
+    private var worldStamp: Long = 0L
 
     fun bind() {
         ServerConfig.settings = server
@@ -35,6 +36,21 @@ object FabricSettings {
         }
         worldFile = path
         load(path, server::read, server::writeMissing)
+        worldStamp = stamp(path)
+    }
+
+    /**
+     * Файл мира правят и на работающем сервере. NeoForge перечитывает свой toml сам,
+     * здесь сервер раз в несколько секунд смотрит время изменения и шлёт правила игрокам.
+     */
+    fun reloadIfChanged(): Boolean {
+        val path = worldFile ?: return false
+        val now = stamp(path)
+        if (now == 0L || now == worldStamp) return false
+        worldStamp = now
+        read(path, server::read)
+        TamedPhantomsMod.LOGGER.info("Серверные правила Tamed Phantoms перечитаны из {}", path)
+        return true
     }
 
     fun saveClient() {
@@ -45,9 +61,24 @@ object FabricSettings {
         val world = worldFile
         if (world != null) {
             world.writeText(server.write())
+            worldStamp = stamp(world)
             return
         }
         templateFile().writeText(server.write())
+    }
+
+    private fun stamp(path: Path): Long = try {
+        if (path.exists()) Files.getLastModifiedTime(path).toMillis() else 0L
+    } catch (_: Exception) {
+        0L
+    }
+
+    private fun read(path: Path, read: (Map<String, String>) -> Unit) {
+        try {
+            read(parse(path.readText()))
+        } catch (error: Exception) {
+            TamedPhantomsMod.LOGGER.warn("Не удалось перечитать {}", path, error)
+        }
     }
 
     fun toPayload() = PhantomServerSettingsPayload(
@@ -57,12 +88,12 @@ object FabricSettings {
         server.repelRadiusValue,
         server.defendTicks,
         server.flightSpeedValue,
-        server.acrobaticsStepValue,
         server.screamRadiusValue,
         server.screamCooldown,
         server.insomnia,
         server.groupMultiplier,
         server.size,
+        server.immortal,
     )
 
     fun apply(payload: PhantomServerSettingsPayload) {
@@ -72,12 +103,12 @@ object FabricSettings {
         server.repelRadiusValue = payload.repelRadius
         server.defendTicks = payload.defendDurationTicks
         server.flightSpeedValue = payload.flightSpeed
-        server.acrobaticsStepValue = payload.acrobaticsStep
         server.screamRadiusValue = payload.screamRadius
         server.screamCooldown = payload.screamCooldownSeconds
         server.insomnia = payload.insomniaDays
         server.groupMultiplier = payload.phantomGroupMultiplier
         server.size = payload.phantomSize
+        server.immortal = payload.immortalPhantoms
     }
 
     private fun clientFile(): Path = FabricLoader.getInstance().configDir.resolve("tamedphantoms-client.toml")
@@ -138,12 +169,12 @@ object FabricSettings {
         var repelRadiusValue: Double = 64.0
         var defendTicks: Int = 200
         var flightSpeedValue: Double = 1.25
-        var acrobaticsStepValue: Double = 0.3
         var screamRadiusValue: Double = 32.0
         var screamCooldown: Int = 4
         var insomnia: Int = 1
         var groupMultiplier: Double = 2.0
         var size: Int = 3
+        var immortal: Boolean = false
 
         override fun tameItemId() = tameItem
         override fun releaseItemId() = releaseItem
@@ -151,12 +182,12 @@ object FabricSettings {
         override fun repelRadius() = repelRadiusValue
         override fun defendDurationTicks() = defendTicks
         override fun flightSpeed() = flightSpeedValue
-        override fun acrobaticsStep() = acrobaticsStepValue
         override fun screamRadius() = screamRadiusValue
         override fun screamCooldownSeconds() = screamCooldown
         override fun insomniaDays() = insomnia
         override fun phantomGroupMultiplier() = groupMultiplier
         override fun phantomSize() = size
+        override fun immortalPhantoms() = immortal
 
         fun read(values: Map<String, String>) {
             tameItem = values["taming.tame_item"] ?: tameItem
@@ -165,8 +196,8 @@ object FabricSettings {
             repelRadiusValue = values.double("taming.repel_radius", repelRadiusValue)
             defendTicks = values.int("taming.defend_time_ticks", defendTicks)
             size = values.int("taming.phantom_size", size)
+            immortal = values.bool("taming.immortal_phantoms", immortal)
             flightSpeedValue = values.double("flight.flight_speed", flightSpeedValue)
-            acrobaticsStepValue = values.double("flight.acrobatics_step", acrobaticsStepValue)
             screamRadiusValue = values.double("scream.scream_radius", screamRadiusValue)
             screamCooldown = values.int("scream.scream_cooldown_seconds", screamCooldown)
             insomnia = values.int("spawning.insomnia_days", insomnia)
@@ -183,10 +214,10 @@ object FabricSettings {
             repel_radius = $repelRadiusValue
             defend_time_ticks = $defendTicks
             phantom_size = $size
+            immortal_phantoms = $immortal
 
             [flight]
             flight_speed = $flightSpeedValue
-            acrobatics_step = $acrobaticsStepValue
 
             [scream]
             scream_radius = $screamRadiusValue
@@ -228,6 +259,13 @@ private fun Map<String, String>.double(key: String, fallback: Double): Double =
             TamedPhantomsMod.LOGGER.warn("Некорректное число в настройке {}: '{}'", key, this[key])
         }
     }
+
+private fun Map<String, String>.bool(key: String, fallback: Boolean): Boolean = when (this[key]?.trim()?.lowercase()) {
+    "true" -> true
+    "false" -> false
+    null -> fallback
+    else -> fallback.also { TamedPhantomsMod.LOGGER.warn("Некорректное значение в настройке {}: '{}'", key, this[key]) }
+}
 
 private fun Map<String, String>.int(key: String, fallback: Int): Int =
     this[key]?.toIntOrNull() ?: this[key]?.toDoubleOrNull()?.toInt() ?: fallback

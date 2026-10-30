@@ -1,10 +1,14 @@
 package com.tamedphantoms.mod.event
 
 import com.tamedphantoms.mod.TamedPhantomsMod
+import com.tamedphantoms.mod.api.TamedPhantomsApi
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomHeldLook
+import com.tamedphantoms.mod.util.PhantomHitParts
 import com.tamedphantoms.mod.util.PhantomTamingLogic
+import net.minecraft.world.phys.Vec3
+import java.util.WeakHashMap
 import net.minecraft.core.component.DataComponents
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundSource
@@ -18,15 +22,32 @@ import net.minecraft.world.item.Items
 
 object PhantomInteractionHandler {
 
+    private class Hit(val entityId: Int, val tick: Long, val pos: Vec3)
+
+    private val lastHit = WeakHashMap<Player, Hit>()
+
+    /**
+     * Точка клика приходит отдельным пакетом прямо перед обычным кликом.
+     * На NeoForge её видит только [TamedPhantomEntity.interactAt], поэтому она запоминается здесь.
+     */
+    fun rememberHit(player: Player, phantom: TamedPhantomEntity, worldPos: Vec3) {
+        lastHit[player] = Hit(phantom.id, player.tickCount.toLong(), worldPos)
+    }
+
     /**
      * @return результат, которым надо отменить взаимодействие, или null, если его не трогать.
      * Обе руки шлют клик по сущности: пустая вторая рука тут же снимала «сидеть».
+     * @param hitPos точка клика в мире, если загрузчик её знает
      */
-    fun onEntityInteract(player: Player, target: Entity, hand: InteractionHand): InteractionResult? {
+    fun onEntityInteract(player: Player, target: Entity, hand: InteractionHand, hitPos: Vec3? = null): InteractionResult? {
         when (target) {
             is TamedPhantomEntity -> {
                 if (hand == InteractionHand.MAIN_HAND && !player.level().isClientSide) {
-                    handleTamedPhantomEntity(player, target, player.getItemInHand(hand))
+                    val stack = player.getItemInHand(hand)
+                    val part = partOf(target, hitOf(player, target, hitPos))
+                    if (TamedPhantomsApi.interact(player, target, hand, stack, part) == null) {
+                        handleTamedPhantomEntity(player, target, stack)
+                    }
                 }
                 return InteractionResult.SUCCESS
             }
@@ -39,6 +60,28 @@ object PhantomInteractionHandler {
             }
         }
         return null
+    }
+
+    private fun hitOf(player: Player, phantom: TamedPhantomEntity, given: Vec3?): Vec3? {
+        if (given != null) return given
+        val hit = lastHit.remove(player) ?: return null
+        if (hit.entityId != phantom.id || player.tickCount - hit.tick > 1) return null
+        return hit.pos
+    }
+
+    private fun partOf(phantom: TamedPhantomEntity, hit: Vec3?): TamedPhantomsApi.Part {
+        if (hit == null) return TamedPhantomsApi.Part.BODY
+        val saddle = PhantomHitParts.onSaddle(
+            hit.x - phantom.x,
+            hit.y - phantom.y,
+            hit.z - phantom.z,
+            phantom.yBodyRot,
+            phantom.bbHeight.toDouble(),
+            phantom.bbWidth / 0.9,
+            phantom.isSaddled,
+            phantom.isOrderedToSit(),
+        )
+        return if (saddle) TamedPhantomsApi.Part.SADDLE else TamedPhantomsApi.Part.BODY
     }
 
     /** Кормление верхом. null — ванильное использование предмета. */
@@ -88,6 +131,8 @@ object PhantomInteractionHandler {
 
     private fun handleTamedPhantomEntity(player: Player, phantom: TamedPhantomEntity, stack: ItemStack) {
         if (phantom.leashHolder === player) {
+            val post = PhantomLeashTie.postBehind(player)
+            if (post != null && PhantomLeashTie.onUseBlock(player, player.level(), post) != null) return
             phantom.dropLeash(true, !player.abilities.instabuild)
             return
         }

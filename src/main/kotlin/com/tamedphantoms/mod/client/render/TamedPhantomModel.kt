@@ -137,10 +137,21 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
             rightTipZ = Mth.lerp(takeoff, rightTipZ, -tipLocal)
         }
 
+        // Сложенные назад крылья: пике со сложенными крыльями и быстрый полёт.
+        val fold = Mth.lerp(partial, pet.wingSweepO, pet.wingSweep).coerceIn(0f, 1f) * (1f - crawl)
+        if (fold > 0.001f) {
+            leftBaseY -= fold * SWEEP_BASE
+            rightBaseY += fold * SWEEP_BASE
+            leftTipZ += fold * TUCK_TIP_DOWN
+            rightTipZ -= fold * TUCK_TIP_DOWN
+        }
+
         if (swim > 0.01f) {
-            val ripple = ageInTicks * 0.09f
-            val baseWave = Mth.sin(ripple) * 0.08f
-            val tipWave = Mth.sin(ripple - 1.05f) * 0.13f
+            // Под водой волна бежит от корня к кончику, как у ската, и растёт со скоростью.
+            val stroke = amplitude.coerceIn(0.05f, 0.8f)
+            val ripple = time * SWIM_STROKE
+            val baseWave = Mth.sin(ripple) * (0.08f + stroke * 0.55f)
+            val tipWave = Mth.sin(ripple - 1.05f) * (0.13f + stroke * 0.8f)
             leftBaseZ = Mth.lerp(swim, leftBaseZ, baseWave)
             rightBaseZ = Mth.lerp(swim, rightBaseZ, -baseWave)
             leftTipZ = Mth.lerp(swim, leftTipZ, tipWave - baseWave)
@@ -154,8 +165,8 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         // Правое крыло смотрит в −X. Тот же yRot уводит его кончик в другую сторону, чем левый.
         leftWingBase.yRot = Mth.lerp(crawl, leftBaseY, sweep)
         rightWingBase.yRot = Mth.lerp(crawl, rightBaseY, sweep)
-        leftWingTip.yRot = Mth.lerp(crawl, 0f, tipSweep)
-        rightWingTip.yRot = Mth.lerp(crawl, 0f, tipSweep)
+        leftWingTip.yRot = Mth.lerp(crawl, -fold * SWEEP_TIP, tipSweep)
+        rightWingTip.yRot = Mth.lerp(crawl, fold * SWEEP_TIP, tipSweep)
         if (crawl > 0f) {
             val flat = 1f - crawl
             leftWingBase.xRot *= flat
@@ -262,5 +273,13 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
         private const val TAIL_TIP_EXTRA = 0.45f
         private const val SWIM_WAVE = 0.15f
         private const val SWIM_LAG = 0.6f
+
+        /** Фаза взмаха в радианы волны под водой: при подводной крейсерской около полутора секунд на гребок. */
+        private const val SWIM_STROKE = 0.55f
+
+        /** Отвод крыла назад у основания и у кончика, радианы, и опускание кончика при складывании. */
+        private const val SWEEP_BASE = 0.95f
+        private const val SWEEP_TIP = 0.6f
+        private const val TUCK_TIP_DOWN = 0.2f
     }
 }

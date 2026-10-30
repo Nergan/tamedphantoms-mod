@@ -16,11 +16,12 @@
   "tamedphantoms.configuration.taming.repel_radius": "Repel radius",
   "tamedphantoms.configuration.taming.defend_time_ticks": "Self-defense duration (ticks)",
   "tamedphantoms.configuration.taming.phantom_size": "Phantom size",
+  "tamedphantoms.configuration.taming.immortal_phantoms": "Immortal phantoms",
+  "tamedphantoms.configuration.taming.immortal_phantoms.tooltip": "On: a full loop in the saddle makes that phantom immortal and grants a secret advancement. Off: loops grant nothing, and phantoms that are already immortal become ordinary on their next tick. Applies without a restart.",
   "tamedphantoms.configuration.sound": "Sound",
   "tamedphantoms.configuration.sound.tamed_sound_volume": "Tamed phantom volume",
   "tamedphantoms.configuration.flight": "Flight",
   "tamedphantoms.configuration.flight.flight_speed": "Flight speed",
-  "tamedphantoms.configuration.flight.acrobatics_step": "Barrel and loop speed",
   "tamedphantoms.configuration.flight.owned_flight_speed": "Speed of your phantoms",
   "tamedphantoms.configuration.flight.owned_flight_speed.value": "%s (max %s)",
   "tamedphantoms.configuration.flight.owned_flight_speed.tooltip": "Speed of your own tamed phantoms only. This server's maximum is %s. The slider stops there: a higher value is cut down to the server maximum.",
@@ -32,6 +33,8 @@
   "tamedphantoms.configuration.spawning.phantom_group_multiplier": "Phantom group size",
 
   "tamedphantoms.scream.cooldown": "The phantom's scream will be ready in %s s.",
+  "tamedphantoms.cruise.on": "The phantom flies on by itself",
+  "tamedphantoms.cruise.off": "The phantom listens to you again",
   "tamedphantoms.dismount.high": "A bit high, isn't it?",
 
   "advancements.tamedphantoms.tame_phantom.title": "Winged Pet",
@@ -66,14 +69,16 @@
 
   "tamedphantoms.guide.entry.wild": "Wild Phantoms",
   "tamedphantoms.guide.page.wild.1": "A wild phantom now watches the world with $(warn)blood-red eyes$(). If you hold the taming item, it will come closer instead of turning away. Night is still dangerous, but the first step is simply to be seen holding something it wants.",
-  "tamedphantoms.guide.page.wild.2": "By default that item is a $(item)cookie$(). The item can be changed in the server settings. A tamed phantom also keeps wild phantoms from gathering too close to its owner.",
+  "tamedphantoms.guide.page.wild.2": "By default that item is a $(item)cookie$(). The item can be changed in the server settings. Wild phantoms are afraid of tamed and released ones: near them they drop their prey and climb away.",
 
   "tamedphantoms.guide.entry.tame": "How to Tame",
   "tamedphantoms.guide.page.tame.1": "Stand near a wild phantom and use the taming item with the right mouse button. If the attempt succeeds, the phantom becomes yours. It grows a little larger and darker, and its eyes turn a bright $(#33cc44)green$(). Hearts appear above it when the bond is made.",
   "tamedphantoms.guide.page.tame.2": "By default every attempt succeeds. The chance can be changed in the server settings. A phantom that was released can be tamed again in the same way. Free phantoms of that kind have bright $(#e8c400)yellow eyes$().",
 
   "tamedphantoms.guide.entry.care": "Care and the Lead",
-  "tamedphantoms.guide.page.care.1": "Anyone can feed a tamed phantom ordinary food, and it restores health. If the phantom is hurt and the owner or another player holds that food nearby, it stops, turns its head toward them, and nods. At full health it does not nod, and the motion stops as soon as the item is put away. Only the owner can offer a poisonous potato or the release item: the phantom still stops and turns, but shakes its head from side to side, and someone else's click sends up angry clouds. Food held by a rider of that phantom does not count, and a phantom that already has a rider does not stop. A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. A released phantom will not abide a lead: it drifts aside and snaps free, without shoving off the player.",
+  "tamedphantoms.guide.page.care.1": "Anyone can feed a tamed phantom ordinary food, and it restores health. If the phantom is hurt and the owner or another player holds that food nearby, it stops, turns its head toward them, and nods. At full health it does not nod, and the motion stops as soon as the item is put away.",
+  "tamedphantoms.guide.page.care.4": "Only the owner can offer a poisonous potato or the release item: the phantom still stops and turns, but shakes its head from side to side, and someone else's click sends up angry clouds. Food held by a rider of that phantom does not count, and a phantom that already has a rider does not stop.",
+  "tamedphantoms.guide.page.care.3": "A lead can be attached with the right mouse button, and taken off the same way with an empty hand. While leashed, the phantom stays close and drifts nearby instead of following in a straight line. To tie it to a fence, use the fence: a sitting phantom up to twelve blocks away is tied too, and a click that lands on the phantom with the fence right behind it ties it as well. A released phantom will not abide a lead: it drifts aside and snaps free.",
   "tamedphantoms.guide.page.care.2": "Sunlight will not burn it, and it will not drown. If you travel too far, it will appear beside you again, the way a wolf returns when it has been left behind.",
 
   "tamedphantoms.guide.entry.release": "Letting Go",
@@ -86,7 +91,9 @@
 
   "tamedphantoms.guide.entry.flight": "In the Air",
   "tamedphantoms.guide.page.flight.1": "While you are riding, the movement keys send the phantom forward, back, and to the sides. Jump makes it climb. The left Control key makes it descend. It turns with your look. You and anyone sitting behind you receive $(thing)Night Vision$() for as long as you stay in the air. More than eight blocks above the surface, the first Shift only asks if that is a bit high. A second press within a second lets either the owner or the rider behind get down.",
-  "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section. While the phantom flies forward, the camera follows its climb and dive. Hold climb, dive, or a turn and the lean keeps going, far enough for a loop or a barrel roll. Hovering and flying backward keep the usual tilt, and the camera does not follow it. A full loop grants a secret advancement. That phantom glows from then on, and it will not die.",
+  "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section. The phantom keeps its speed: climbing spends it, diving builds it, and beating wings push only up to cruising speed. Let go of forward and it glides on, slowly losing height and speed, until it hangs in the air. Back brakes harder and then hovers. Its body leans into turns, and a sharp turn at speed bleeds a little speed.",
+  "tamedphantoms.guide.page.flight.3": "Dive without forward and the phantom folds its wings back like a falcon: the fall is steeper and much faster, and that speed stays for a few seconds after you level out. Climb on it, or fly far with it. Double-tap jump while flying forward fast enough, and the phantom flies a whole loop. Too slow, and it stalls before the top and drops its nose. Double-tap left or right for a quick barrel roll that also slips aside.",
+  "tamedphantoms.guide.page.flight.4": "Double-tap forward for cruise: the phantom flies on by itself, and the camera still steers it. Any movement key hands control back, and both changes are shown above the hotbar. The camera follows part of a climb or dive and all of a loop. If the server allows immortal phantoms, a full loop grants a secret advancement, and that phantom glows from then on and will not die. The setting is off by default.",
 
   "tamedphantoms.guide.entry.sit": "Sitting Still",
   "tamedphantoms.guide.page.sit.1": "Only the owner can ask a phantom to sit, and only while not riding it. If there is no saddle, use the right mouse button. If there is a saddle, sneak and use the right mouse button. The phantom turns over, falls, and stays where it lands. Falling does not hurt it. A breath of wind marks the command.",
@@ -101,6 +108,6 @@
   "tamedphantoms.guide.page.scream.2": "The cry then needs about four seconds to return. If it is not ready, a red line tells you how long is left. Radius and cooldown are server settings. A phantom that is defending itself cries the same way, on the same cooldown. On a full moon a released phantom may cry even when it is not fighting: the eyes stay yellow, the glow still flashes, nearby mobs still flee, nobody is blinded, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it. Hearing that cry grants the secret advancement $(thing)Sick Moon$().",
 
   "tamedphantoms.guide.entry.stats": "Strength",
-  "tamedphantoms.guide.page.stats.1": "A tamed or released phantom is stronger than a wild one. It has forty health, its bite deals twelve damage, and it flies twice as fast. Each time it wounds something, it heals itself for the same amount.",
+  "tamedphantoms.guide.page.stats.1": "A tamed or released phantom is stronger than a wild one. It has forty health, its bite deals twelve damage, and it flies faster. Each time it wounds something, it heals itself for the same amount.",
   "tamedphantoms.guide.page.stats.2": "By default it is about one and a half times an ordinary phantom. The server sets the size of tamed and released phantoms. The night remains unsafe. A bonded phantom simply shares that danger with you."
 }

@@ -44,6 +44,12 @@
 
 `RenderPipelines.EYES` на 26.3 смешивает как обычную прозрачность. В текстуре должен лежать уже тот цвет, который нужно увидеть. Родителя `minecraft:item/template_spawn_egg` в 26.3 нет. Наклон свободного полёта не считай углом до близкой точки маршрута. Файлы из `kotlinExcludes` на 26.3 — отдельные копии: правка только родительского файла в сборку 26.3 не входит.
 
+Правку 1.21.1 в копию 26.3 переноси `git merge-file <копия 26.3> <файл HEAD> <новый файл 1.21.1>`. Базу бери из `git show HEAD:<путь>` и переводи в CRLF, как рабочие файлы: с базой в LF конфликтует каждая строка. После слияния ищи в новых строках API 1.21.1. На 26.3 нет `Entity.interactAt`: точка клика приходит в `interact(player, hand, Vec3)`, на Fabric — в `UseEntityCallback`. Надпись над хотбаром — `player.sendOverlayMessage(component)`, не `displayClientMessage(..., true)`. `DustParticleOptions` принимает `(int rgb, float)`. Вместо `isDay` и `moonPhase` — `isDarkOutside` и `getOverworldClockTime() / 24000 % 8`. В Kotlin-миксине 26.3 поле `at` у `@Redirect` — массив: `at = [At(...)]`, на 1.21.1 одиночный `At`.
+
+## API для аддонов
+
+Облик фантома для аддонов (`bodyDye`, `saddleDye`, `luminous`, `startShake`) хранит, синхронизирует и рисует этот мод. Аддон только регистрирует обработчики в `TamedPhantomsApi`: клик с частью тела (`BODY` или `SADDLE`) и освобождение. Новое поле облика добавляй сюда, в обе копии сущности, а не в аддон. Изменение API — новая `mod_version`: аддон `tamedphantoms-colors-mod` указывает нижнюю границу версии.
+
 ## Локальные инструменты
 
 Kidou и Mikchan CDN — локальные инструменты этой мастерской. Искать сведения о них в интернете бесполезно: публичной документации нет. Для Kidou источник — спецификация в `D:\DATA\soft\code\projects\minecraft\modpacks\Kidou-1.1.4-release.jar` и `D:\DATA\soft\code\projects\minecraft\modpacks\AGENTS.md`. Для Mikchan CDN — https://cdn.mikchan.net/ai/SKILL.md и `GET https://cdn.mikchan.net/version`.

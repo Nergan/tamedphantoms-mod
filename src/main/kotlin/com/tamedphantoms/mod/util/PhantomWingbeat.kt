@@ -105,6 +105,35 @@ object PhantomWingbeat {
         return Pose(rate, amplitude, droop, tipHang)
     }
 
+    /** Градусы фазы взмаха за тик, как у ванильной модели. */
+    const val DEGREES_PER_TICK = 7.448451f
+
+    /**
+     * Поправка от усилия крыльев поверх позы по движению. Птица машет чаще и шире
+     * на малой скорости и в наборе, реже на крейсерской и почти не машет в пике
+     * со сложенными крыльями. Под водой взмах медленный и широкий, как у ската,
+     * и растёт со скоростью.
+     *
+     * @param weight доля полёта: 0 у земли и при взлёте, там поза остаётся прежней
+     * @param swimSpeed скорость под водой в долях подводной крейсерской
+     */
+    fun effort(base: Pose, effort: Float, tuck: Float, weight: Float, swim: Float = 0f, swimSpeed: Float = 0f): Pose {
+        val w = weight.coerceIn(0f, 1f)
+        val e = effort.coerceIn(0f, 1f)
+        val k = tuck.coerceIn(0f, 1f)
+        var rate = mix(base.rate, mix(0.72f, 1.45f, e), w * 0.6f)
+        var amplitude = mix(base.amplitude, mix(0.6f, 1.3f, e), w * 0.6f)
+        rate *= 1f - 0.85f * k * w
+        amplitude *= 1f - 0.95f * k * w
+        val s = swim.coerceIn(0f, 1f)
+        if (s > 0f) {
+            val pace = swimSpeed.coerceIn(0f, 1.2f) / 1.2f
+            rate = mix(rate, mix(SWIM_RATE, 0.34f, pace), s)
+            amplitude = mix(amplitude, mix(SWIM_AMPLITUDE, 0.6f, pace), s)
+        }
+        return base.copy(rate = rate.coerceAtLeast(0.04f), amplitude = amplitude.coerceAtLeast(0f))
+    }
+
     private fun ramp(value: Double, start: Double, full: Double): Float {
         if (full <= start) return if (value >= full) 1f else 0f
         return ((value - start) / (full - start)).toFloat().coerceIn(0f, 1f)

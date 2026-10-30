@@ -5,7 +5,7 @@
   "compatibilityLevel": "JAVA_21",
     "mixins": [
     "DataFixerSchemaMixin",
-    "PhantomSitFlapMixin",
+    "PhantomFlapMixin",
     "PhantomMoveControlMixin",
     "MoveControlMobAccessor",
     "PhantomSpawnerMixin",

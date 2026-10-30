@@ -88,6 +88,13 @@ val patchKotlinRefmap by tasks.registering {
             "com/tamedphantoms/mod/mixin/PhantomInteractMixin" to mapOf(
                 "interactOn" to "Lnet/minecraft/class_1657;method_7287(Lnet/minecraft/class_1297;Lnet/minecraft/class_1268;)Lnet/minecraft/class_1269;",
             ),
+            "com/tamedphantoms/mod/mixin/PhantomFlapMixin" to mapOf(
+                "tick" to "Lnet/minecraft/class_1593;method_5773()V",
+                "Lnet/minecraft/world/level/Level;playLocalSound(DDDLnet/minecraft/sounds/SoundEvent;Lnet/minecraft/sounds/SoundSource;FFZ)V" to
+                    "Lnet/minecraft/class_1937;method_8486(DDDLnet/minecraft/class_3414;Lnet/minecraft/class_3419;FFZ)V",
+                "Lnet/minecraft/world/level/Level;addParticle(Lnet/minecraft/core/particles/ParticleOptions;DDDDDD)V" to
+                    "Lnet/minecraft/class_1937;method_8406(Lnet/minecraft/class_2394;DDDDDD)V",
+            ),
             "com/tamedphantoms/mod/mixin/VanillaPhantomBufferMixin" to mapOf(
                 "getCompleteBuffer" to "Lnet/minecraft/class_4237;method_19743(Lnet/minecraft/class_2960;)Ljava/util/concurrent/CompletableFuture;",
                 "getStream" to "Lnet/minecraft/class_4237;method_19744(Lnet/minecraft/class_2960;Z)Ljava/util/concurrent/CompletableFuture;",

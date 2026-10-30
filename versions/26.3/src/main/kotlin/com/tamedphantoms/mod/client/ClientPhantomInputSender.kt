@@ -9,9 +9,12 @@ import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
 import com.tamedphantoms.mod.platform.ModNetwork
+import com.tamedphantoms.mod.util.PhantomFlightKeys
+import com.tamedphantoms.mod.util.PhantomFlightModel
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.network.chat.Component
 
 object ClientPhantomInputSender {
 
@@ -44,17 +47,52 @@ object ClientPhantomInputSender {
             phantom.loopReadyToReport = false
             ModNetwork.sendToServer(PhantomLoopPayload)
         }
-        if (phantom == null) return
+        if (phantom == null) {
+            flightKeys.stop()
+            return
+        }
+
+        val options = minecraft.options
+        val ascending = held(ModKeyMappings.FLY_UP)
+        val descending = held(ModKeyMappings.FLY_DOWN)
+        val pilot = phantom.isOwnedBy(player) && phantom.controllingPassenger === player
+        val keys = PhantomFlightKeys.Keys(
+            forward = options.keyUp.isDown,
+            back = options.keyDown.isDown,
+            left = options.keyLeft.isDown,
+            right = options.keyRight.isDown,
+            up = ascending,
+            down = descending,
+            sneak = shiftDown,
+        )
+        val result = flightKeys.tick(player.tickCount, keys, pilot && openScreen(minecraft) == null && phantom.airborne())
+        phantom.clientCruise = flightKeys.cruising
+        if (result.loop) phantom.clientLoopRequest = true
+        if (result.roll != 0) phantom.clientRollRequest = result.roll
+        when (result.cruise) {
+            PhantomFlightKeys.CruiseChange.STARTED ->
+                player.sendOverlayMessage(Component.translatable("tamedphantoms.cruise.on"))
+            PhantomFlightKeys.CruiseChange.STOPPED ->
+                player.sendOverlayMessage(Component.translatable("tamedphantoms.cruise.off"))
+            PhantomFlightKeys.CruiseChange.NONE -> Unit
+        }
 
         ModNetwork.sendToServer(
             PhantomInputPayload(
-                ascending = held(ModKeyMappings.FLY_UP),
-                descending = held(ModKeyMappings.FLY_DOWN),
-                forward = player.zza,
+                ascending = ascending,
+                descending = descending,
+                forward = if (flightKeys.cruising) 1f else player.zza,
                 strafe = player.xxa,
+                pitch = PhantomFlightModel.wrap(phantom.acroPitch),
+                roll = PhantomFlightModel.wrap(phantom.bank),
+                tuck = phantom.flightTuck,
+                effort = phantom.flightEffort,
+                acrobatic = phantom.acrobatic,
             ),
         )
     }
+
+    private val flightKeys = PhantomFlightKeys()
 
     private fun held(mapping: KeyMapping): Boolean {
         if (mapping.isDown) return true

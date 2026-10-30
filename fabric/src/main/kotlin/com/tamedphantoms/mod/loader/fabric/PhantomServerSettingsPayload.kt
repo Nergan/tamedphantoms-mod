@@ -14,12 +14,12 @@ data class PhantomServerSettingsPayload(
     val repelRadius: Double,
     val defendDurationTicks: Int,
     val flightSpeed: Double,
-    val acrobaticsStep: Double,
     val screamRadius: Double,
     val screamCooldownSeconds: Int,
     val insomniaDays: Int,
     val phantomGroupMultiplier: Double,
     val phantomSize: Int,
+    val immortalPhantoms: Boolean,
 ) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
@@ -36,12 +36,12 @@ data class PhantomServerSettingsPayload(
                 buf.writeDouble(payload.repelRadius)
                 buf.writeVarInt(payload.defendDurationTicks)
                 buf.writeDouble(payload.flightSpeed)
-                buf.writeDouble(payload.acrobaticsStep)
                 buf.writeDouble(payload.screamRadius)
                 buf.writeVarInt(payload.screamCooldownSeconds)
                 buf.writeVarInt(payload.insomniaDays)
                 buf.writeDouble(payload.phantomGroupMultiplier)
                 buf.writeVarInt(payload.phantomSize)
+                buf.writeBoolean(payload.immortalPhantoms)
             },
             { buf ->
                 PhantomServerSettingsPayload(
@@ -52,11 +52,11 @@ data class PhantomServerSettingsPayload(
                     buf.readVarInt(),
                     buf.readDouble(),
                     buf.readDouble(),
-                    buf.readDouble(),
                     buf.readVarInt(),
                     buf.readVarInt(),
                     buf.readDouble(),
                     buf.readVarInt(),
+                    buf.readBoolean(),
                 )
             },
         )

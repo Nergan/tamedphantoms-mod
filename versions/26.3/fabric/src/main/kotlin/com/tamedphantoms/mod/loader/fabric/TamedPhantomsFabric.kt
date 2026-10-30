@@ -7,6 +7,7 @@ import com.tamedphantoms.mod.event.PhantomDamageHandler
 import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomGuideHandler
 import com.tamedphantoms.mod.event.PhantomInteractionHandler
+import com.tamedphantoms.mod.event.PhantomLeashTie
 import com.tamedphantoms.mod.event.PhantomOwnerRecallHandler
 import com.tamedphantoms.mod.event.PhantomTemptHandler
 import com.tamedphantoms.mod.item.ModItems
@@ -21,6 +22,7 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerEntityEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents
+import net.fabricmc.fabric.api.event.player.UseBlockCallback
 import net.fabricmc.fabric.api.event.player.UseEntityCallback
 import net.fabricmc.fabric.api.event.player.UseItemCallback
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
@@ -33,6 +35,7 @@ import net.minecraft.core.registries.Registries
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 import net.minecraft.resources.ResourceKey
+import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.item.CreativeModeTab
 import net.minecraft.world.item.Item
@@ -41,6 +44,10 @@ import net.minecraft.world.item.SpawnEggItem
 import java.util.function.Supplier
 
 class TamedPhantomsFabric : ModInitializer {
+
+    private companion object {
+        const val SETTINGS_CHECK_TICKS = 100
+    }
 
     override fun onInitialize() {
         TamedPhantomsMod.LOGGER.info("Инициализация Tamed Phantoms (Fabric)")
@@ -100,8 +107,12 @@ class TamedPhantomsFabric : ModInitializer {
     }
 
     private fun registerEvents() {
-        UseEntityCallback.EVENT.register { player, _, hand, entity, _ ->
-            PhantomInteractionHandler.onEntityInteract(player, entity, hand) ?: InteractionResult.PASS
+        UseEntityCallback.EVENT.register { player, _, hand, entity, hit ->
+            PhantomInteractionHandler.onEntityInteract(player, entity, hand, hit?.location) ?: InteractionResult.PASS
+        }
+        UseBlockCallback.EVENT.register { player, level, hand, hit ->
+            if (hand != InteractionHand.MAIN_HAND) return@register InteractionResult.PASS
+            PhantomLeashTie.onUseBlock(player, level, hit.blockPos) ?: InteractionResult.PASS
         }
         UseItemCallback.EVENT.register { player, _, hand ->
             PhantomInteractionHandler.onUseItem(player, hand) ?: InteractionResult.PASS
@@ -137,6 +148,11 @@ class TamedPhantomsFabric : ModInitializer {
         ServerTickEvents.END_SERVER_TICK.register { server ->
             for (player in server.playerList.players) {
                 PhantomDismount.onPlayerTick(player)
+            }
+            if (server.tickCount % SETTINGS_CHECK_TICKS == 0 && FabricSettings.reloadIfChanged()) {
+                for (player in server.playerList.players) {
+                    FabricNetworking.sendSettings(player)
+                }
             }
         }
         ServerLifecycleEvents.SERVER_STARTING.register { server ->

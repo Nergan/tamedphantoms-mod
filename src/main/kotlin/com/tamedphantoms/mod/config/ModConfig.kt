@@ -12,23 +12,14 @@ package com.tamedphantoms.mod.config
  */
 object ModConfig {
 
-    /** Как часто (в тиках) прирученный фантом "толкает" диких фантомов прочь. Не влияет на итоговый радиус — чисто оптимизация частоты проверки. */
-    const val REPEL_PUSH_INTERVAL_TICKS: Int = 10
-
     /**
      * Крейсерская горизонтальная скорость управляемого полёта при множителе ×2,
      * в блоках/тик. Это прежнее поведение питомца. Игровой множитель
      * ([com.tamedphantoms.mod.config.ServerConfig.flightSpeed], по умолчанию 1.25)
      * умножает это число на `множитель / 2`: 2.0 оставляет как есть, 1.25 берёт 0.625.
-     * Вертикальная скорость — около 70% от горизонтальной.
+     * Набор высоты, пике и петли меряются от этой скорости в [com.tamedphantoms.mod.util.PhantomFlightModel].
      */
     const val FLIGHT_SPEED_BLOCKS_PER_TICK: Double = 0.84
-
-    /** Множитель вертикальной скорости относительно горизонтальной. */
-    const val VERTICAL_SPEED_FACTOR: Double = 0.7
-
-    /** Насколько плавно скорость подтягивается к целевой (0..1, больше = резче). */
-    const val FLIGHT_ACCELERATION: Double = 0.22
 
     // Отдельный кулдаун для "фоновых" звуков (Phantom idle*.ogg) не нужен:
     // ванильный Phantom.getAmbientSound() уже возвращает SoundEvents.PHANTOM_AMBIENT

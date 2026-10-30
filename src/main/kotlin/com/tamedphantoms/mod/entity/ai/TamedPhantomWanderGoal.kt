@@ -1,24 +1,32 @@
 package com.tamedphantoms.mod.entity.ai
 
 import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.entity.PhantomManeuverPilot
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomManeuvers
 import com.tamedphantoms.mod.util.PhantomPerch
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
 import java.util.EnumSet
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
 /**
- * Блуждание освобождённого фантома. Иногда садится, немного ползает и снова взлетает.
+ * Жизнь освобождённого фантома. Высота и привычки зависят от характера
+ * ([PhantomSurroundings.temperament]), времени суток, Луны, погоды и местности:
+ * ночью летает выше и чаще крутит фигуры, в полнолуние особенно, днём больше отдыхает,
+ * над водой идёт бреющим полётом, в жару парит широкими кругами, в грозу мечется.
+ * Держится рядом с другими освобождёнными, иногда облетает игрока посмотреть.
  * Если игрок держит предмет приручения — летит к нему.
  */
 class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
 
     private enum class Mode {
         FLY,
+        VISIT,
         LAND,
         CRAWL,
         LAUNCH,
@@ -26,10 +34,11 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
 
     companion object {
         private const val TEMPT_RANGE = 16.0
+        private const val FLOCK_RANGE = 24.0
+        private const val VISIT_RANGE = 24.0
     }
 
     private var heading = 0.0
-    private var climb = 0.0
     private var recalcCooldown = 0
     private var mode = Mode.FLY
     private var modeTicks = 0
@@ -39,6 +48,12 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
     private var stuckTicks = 0
     private var stuckX = Double.NaN
     private var stuckZ = Double.NaN
+    private var visited: Player? = null
+    private var visitAngle = 0.0
+    private var visitCooldown = 600
+    private var soarAngle = 0.0
+    private var flockCooldown = 0
+    private var flockHeading: Double? = null
 
     init {
         flags = EnumSet.of(Flag.MOVE)
@@ -51,8 +66,7 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
     override fun requiresUpdateEveryTick(): Boolean = true
 
     override fun start() {
-        heading = phantom.yRot * (Math.PI / 180.0)
-        climb = 0.0
+        heading = phantom.yRot * (Math.PI / 180.0) + Math.PI / 2.0
         recalcCooldown = 0
         mode = Mode.FLY
     }
@@ -61,14 +75,18 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
         val tempting = findTemptingPlayer()
         if (tempting != null) {
             mode = Mode.FLY
+            phantom.endManeuver()
             phantom.moveControl.setWantedPosition(tempting.x, tempting.y + 1.4, tempting.z, 0.85)
             return
         }
+        if (phantom.maneuverKind() != null) return
         if (landCooldown > 0) landCooldown--
+        if (visitCooldown > 0) visitCooldown--
         if (phantom.isInWater) mode = Mode.FLY
 
         when (mode) {
             Mode.FLY -> tickFly()
+            Mode.VISIT -> tickVisit()
             Mode.LAND -> tickLand()
             Mode.CRAWL -> tickCrawl()
             Mode.LAUNCH -> tickLaunch()
@@ -76,8 +94,13 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
     }
 
     private fun tickFly() {
-        if (landCooldown <= 0 && phantom.y > phantom.level().minBuildHeight + 4 && phantom.random.nextInt(220) == 0) {
-            val spot = PhantomPerch.spot(phantom.level(), phantom.random, phantom.x, phantom.z, phantom.y, 8.0, 1.5, 4.5)
+        val world = PhantomSurroundings.sample(phantom)
+        val temper = PhantomSurroundings.temperament(phantom)
+        val random = phantom.random
+        if (landCooldown <= 0 && phantom.y > phantom.level().minBuildHeight + 4 &&
+            random.nextInt(temper.restOdds(world.night, world.raining)) == 0
+        ) {
+            val spot = PhantomPerch.spot(phantom.level(), random, phantom.x, phantom.z, phantom.y, 8.0, 1.5, 4.5)
             if (spot != null) {
                 land = spot
                 mode = Mode.LAND
@@ -85,21 +108,113 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
                 return
             }
         }
+        if (visitCooldown <= 0 && random.nextFloat() < 0.004f * (0.3f + temper.curiosity)) {
+            val player = phantom.level().getNearestPlayer(phantom, VISIT_RANGE)
+            if (player != null && player.isAlive && !player.isSpectator) {
+                visited = player
+                visitAngle = atan2(phantom.z - player.z, phantom.x - player.x)
+                mode = Mode.VISIT
+                modeTicks = 120 + random.nextInt(80)
+                return
+            }
+        }
+        if (random.nextInt(temper.maneuverOdds(world.night, world.fullMoon, world.newMoon)) == 0) {
+            val kinds = PhantomManeuvers.Kind.entries
+            if (PhantomManeuverPilot.tryStart(phantom, kinds[random.nextInt(kinds.size)])) return
+        }
+
         if (this.recalcCooldown-- <= 0) {
-            this.recalcCooldown = 70 + phantom.random.nextInt(70)
-            heading += (phantom.random.nextDouble() - 0.5) * 1.1
-            climb = (phantom.random.nextDouble() - 0.42) * 0.28
+            this.recalcCooldown = 70 + random.nextInt(70)
+            val swing = if (world.thundering) 2.2 else 1.1
+            heading += (random.nextDouble() - 0.5) * swing
         }
         if (courseIsStuck()) {
-            heading += if (phantom.random.nextBoolean()) 2.4 else -2.4
+            heading += if (random.nextBoolean()) 2.4 else -2.4
             this.recalcCooldown = 25
         }
-        heading += 0.016 + (phantom.random.nextDouble() - 0.5) * 0.012
-        val ahead = 7.0
-        val targetX = phantom.x + cos(heading) * ahead
-        val targetZ = phantom.z + sin(heading) * ahead
-        val targetY = phantom.y + climb * 5.0
-        phantom.moveControl.setWantedPosition(targetX, targetY, targetZ, 0.48)
+        heading += 0.016 + (random.nextDouble() - 0.5) * 0.012
+        steerWithFlock()
+
+        val hotDay = world.terrain == PhantomSurroundings.Terrain.HOT && !world.night && !world.raining
+        val targetX: Double
+        val targetZ: Double
+        if (hotDay) {
+            // Парение кругами в восходящем потоке над нагретой землёй.
+            soarAngle += 0.035
+            targetX = phantom.x + cos(soarAngle) * 6.0
+            targetZ = phantom.z + sin(soarAngle) * 6.0
+        } else {
+            soarAngle = heading
+            targetX = phantom.x + cos(heading) * 7.0
+            targetZ = phantom.z + sin(heading) * 7.0
+        }
+        val surface = world.waterSurface
+        val wantedHeight = when {
+            world.terrain == PhantomSurroundings.Terrain.WATER && surface != null && !world.night -> surface + 2.5
+            hotDay -> world.ground + temper.cruiseHeight(true, false) + 10.0
+            else -> world.ground + temper.cruiseHeight(world.night, world.raining)
+        }
+        val targetY = phantom.y + ((wantedHeight - phantom.y) * 0.25).coerceIn(-2.5, 2.5)
+        val pace = when {
+            world.thundering -> 0.7
+            hotDay -> 0.36
+            world.night -> 0.52
+            world.terrain == PhantomSurroundings.Terrain.COLD -> 0.38
+            else -> 0.44
+        }
+        phantom.moveControl.setWantedPosition(targetX, targetY, targetZ, pace)
+    }
+
+    private fun tickVisit() {
+        modeTicks--
+        val player = visited
+        if (player == null || !player.isAlive || modeTicks <= 0 || phantom.distanceToSqr(player) > VISIT_RANGE * VISIT_RANGE * 2.0) {
+            visited = null
+            mode = Mode.FLY
+            visitCooldown = 900 + phantom.random.nextInt(900)
+            return
+        }
+        visitAngle += 0.05
+        val radius = 6.5
+        phantom.moveControl.setWantedPosition(
+            player.x + cos(visitAngle) * radius,
+            player.y + 3.0,
+            player.z + sin(visitAngle) * radius,
+            0.42,
+        )
+        phantom.lookControl.setLookAt(player, 20f, 20f)
+    }
+
+    /** Свои рядом: подстраивает курс под соседей, не сбиваясь в кучу. */
+    private fun steerWithFlock() {
+        if (flockCooldown-- <= 0) {
+            flockCooldown = 20
+            val near = phantom.level().getEntitiesOfClass(TamedPhantomEntity::class.java, phantom.boundingBox.inflate(FLOCK_RANGE)) {
+                it !== phantom && it.isAlive && !it.tamed && !it.isVehicle
+            }
+            flockHeading = if (near.isEmpty()) {
+                null
+            } else {
+                var vx = 0.0
+                var vz = 0.0
+                for (other in near) {
+                    val motion = other.deltaMovement
+                    vx += motion.x
+                    vz += motion.z
+                    val dx = phantom.x - other.x
+                    val dz = phantom.z - other.z
+                    val gap = hypot(dx, dz)
+                    if (gap in 0.01..4.0) {
+                        vx += dx / gap * 0.3
+                        vz += dz / gap * 0.3
+                    }
+                }
+                if (hypot(vx, vz) < 1.0E-3) null else atan2(vz, vx)
+            }
+        }
+        val flock = flockHeading ?: return
+        val turn = Math.atan2(sin(flock - heading), cos(flock - heading))
+        heading += turn * 0.04
     }
 
     private fun tickLand() {

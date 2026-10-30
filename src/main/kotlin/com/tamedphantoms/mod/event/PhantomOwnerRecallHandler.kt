@@ -24,5 +24,6 @@ object PhantomOwnerRecallHandler {
 
     fun onClone(newPlayer: Player, oldPlayer: Player) {
         PhantomOwnerRecall.copyTo(newPlayer, oldPlayer)
+        PhantomGuideHandler.copyTo(newPlayer, oldPlayer)
     }
 }

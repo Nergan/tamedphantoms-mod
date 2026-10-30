@@ -53,6 +53,13 @@ object FabricConfigScreen {
         category.addEntry(whole(entries, "tamedphantoms.configuration.taming.phantom_size", server.size, 3, 0, 64, remote) {
             server.size = it
         })
+        category.addEntry(
+            entries.startBooleanToggle(Component.translatable("tamedphantoms.configuration.taming.immortal_phantoms"), server.immortal)
+                .setDefaultValue(false)
+                .setTooltip(Component.translatable("tamedphantoms.configuration.taming.immortal_phantoms.tooltip"))
+                .setSaveConsumer { if (!remote) server.immortal = it }
+                .build(),
+        )
     }
 
     private fun addFlight(
@@ -64,9 +71,6 @@ object FabricConfigScreen {
     ) {
         category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.flight_speed", server.flightSpeedValue, 1.25, PhantomFlightPace.MIN, PhantomFlightPace.MAX, remote) {
             server.flightSpeedValue = it
-        })
-        category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.acrobatics_step", server.acrobaticsStepValue, 0.3, 0.05, 12.0, remote) {
-            server.acrobaticsStepValue = it
         })
         val cap = server.flightSpeedValue.coerceIn(PhantomFlightPace.MIN, PhantomFlightPace.MAX)
         category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.owned_flight_speed", client.ownedSpeed.coerceIn(PhantomFlightPace.MIN, cap), 1.25, PhantomFlightPace.MIN, cap, false) {

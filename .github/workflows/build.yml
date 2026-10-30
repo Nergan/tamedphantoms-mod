@@ -45,6 +45,9 @@ jobs:
       - name: Run unit tests
         run: gradle test --stacktrace
 
+      - name: Run game tests (NeoForge 1.21.1)
+        run: gradle runGameTestServer --stacktrace
+
       - name: Upload mod jar artifact
         uses: actions/upload-artifact@v4
         with:

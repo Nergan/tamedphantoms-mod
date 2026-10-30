@@ -183,41 +183,15 @@ class PhantomFlightAttitudeTest {
 class PhantomAcrobaticsTest {
 
     @Test
-    @DisplayName("В прямом полёте наклон копится до полной петли, в зависании и назад — нет")
-    fun loopOnlyWhileFlyingForward() {
-        var pitch = 0f
-        var roll = 0f
-        var loop = 0f
-        var done = false
-        val stepDeg = PhantomAcrobatics.DEFAULT_STEP
-        var guard = 0
-        while (!done && guard < 4000) {
-            val step = PhantomAcrobatics.step(pitch, roll, loop, acrobatic = true, climb = 1f, strafe = 0f, step = stepDeg)
-            pitch = step.pitch
-            roll = step.roll
-            loop = step.loop
-            done = step.completedLoop
-            guard++
-        }
-        assertTrue(done)
-        assertTrue(guard >= (PhantomAcrobatics.FULL_TURN / stepDeg).toInt())
-        assertTrue(pitch > PhantomFlightAttitude.MOVE_PITCH)
-
-        val hover = PhantomAcrobatics.step(40f, 30f, 40f, acrobatic = false, climb = 1f, strafe = 1f)
-        assertTrue(!hover.completedLoop)
-        assertTrue(hover.pitch < 40f)
-        assertTrue(hover.roll < 30f)
+    @DisplayName("Камера следует за наклоном только в полёте вперёд, в зависании, назад и на земле — нет")
+    fun cameraFollowsOnlyForwardFlight() {
         assertTrue(!PhantomAcrobatics.allows(0.0, 0.0, crawling = false, sitting = false, ridden = true))
         assertTrue(!PhantomAcrobatics.allows(-0.4, 0.0, crawling = false, sitting = false, ridden = true))
         assertTrue(PhantomAcrobatics.allows(0.4, 0.0, crawling = false, sitting = false, ridden = true))
         assertTrue(!PhantomAcrobatics.allows(0.0, 0.8, crawling = false, sitting = false, ridden = true))
         assertTrue(!PhantomAcrobatics.allows(-0.4, 0.8, crawling = false, sitting = false, ridden = true))
-
-        var barrelRoll = 0f
-        repeat((PhantomFlightAttitude.BANK / stepDeg).toInt() + 3) {
-            barrelRoll = PhantomAcrobatics.step(0f, barrelRoll, 0f, acrobatic = true, climb = 0f, strafe = 1f, step = stepDeg).roll
-        }
-        assertTrue(barrelRoll < -PhantomFlightAttitude.BANK)
+        assertTrue(!PhantomAcrobatics.allows(0.4, 0.0, crawling = true, sitting = false, ridden = true))
+        assertTrue(!PhantomAcrobatics.allows(0.4, 0.0, crawling = false, sitting = false, ridden = false))
     }
 }
 

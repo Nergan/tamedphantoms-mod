@@ -20,12 +20,12 @@ object ServerConfig {
         fun repelRadius(): Double
         fun defendDurationTicks(): Int
         fun flightSpeed(): Double
-        fun acrobaticsStep(): Double
         fun screamRadius(): Double
         fun screamCooldownSeconds(): Int
         fun insomniaDays(): Int
         fun phantomGroupMultiplier(): Double
         fun phantomSize(): Int
+        fun immortalPhantoms(): Boolean
     }
 
     var settings: Settings = Defaults
@@ -36,7 +36,6 @@ object ServerConfig {
     fun repelRadius(): Double = settings.repelRadius()
     fun defendDurationTicks(): Int = settings.defendDurationTicks()
     fun flightSpeed(): Double = settings.flightSpeed()
-    fun acrobaticsStep(): Double = settings.acrobaticsStep()
     fun screamRadius(): Double = settings.screamRadius()
     fun screamCooldownSeconds(): Int = settings.screamCooldownSeconds()
 
@@ -45,6 +44,9 @@ object ServerConfig {
 
     fun phantomGroupMultiplier(): Double = settings.phantomGroupMultiplier()
     fun phantomSize(): Int = settings.phantomSize()
+
+    /** Выключено — мёртвая петля бессмертия не даёт, а уже бессмертные становятся обычными. */
+    fun immortalPhantoms(): Boolean = settings.immortalPhantoms()
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null
@@ -108,11 +110,11 @@ object ServerConfig {
         override fun repelRadius() = 64.0
         override fun defendDurationTicks() = 200
         override fun flightSpeed() = 1.25
-        override fun acrobaticsStep() = 0.3
         override fun screamRadius() = 32.0
         override fun screamCooldownSeconds() = 4
         override fun insomniaDays() = 1
         override fun phantomGroupMultiplier() = 2.0
         override fun phantomSize() = 3
+        override fun immortalPhantoms() = false
     }
 }

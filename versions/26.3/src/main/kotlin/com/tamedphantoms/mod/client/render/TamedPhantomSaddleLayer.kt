@@ -38,7 +38,7 @@ class TamedPhantomSaddleLayer(
         collector.order(1).submitModelPart(
             saddleRoot,
             poseStack,
-            RenderTypes.entityCutout(PhantomTextureProcessor.saddleTexture()),
+            RenderTypes.entityCutout(PhantomTextureProcessor.saddleTexture(pet.saddleDye)),
             light,
             OverlayTexture.NO_OVERLAY,
             null,

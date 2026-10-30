@@ -2,7 +2,9 @@ package com.tamedphantoms.mod.event
 
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.platform.ModAccess
+import com.tamedphantoms.mod.entity.PhantomFear
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.entity.ai.WildPhantomFearGoal
 import com.tamedphantoms.mod.entity.ai.WildPhantomTemptGoal
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
@@ -14,6 +16,7 @@ import java.util.WeakHashMap
 /**
  * Дикий фантом, пока игрок держит предмет приручения: не атакует и летит к нему.
  * Цель с приоритетом 0 глушит ванильное кружение; цель атаки сбрасывается событием.
+ * Рядом с прирученным или освобождённым фантомом дикий не берёт игрока в цель и уходит.
  */
 object PhantomTemptHandler {
 
@@ -25,6 +28,7 @@ object PhantomTemptHandler {
         if (phantom is TamedPhantomEntity) return
         if (!injected.add(phantom)) return
         ModAccess.addGoal(phantom, 0, WildPhantomTemptGoal(phantom))
+        ModAccess.addGoal(phantom, 1, WildPhantomFearGoal(phantom))
     }
 
     fun shouldCancelTarget(entity: LivingEntity, next: LivingEntity?): Boolean {
@@ -32,7 +36,8 @@ object PhantomTemptHandler {
         if (phantom is TamedPhantomEntity) {
             return phantom.tamed && next !== phantom.getDefendTarget()
         }
-        return next is Player && isHoldingTameItem(next)
+        if (next !is Player) return false
+        return isHoldingTameItem(next) || PhantomFear.protector(phantom) != null
     }
 
     private fun isHoldingTameItem(player: Player): Boolean {

@@ -88,6 +88,7 @@ fun rewriteFor26(line: String): String {
         "copy.moveTo(" to "copy.snapTo(",
         "tamed.moveTo(" to "tamed.snapTo(",
         "player.storedData.getBoolean(TAG_RECEIVED)" to "player.storedData.getBooleanOr(TAG_RECEIVED, false)",
+        "oldPlayer.storedData.getBoolean(TAG_RECEIVED)" to "oldPlayer.storedData.getBooleanOr(TAG_RECEIVED, false)",
         "emptySet<Relative>(), phantom.yRot, phantom.xRot)" to
             "emptySet<Relative>(), phantom.yRot, phantom.xRot, true)",
         "fallDistance = 0.0f" to "fallDistance = 0.0",
@@ -95,6 +96,8 @@ fun rewriteFor26(line: String): String {
             "val server = (owner as? net.minecraft.server.level.ServerPlayer)?.level()?.getServer() ?: return",
         "fun isFullMoonNight(level: ServerLevel): Boolean = level.moonPhase == 0 && level.isNight" to
             "fun isFullMoonNight(level: ServerLevel): Boolean = ((level.getOverworldClockTime() / 24000L) % 8L).toInt() == 0 && level.isDarkOutside",
+        "night = !level.isDay," to "night = level.isDarkOutside,",
+        "moonPhase = level.moonPhase," to "moonPhase = ((level.getOverworldClockTime() / 24000L) % 8L).toInt(),",
     )
     for ((from, to) in pairs) {
         s = s.replace(from, to)
@@ -135,6 +138,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/client/ClientPhantomSoundHandler.kt",
     "com/tamedphantoms/mod/client/VanillaPhantomBuffers.kt",
     "com/tamedphantoms/mod/mixin/VanillaPhantomBufferMixin.kt",
+    "com/tamedphantoms/mod/mixin/PhantomFlapMixin.kt",
     "com/tamedphantoms/mod/client/FlightAwareSectionScreen.kt",
     "com/tamedphantoms/mod/client/ClientModEvents.kt",
     "com/tamedphantoms/mod/TamedPhantomsNeoForge.kt",
@@ -146,7 +150,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "pixel-argb-1")
+    inputs.property("rewriteStamp", "flight-model-1")
     filter { line -> rewriteIdentifiers(line) }
 }
 
@@ -158,7 +162,6 @@ val sharedJava by tasks.registering(Sync::class) {
     exclude(
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
         "com/tamedphantoms/mod/mixin/PlayerRideBankMixin.java",
-        "com/tamedphantoms/mod/mixin/PhantomSitFlapMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",
     )

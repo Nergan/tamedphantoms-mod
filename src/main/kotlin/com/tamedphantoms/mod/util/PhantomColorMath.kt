@@ -90,6 +90,29 @@ object PhantomColorMath {
     /** Внешнее свечение крови — темнее [recolorEyePixelRed], для многослойного RenderType.eyes. */
     fun recolorEyePixelRedGlow(argb: Int): Int = recolorEyeRgb(argb, BLOOD_GLOW_R, BLOOD_GLOW_G, BLOOD_GLOW_B)
 
+    /**
+     * Краска тела или седла: рисунок остаётся, цвет берётся у красителя.
+     * Яркость пикселя растянута так, чтобы тёмная шкура фантома в цвете ещё читалась,
+     * а светлые места оставались светлее тёмных. Прозрачные пиксели не трогаются.
+     */
+    fun dyePixel(argb: Int, dyeRgb: Int): Int {
+        val alpha = (argb ushr 24) and 0xFF
+        if (alpha == 0) return argb
+        val r = (argb ushr 16) and 0xFF
+        val g = (argb ushr 8) and 0xFF
+        val b = argb and 0xFF
+        val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+        val shade = (DYE_FLOOR + luminance * DYE_GAIN).coerceIn(0.0, DYE_CEILING)
+        val dr = (((dyeRgb ushr 16) and 0xFF) * shade).toInt().coerceIn(0, 255)
+        val dg = (((dyeRgb ushr 8) and 0xFF) * shade).toInt().coerceIn(0, 255)
+        val db = ((dyeRgb and 0xFF) * shade).toInt().coerceIn(0, 255)
+        return (alpha shl 24) or (dr shl 16) or (dg shl 8) or db
+    }
+
+    private const val DYE_FLOOR = 0.3
+    private const val DYE_GAIN = 1.15
+    private const val DYE_CEILING = 1.2
+
     private fun recolorEyeRgb(argb: Int, red: Int, green: Int, blue: Int): Int {
         val alpha = (argb ushr 24) and 0xFF
         if (alpha == 0) return argb

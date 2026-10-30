@@ -1,7 +1,10 @@
 package com.tamedphantoms.mod.entity.ai
 
+import com.tamedphantoms.mod.entity.PhantomManeuverPilot
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomManeuvers
 import com.tamedphantoms.mod.util.PhantomOwnerTeleport
+import net.minecraft.world.entity.monster.Monster
 import net.minecraft.core.BlockPos
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.util.Mth
@@ -30,6 +33,8 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
 
     companion object {
         private const val CATCH_UP_DISTANCE = 16.0
+        private const val PERSONAL_SPACE = 2.6
+        private const val GUARD_RANGE = 12.0
     }
 
     private var owner: Player? = null
@@ -111,6 +116,21 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
     }
 
     private fun tickFly(owner: Player, dist: Double) {
+        val threat = threatTo(owner)
+        if (threat != null && !phantom.isDefending()) {
+            guard(owner, threat)
+            return
+        }
+        val ownerStill = hypot(owner.deltaMovement.x, owner.deltaMovement.z) < 0.04
+        if (ownerStill && dist < 12.0 && phantom.maneuverKind() == null) {
+            val world = PhantomSurroundings.sample(phantom)
+            val odds = PhantomSurroundings.temperament(phantom).maneuverOdds(world.night, world.fullMoon, world.newMoon) * 2
+            if (phantom.random.nextInt(odds) == 0) {
+                val kinds = PhantomManeuvers.Kind.entries
+                if (PhantomManeuverPilot.tryStart(phantom, kinds[phantom.random.nextInt(kinds.size)])) return
+            }
+        }
+        if (phantom.maneuverKind() != null) return
         if (dist < 11.0 && landCooldown <= 0 && !owner.isInWater && phantom.random.nextInt(280) == 0) {
             val spot = landingSpot(owner)
             if (spot != null) {
@@ -208,8 +228,13 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
             desiredHeight = 0.9 + phantom.random.nextDouble() * 1.8
         }
 
-        orbitRadius += (desiredRadius - orbitRadius) * 0.06
-        hoverHeight += (desiredHeight - hoverHeight) * 0.05
+        val world = PhantomSurroundings.sample(phantom)
+        var radiusGoal = desiredRadius
+        if (owner.isShiftKeyDown) radiusGoal = radiusGoal.coerceIn(3.2, 4.5)
+        if (world.thundering) radiusGoal = radiusGoal.coerceAtMost(5.5)
+        if (dist < PERSONAL_SPACE) radiusGoal = radiusGoal.coerceAtLeast(5.0)
+        orbitRadius += (radiusGoal - orbitRadius) * 0.06
+        hoverHeight += (desiredHeight + sightLift(owner) - hoverHeight) * 0.05
 
         val catchingUp = dist > CATCH_UP_DISTANCE
         if (courseIsStuck()) {
@@ -227,15 +252,49 @@ class TamedPhantomFollowOwnerGoal(private val phantom: TamedPhantomEntity) : Goa
         val targetZ = owner.z + leadZ + sin(orbitAngle) * orbitRadius
         val targetY = owner.y + hoverHeight
 
-        val speed = when {
+        var speed = when {
             dist > CATCH_UP_DISTANCE -> 1.05
             dist > 4.5 -> 0.40
             else -> 0.26
         }
+        if (owner.isShiftKeyDown && !catchingUp) speed *= 0.7
         phantom.moveControl.setWantedPosition(targetX, targetY, targetZ, speed)
         if (!catchingUp) {
             phantom.lookControl.setLookAt(owner, 12.0f, 12.0f)
         }
+    }
+
+    /** На уровне глаз прямо перед хозяином фантом закрывал бы обзор и клики: там он поднимается выше. */
+    private fun sightLift(owner: Player): Double {
+        val toPhantom = phantom.position().subtract(owner.eyePosition)
+        val distance = toPhantom.length()
+        if (distance < 0.5 || distance > 8.0) return 0.0
+        val facing = toPhantom.scale(1.0 / distance).dot(owner.getViewVector(1f))
+        return if (facing > 0.8) 2.2 else 0.0
+    }
+
+    private var guardTarget: Monster? = null
+    private var guardScan = 0
+
+    /** Ближайший монстр, который сейчас охотится на хозяина. */
+    private fun threatTo(owner: Player): Monster? {
+        if (guardScan-- > 0) {
+            return guardTarget?.takeIf { it.isAlive && it.target === owner && it.distanceToSqr(owner) < GUARD_RANGE * GUARD_RANGE }
+        }
+        guardScan = 10
+        guardTarget = phantom.level().getEntitiesOfClass(Monster::class.java, owner.boundingBox.inflate(GUARD_RANGE)) {
+            it.isAlive && it.target === owner
+        }.minByOrNull { it.distanceToSqr(owner) }
+        return guardTarget
+    }
+
+    /** Встаёт между хозяином и монстром и смотрит на него. Кусает, только если ударят его самого. */
+    private fun guard(owner: Player, threat: Monster) {
+        val x = owner.x + (threat.x - owner.x) * 0.6
+        val z = owner.z + (threat.z - owner.z) * 0.6
+        val y = maxOf(owner.y, threat.y) + threat.bbHeight + 0.8
+        phantom.moveControl.setWantedPosition(x, y, z, 0.8)
+        phantom.lookControl.setLookAt(threat, 30f, 30f)
     }
 
     private fun courseIsStuck(): Boolean {

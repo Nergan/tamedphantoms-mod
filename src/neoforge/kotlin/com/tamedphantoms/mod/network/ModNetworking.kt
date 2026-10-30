@@ -25,6 +25,7 @@ object ModNetworking {
                 val vehicle = player.vehicle
                 if (vehicle is TamedPhantomEntity && vehicle.isOwnedBy(player)) {
                     vehicle.setPilotInput(payload.ascending, payload.descending, payload.forward, payload.strafe)
+                    vehicle.setPilotAttitude(payload.pitch, payload.roll, payload.tuck, payload.effort, payload.acrobatic)
                 }
             }
         }

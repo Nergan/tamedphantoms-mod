@@ -35,12 +35,12 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 override fun repelRadius() = cfg.repelRadius.get()
                 override fun defendDurationTicks() = cfg.defendDurationTicks.get()
                 override fun flightSpeed() = cfg.flightSpeed.get()
-                override fun acrobaticsStep() = cfg.acrobaticsStep.get()
                 override fun screamRadius() = cfg.screamRadius.get()
                 override fun screamCooldownSeconds() = cfg.screamCooldownSeconds.get()
                 override fun insomniaDays() = cfg.insomniaDays.get()
                 override fun phantomGroupMultiplier() = cfg.phantomGroupMultiplier.get()
                 override fun phantomSize() = cfg.phantomSize.get()
+                override fun immortalPhantoms() = if (SPEC.isLoaded) cfg.immortalPhantoms.get() else false
             }
         }
     }
@@ -51,12 +51,12 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
     val repelRadius: ModConfigSpec.DoubleValue
     val defendDurationTicks: ModConfigSpec.IntValue
     val flightSpeed: ModConfigSpec.DoubleValue
-    val acrobaticsStep: ModConfigSpec.DoubleValue
     val screamRadius: ModConfigSpec.DoubleValue
     val screamCooldownSeconds: ModConfigSpec.IntValue
     val insomniaDays: ModConfigSpec.IntValue
     val phantomGroupMultiplier: ModConfigSpec.DoubleValue
     val phantomSize: ModConfigSpec.IntValue
+    val immortalPhantoms: ModConfigSpec.BooleanValue
 
     init {
         builder.push("taming")
@@ -107,6 +107,16 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             .translation("$KEY_PREFIX.taming.phantom_size")
             .defineInRange("phantom_size", 3, 0, 64)
 
+        immortalPhantoms = builder
+            .comment(
+                "Существуют ли бессмертные фантомы. Включено — полная мёртвая петля верхом делает фантома бессмертным",
+                "и даёт тайное достижение. Выключено — петля бессмертия не даёт, достижение не выдаётся,",
+                "а уже бессмертные фантомы в мире при следующем тике становятся обычными.",
+                "Применяется без перезапуска: сохраните файл или поменяйте значение в экране настроек.",
+            )
+            .translation("$KEY_PREFIX.taming.immortal_phantoms")
+            .define("immortal_phantoms", false)
+
         builder.pop()
 
         builder.push("flight")
@@ -122,14 +132,6 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             )
             .translation("$KEY_PREFIX.flight.flight_speed")
             .defineInRange("flight_speed", 1.25, 0.25, 4.0)
-
-        acrobaticsStep = builder
-            .comment(
-                "Насколько быстро в прямом полёте набираются бочка и мёртвая петля, в градусах за тик.",
-                "Меньше — фигуры медленнее. 0.3 — около минуты на полный оборот при зажатой клавише.",
-            )
-            .translation("$KEY_PREFIX.flight.acrobatics_step")
-            .defineInRange("acrobatics_step", 0.3, 0.05, 12.0)
 
         builder.pop()
 

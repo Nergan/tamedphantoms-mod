@@ -18,6 +18,8 @@ object PhantomShake {
 /**
  * Переход «был мокрый → высох». Первый замер только запоминает состояние.
  * Дождь, который сменился водой, отряхивание не запускает: его даст выход из воды.
+ * Из воды прямо под дождь фантом тоже не отряхивается: он отряхнётся, когда выйдет из-под дождя.
+ * Снег и пустыня для игры не дождь, там выход из воды отряхивание даёт.
  */
 object PhantomWetness {
 
@@ -32,7 +34,7 @@ object PhantomWetness {
         if (!memory.tracked) {
             return Memory(tracked = true, inWater = inWater, inRain = inRain) to false
         }
-        val leftWater = memory.inWater && !inWater
+        val leftWater = memory.inWater && !inWater && !inRain
         val leftRain = memory.inRain && !inRain && !inWater
         return Memory(tracked = true, inWater = inWater, inRain = inRain) to (leftWater || leftRain)
     }

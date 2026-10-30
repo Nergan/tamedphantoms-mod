@@ -11,6 +11,14 @@
     {
       "type": "patchouli:text",
       "text": "tamedphantoms.guide.page.flight.2"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.flight.3"
+    },
+    {
+      "type": "patchouli:text",
+      "text": "tamedphantoms.guide.page.flight.4"
     }
   ]
 }

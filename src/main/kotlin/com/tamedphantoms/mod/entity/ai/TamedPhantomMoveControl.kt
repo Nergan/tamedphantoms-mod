@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.entity.ai
 
+import com.tamedphantoms.mod.entity.PhantomManeuverPilot
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomEffectSpeed
 import com.tamedphantoms.mod.util.PhantomFlightAvoidance
@@ -42,6 +43,10 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         }
         if (phantom == null || phantom.isOrderedToSit() || phantom.isVehicle) {
             operation = Operation.WAIT
+            return
+        }
+        if (PhantomManeuverPilot.tick(phantom)) {
+            currentSpeed = phantom.maneuverSpeed.toFloat()
             return
         }
         if (PhantomFlightEscape.active(phantom)) {
@@ -100,8 +105,9 @@ class TamedPhantomMoveControl(mob: Mob) : MoveControl(mob) {
         // Клюв следует за реальной вертикальной скоростью, а не за углом на точку маршрута.
         val climb = mob.deltaMovement.y
         val vertical = if (kotlin.math.abs(climb) < 0.04) 0.0 else climb
-        val speedPitch = Math.toDegrees(kotlin.math.atan2(vertical, 0.65)).toFloat()
-        mob.xRot = rotlerp(mob.xRot, speedPitch.coerceIn(-12f, 12f), 1.5f)
+        val along = hypot(mob.deltaMovement.x, mob.deltaMovement.z).coerceAtLeast(0.3)
+        val speedPitch = Math.toDegrees(kotlin.math.atan2(vertical, along)).toFloat()
+        mob.xRot = rotlerp(mob.xRot, speedPitch.coerceIn(-30f, 30f), 2f)
 
         val ease = (dist / 4.0).coerceIn(0.28, 1.0)
         val pace = PhantomFlightPace.pace(phantom)

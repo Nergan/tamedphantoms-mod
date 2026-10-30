@@ -1,7 +1,19 @@
 package com.tamedphantoms.mod.entity
 
+import com.tamedphantoms.mod.api.TamedPhantomsApi
 import com.tamedphantoms.mod.config.ModConfig
 import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.event.PhantomInteractionHandler
+import com.tamedphantoms.mod.util.PhantomFlightModel
+import com.tamedphantoms.mod.util.PhantomManeuvers
+import net.minecraft.core.particles.DustParticleOptions
+import net.minecraft.core.particles.ParticleOptions
+import net.minecraft.world.InteractionHand
+import net.minecraft.world.InteractionResult
+import net.minecraft.world.entity.EntityAttachment
+import net.minecraft.world.entity.EntityDimensions
+import net.minecraft.world.item.DyeColor
+import org.joml.Vector3f
 import com.tamedphantoms.mod.entity.ai.TamedPhantomBodyControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomDefendGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomFollowOwnerGoal
@@ -119,6 +131,29 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
         private val DATA_TAKEOFF: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_BODY_DYE: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_SADDLE_DYE: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_GLOW: EntityDataAccessor<Boolean> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.BOOLEAN)
+        private val DATA_SHAKE_STYLE: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+        private val DATA_TUCK: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_EFFORT: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_MANEUVER: EntityDataAccessor<Int> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
+
+        /** Краска не нанесена. */
+        const val NO_DYE = -1
+
+        /** Отряхивание: брызги воды. Неотрицательное значение — брызги этого цвета RGB. */
+        const val SHAKE_WATER = -1
+
+        /** Отряхивание без брызг. */
+        const val SHAKE_DRY = -2
 
         var clientAfterTick: ((TamedPhantomEntity) -> Unit)? = null
 
@@ -131,6 +166,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private const val TAG_IN_RAIN = "InRain"
         private const val TAG_SCREAM_COOLDOWN = "ScreamCooldown"
         private const val TAG_IMMORTAL = "Immortal"
+        private const val TAG_BODY_DYE = "BodyDye"
+        private const val TAG_SADDLE_DYE = "SaddleDye"
+        private const val TAG_GLOW = "Glow"
 
         /**
          * Phantom НЕ предоставляет собственный публичный статический
@@ -159,6 +197,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
         /** Насколько голова кивает вверх/вниз при наборе и снижении верхом, градусы. */
         private const val RIDE_HEAD_DEGREES = 32f
+
+        /** Тангаж корпуса, который уходит в обычный `xRot`. Остальное — фигура в [acroPitch]. */
+        private const val BODY_PITCH_LIMIT = 40f
     }
 
     init {
@@ -168,7 +209,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private var angerState: PhantomAngerState = PhantomAngerState.NONE
-    private var repelCooldown: Int = 0
 
     /**
      * Состояние клавиш "Взлёт"/"Снижение" ВЛАДЕЛЬЦА, приходит сетевым
@@ -202,7 +242,54 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         builder.define(DATA_ACROBATIC, false)
         builder.define(DATA_IMMORTAL, false)
         builder.define(DATA_TAKEOFF, 0)
+        builder.define(DATA_BODY_DYE, NO_DYE)
+        builder.define(DATA_SADDLE_DYE, NO_DYE)
+        builder.define(DATA_GLOW, false)
+        builder.define(DATA_SHAKE_STYLE, SHAKE_WATER)
+        builder.define(DATA_TUCK, 0f)
+        builder.define(DATA_EFFORT, 0f)
+        builder.define(DATA_MANEUVER, 0)
     }
+
+    /** Цвет краски тела: id [net.minecraft.world.item.DyeColor] или [NO_DYE]. Глаза не красятся. */
+    var bodyDye: Int
+        get() = this.entityData.get(DATA_BODY_DYE)
+        set(value) = this.entityData.set(DATA_BODY_DYE, value.coerceIn(NO_DYE, 15))
+
+    /** Цвет краски седла, отдельно от тела. */
+    var saddleDye: Int
+        get() = this.entityData.get(DATA_SADDLE_DYE)
+        set(value) = this.entityData.set(DATA_SADDLE_DYE, value.coerceIn(NO_DYE, 15))
+
+    /** Светится как источник света: рисуется в полную яркость, а свет даёт аддон. */
+    var luminous: Boolean
+        get() = this.entityData.get(DATA_GLOW)
+        set(value) = this.entityData.set(DATA_GLOW, value)
+
+    private val shakeStyle: Int
+        get() = this.entityData.get(DATA_SHAKE_STYLE)
+
+    /** Запустить отряхивание. [style] — [SHAKE_WATER], [SHAKE_DRY] или цвет брызг RGB. */
+    fun startShake(style: Int, sound: Boolean = true) {
+        this.entityData.set(DATA_SHAKE_STYLE, style)
+        this.shakeTicks = PhantomShake.LENGTH
+        if (sound) {
+            this.playSound(SoundEvents.PLAYER_SPLASH, 0.65f, 1.2f)
+        }
+    }
+
+    /** Злится на игрока: облако гнева, рык и самозащита на обычное время. */
+    fun provokeBy(player: Player) {
+        this.startDefending(player.uuid)
+        this.spawnAngryParticles()
+        this.playSound(SoundEvents.PHANTOM_HURT, 1.0f, 0.55f + this.random.nextFloat() * 0.1f)
+    }
+
+    /** Взмах крыльев в этом кадре виден у пилота: тугость сложенных крыльев и сила взмаха. */
+    var flightTuck: Float = 0f
+    var flightTuckO: Float = 0f
+    var flightEffort: Float = 0f
+    var flightEffortO: Float = 0f
 
     /**
      * Абсолютный тангаж взгляда головы, градусы. Не путать с [xRot]:
@@ -303,7 +390,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private var skimGroundTicks: Int = 0
     private var skimAirTicks: Int = 0
     private var takeoffQueued: Boolean = false
-    private var diveEnergy: Double = 0.0
     private var riderTakeoffHold: Int = 0
     private var takeoffRamp: Double = 1.0
     private var takeoffArmed: Boolean = false
@@ -333,7 +419,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     /** Лишний тангаж сверх позы полёта. Копится, пока держат набор или снижение. */
     var acroPitch: Float = 0f
     var acroPitchO: Float = 0f
-    private var acroRoll: Float = 0f
     private var loopProgress: Float = 0f
 
     /** Летит вперёд или вбок: камера и модель могут крутиться дальше фиксированного наклона. */
@@ -342,8 +427,13 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var immortal: Boolean
         get() = this.entityData.get(DATA_IMMORTAL)
         set(value) {
+            val was = this.entityData.get(DATA_IMMORTAL)
             this.entityData.set(DATA_IMMORTAL, value)
-            if (value) this.setGlowingTag(true)
+            if (value) {
+                this.setGlowingTag(true)
+            } else if (was) {
+                this.setGlowingTag(false)
+            }
         }
 
     var boltTicks: Int = 0
@@ -426,6 +516,42 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.pilotStrafe = strafe
     }
 
+    /**
+     * Поза, которую посчитала модель полёта у пилота. Сервер раздаёт её остальным
+     * и по ней же копит угол петли: так [tryOwnerLoop] проверяет не только слово клиента.
+     */
+    fun setPilotAttitude(pitch: Float, roll: Float, tuck: Float, effort: Float, acrobatic: Boolean) {
+        val total = PhantomFlightModel.wrap(this.xRot + pitch)
+        val turned = PhantomFlightModel.wrap(total - this.reportedPitch)
+        this.reportedPitch = total
+        this.loopProgress = if (acrobatic && kotlin.math.abs(turned) < 45f) this.loopProgress + turned else 0f
+        if (kotlin.math.abs(total) < 3f && kotlin.math.abs(this.loopProgress) < 60f) this.loopProgress = 0f
+        this.entityData.set(DATA_ACRO_PITCH, PhantomFlightModel.wrap(pitch))
+        this.entityData.set(DATA_ACRO_ROLL, PhantomFlightModel.wrap(roll))
+        this.entityData.set(DATA_ACROBATIC, acrobatic)
+        this.entityData.set(DATA_TUCK, tuck.coerceIn(0f, 1f))
+        this.entityData.set(DATA_EFFORT, effort.coerceIn(0f, 1f))
+    }
+
+    private var reportedPitch: Float = 0f
+
+    /** Клиент пилота: круиз и двойные нажатия, их выставляет обработчик клавиш. */
+    var clientCruise: Boolean = false
+    var clientLoopRequest: Boolean = false
+    var clientRollRequest: Int = 0
+
+    private val flightModel = PhantomFlightModel()
+    private var lastPilotYaw: Float = Float.NaN
+    private var cruiseSpeedUsed: Double = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK
+
+    /** Воздушная скорость в долях крейсерской: у пилота из модели, у остальных по смещению. */
+    var airspeedRatio: Float = 0f
+        private set
+
+    /** 0..1 — крылья сложены назад, как у сокола в пике. */
+    var wingSweep: Float = 0f
+    var wingSweepO: Float = 0f
+
     // =====================================================================
     // Сохранение/загрузка
     // =====================================================================
@@ -444,6 +570,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         tag.putBoolean(TAG_IN_RAIN, this.wetMemory.inRain)
         tag.putInt(TAG_SCREAM_COOLDOWN, this.screamCooldown)
         tag.putBoolean(TAG_IMMORTAL, this.immortal)
+        tag.putInt(TAG_BODY_DYE, this.bodyDye)
+        tag.putInt(TAG_SADDLE_DYE, this.saddleDye)
+        tag.putBoolean(TAG_GLOW, this.luminous)
     }
 
     override fun readAdditionalSaveData(tag: CompoundTag) {
@@ -464,10 +593,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
         this.screamCooldown = tag.getInt(TAG_SCREAM_COOLDOWN).coerceAtLeast(0)
         this.immortal = tag.getBoolean(TAG_IMMORTAL)
+        this.bodyDye = if (tag.contains(TAG_BODY_DYE)) tag.getInt(TAG_BODY_DYE) else NO_DYE
+        this.saddleDye = if (tag.contains(TAG_SADDLE_DYE)) tag.getInt(TAG_SADDLE_DYE) else NO_DYE
+        this.luminous = tag.getBoolean(TAG_GLOW)
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
         super.onSyncedDataUpdated(key)
+        if (key == DATA_MANEUVER) {
+            this.maneuverStart = this.tickCount
+        }
         this.applyPetStats()
     }
 
@@ -604,6 +739,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (previousOwner != null) {
             PhantomOwnerRecall.forget(previousOwner, this.uuid)
         }
+        TamedPhantomsApi.released(this, previousOwner)
         this.dropSaddleIfPresent()
         this.playTameSound()
         this.spawnAngryParticles()
@@ -632,6 +768,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private fun dropSaddleIfPresent() {
         if (!this.saddled) return
         this.saddled = false
+        this.saddleDye = NO_DYE
         val level = this.level()
         if (level is ServerLevel) {
             val drop = ItemEntity(level, this.x, this.y + this.bbHeight * 0.5, this.z, ItemStack(Items.SADDLE))
@@ -736,6 +873,26 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return this.passengers.firstOrNull { it is Player && it.uuid == owner } as? LivingEntity
     }
 
+    /**
+     * Ваниль выбирает место по порядку посадки. Хозяин, севший вторым, оказался бы сзади,
+     * поэтому переднее место всегда за хозяином, заднее — за пассажиром.
+     */
+    override fun getPassengerAttachmentPoint(passenger: Entity, dimensions: EntityDimensions, partialTick: Float): Vec3 {
+        val seat = if (passenger is Player && this.isOwnedBy(passenger)) {
+            PhantomSeatAssignment.PILOT_SEAT
+        } else {
+            PhantomSeatAssignment.PASSENGER_SEAT
+        }
+        return dimensions.attachments().getClamped(EntityAttachment.PASSENGER, seat, this.yRot)
+    }
+
+    override fun interactAt(player: Player, vec: Vec3, hand: InteractionHand): InteractionResult {
+        if (!this.level().isClientSide) {
+            PhantomInteractionHandler.rememberHit(player, this, this.position().add(vec))
+        }
+        return super.interactAt(player, vec, hand)
+    }
+
     // =====================================================================
     // Основной тик
     // =====================================================================
@@ -760,10 +917,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.crawlPhaseO = this.crawlPhase
             this.cameraPitchO = this.cameraPitch
             this.cameraRollO = this.cameraRoll
+            this.flightTuckO = this.flightTuck
+            this.flightEffortO = this.flightEffort
+            this.wingSweepO = this.wingSweep
+            this.normalizeTurns()
             if (this.isVehicle && !this.isControlledByLocalInstance) {
-                this.acroPitch = this.entityData.get(DATA_ACRO_PITCH)
-                this.bank = this.entityData.get(DATA_ACRO_ROLL)
+                this.acroPitch = unwrapNear(this.acroPitch, this.entityData.get(DATA_ACRO_PITCH))
+                this.bank = unwrapNear(this.bank, this.entityData.get(DATA_ACRO_ROLL))
                 this.acrobatic = this.entityData.get(DATA_ACROBATIC)
+                this.flightTuck = this.entityData.get(DATA_TUCK)
+                this.flightEffort = this.entityData.get(DATA_EFFORT)
             }
         }
         val yawBefore = this.yRot
@@ -774,6 +937,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         super.tick()
 
         if (this.level().isClientSide) {
+            if (!(this.isControlledByLocalInstance && this.controllingPassenger is Player)) {
+                this.flightModel.reset()
+                this.lastPilotYaw = Float.NaN
+                this.clientCruise = false
+            }
             this.turnYawDelta = PhantomHeadLook.wrapDegrees(this.yRot - yawBefore)
             this.tickFlightVisuals()
             this.advanceWingPhase()
@@ -808,6 +976,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.boltTicks > 0) {
             this.boltTicks--
         }
+        if (this.immortal && !ServerConfig.immortalPhantoms()) {
+            this.immortal = false
+        }
         if (this.immortal) {
             this.setGlowingTag(true)
             if (this.health < this.maxHealth) {
@@ -820,7 +991,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
 
         if (this.tamed) {
-            this.tickRepelWildPhantoms(level)
             this.tickOwnerRecall()
 
             if (this.isVehicle() && this.controllingPassenger != null) {
@@ -840,8 +1010,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val (next, shake) = PhantomWetness.step(this.wetMemory, inWater, inRain)
         this.wetMemory = next
         if (shake) {
-            this.shakeTicks = PhantomShake.LENGTH
-            this.playSound(SoundEvents.PLAYER_SPLASH, 0.65f, 1.2f)
+            this.startShake(SHAKE_WATER)
         }
         if (this.shakeTicks > 0) {
             this.shakeTicks--
@@ -862,12 +1031,15 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun spawnShakeDroplets() {
         if (this.shakeTicks <= 0 || this.tickCount % 2 != 0) return
+        val style = this.shakeStyle
+        if (style == SHAKE_DRY) return
+        val particle = if (style == SHAKE_WATER) ParticleTypes.SPLASH else dustOf(style, 1.1f)
         val level = this.level()
         repeat(4) {
             val dx = (this.random.nextDouble() - 0.5) * 1.6
             val dz = (this.random.nextDouble() - 0.5) * 1.6
             level.addParticle(
-                ParticleTypes.SPLASH,
+                particle,
                 this.x + dx,
                 this.y + 0.35,
                 this.z + dz,
@@ -978,14 +1150,12 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun flattenGroundAttitude() {
-        this.acroPitch = 0f
-        this.acroRoll = 0f
+        this.acroPitch = settleTurn(this.acroPitch, 30f)
         this.loopProgress = 0f
-        this.bank = 0f
+        this.bank = settleTurn(this.bank, 30f)
         this.bankTarget = 0f
         this.headYawTarget = 0f
         this.acrobatic = false
-        this.diveEnergy = 0.0
     }
 
     /**
@@ -1014,12 +1184,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return if (lifting) this.takeoffRamp else 1.0
     }
 
-    fun diveWindActive(): Boolean {
-        if (!this.isVehicle || this.isInWater || this.isUnderWater) return false
-        val dy = this.y - this.yo
-        val horizontal = hypot(this.x - this.xo, this.z - this.zo)
-        return dy < -0.22 && horizontal > 0.28
+    /** 0..1 — сила встречного ветра для звука: верхом, на скорости выше крейсерской. */
+    fun windStrength(): Float {
+        if (!this.isVehicle || this.isInWater || this.isUnderWater || this.isOrderedToSit()) return 0f
+        return ((this.airspeedRatio - 0.85f) / 1.1f).coerceIn(0f, 1f)
     }
+
+    /** В воздухе: не сидит, не в воде и не ползёт по земле. */
+    fun airborne(): Boolean = !this.isOrderedToSit() && !this.isInWater && !this.crawlLock
 
     fun beginSurfaceTakeoff() {
         if (this.takeoffHoldTicks > 0) return
@@ -1027,10 +1199,12 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun tickCameraFollow() {
-        val targetPitch = this.ridePitchVisual(1f)
+        // Набор и пикирование камера повторяет наполовину, фигуру — целиком.
+        val share = if (this.flightModel.looping || kotlin.math.abs(PhantomHeadLook.wrapDegrees(this.acroPitch)) > 1f) 1f else 0.65f
+        val targetPitch = this.ridePitchVisual(1f) * share
         val targetRoll = this.bankVisual(1f)
-        this.cameraPitch += (targetPitch - this.cameraPitch) * 0.12f
-        this.cameraRoll += (targetRoll - this.cameraRoll) * 0.12f
+        this.cameraPitch += PhantomHeadLook.wrapDegrees(targetPitch - this.cameraPitch) * 0.12f
+        this.cameraRoll += PhantomHeadLook.wrapDegrees(targetRoll - this.cameraRoll) * 0.12f
     }
 
     private fun tickRefuseVisual() {
@@ -1086,25 +1260,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private fun tickAngerTimer() {
         this.angerState = PhantomAngerLogic.tick(this.angerState)
         this.setDefending(this.angerState.isActive)
-    }
-
-    private fun tickRepelWildPhantoms(level: ServerLevel) {
-        if (this.repelCooldown-- > 0) return
-        this.repelCooldown = ModConfig.REPEL_PUSH_INTERVAL_TICKS
-
-        val box = this.boundingBox.inflate(ServerConfig.repelRadius())
-        val nearby = level.getEntitiesOfClass(Phantom::class.java, box) { candidate ->
-            candidate !== this && !(candidate is TamedPhantomEntity && candidate.tamed)
-        }
-        for (wild in nearby) {
-            val dx = wild.x - this.x
-            val dz = wild.z - this.z
-            val distSq = dx * dx + dz * dz
-            if (distSq < 0.01) continue
-            val dist = sqrt(distSq)
-            val push = 0.12
-            wild.push(dx / dist * push, 0.0, dz / dist * push)
-        }
     }
 
     fun tryOwnerScream(player: Player) {
@@ -1170,58 +1325,55 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
+    /** Верхом позу присылает пилот. Без всадника счёт петли пилота сбрасывается. */
     private fun tickAcrobatics() {
-        val ridden = this.isVehicle && this.controllingPassenger is Player
-        val crawling = ridden && this.updateSkim(PhantomGroundSkim.pressed(this))
-        if (crawling) {
-            this.flattenGroundAttitude()
-            this.entityData.set(DATA_ACRO_PITCH, 0f)
-            this.entityData.set(DATA_ACRO_ROLL, 0f)
-            this.entityData.set(DATA_ACROBATIC, false)
+        if (this.isVehicle && this.controllingPassenger is Player) {
+            if (this.maneuverKind() != null) this.endManeuver()
             return
         }
-        val acrobatic = PhantomAcrobatics.allows(
-            this.pilotForward.toDouble(),
-            this.pilotStrafe.toDouble(),
-            crawling,
-            this.isOrderedToSit(),
-            ridden,
-        )
-        val climb = when {
-            this.pilotAscending && !this.pilotDescending -> 1f
-            this.pilotDescending && !this.pilotAscending -> -1f
-            else -> 0f
-        }
-        val stepped = PhantomAcrobatics.step(
-            this.acroPitch,
-            this.acroRoll,
-            this.loopProgress,
-            acrobatic,
-            climb,
-            this.pilotStrafe,
-            PhantomAcrobatics.configuredStep(),
-        )
-        this.acroPitch = stepped.pitch
-        this.acroRoll = stepped.roll
-        this.loopProgress = stepped.loop
-        this.acrobatic = acrobatic
-        this.entityData.set(DATA_ACRO_PITCH, stepped.pitch)
-        this.entityData.set(DATA_ACRO_ROLL, stepped.roll)
-        this.entityData.set(DATA_ACROBATIC, acrobatic)
-        if (stepped.completedLoop) {
-            this.becomeImmortal()
-        }
+        this.loopProgress = 0f
+        this.reportedPitch = 0f
+    }
+
+    private var maneuverSerial = 0
+    private var maneuverStart = 0
+
+    /** Скорость входа в фигуру. Известна только серверу, клиенту она не нужна. */
+    var maneuverSpeed: Double = 0.4
+        private set
+
+    val maneuverSide: Float
+        get() = PhantomManeuvers.side(this.entityData.get(DATA_MANEUVER))
+
+    fun maneuverKind(): PhantomManeuvers.Kind? = PhantomManeuvers.decode(this.entityData.get(DATA_MANEUVER))
+
+    /** Тики с начала фигуры по своим часам: у клиента и сервера разные счётчики тиков. */
+    fun maneuverElapsed(): Int = this.tickCount - this.maneuverStart
+
+    fun startManeuver(kind: PhantomManeuvers.Kind, speed: Double): Boolean {
+        if (this.level().isClientSide || this.maneuverKind() != null) return false
+        this.maneuverSerial++
+        this.maneuverSpeed = speed
+        this.entityData.set(DATA_MANEUVER, PhantomManeuvers.encode(kind, this.maneuverSerial))
+        return true
+    }
+
+    fun endManeuver() {
+        if (this.level().isClientSide) return
+        this.entityData.set(DATA_MANEUVER, 0)
     }
 
     var loopReadyToReport: Boolean = false
 
     fun tryOwnerLoop(player: Player) {
         if (player.vehicle !== this || !this.isOwnedBy(player)) return
-        if (kotlin.math.abs(this.loopProgress) < 270f && kotlin.math.abs(this.acroPitch) < 270f) return
+        if (kotlin.math.abs(this.loopProgress) < 270f) return
+        this.loopProgress = 0f
         this.becomeImmortal()
     }
 
     private fun becomeImmortal() {
+        if (!ServerConfig.immortalPhantoms()) return
         val first = !this.immortal
         this.immortal = true
         if (!first) return
@@ -1242,12 +1394,40 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val (forward, strafe) = PhantomFlightAttitude.split(this.yRot, this.x - this.xo, this.z - this.zo)
         val localRide = this.isControlledByLocalInstance && this.controllingPassenger is Player
         val remoteRide = this.isVehicle && !localRide
-        if (!localRide && !this.isOrderedToSit() && !remoteRide) {
+        if (!localRide) {
+            val moved = sqrt(forward * forward + strafe * strafe + vertical * vertical)
+            val ratio = (moved / this.cruiseReference()).toFloat()
+            this.airspeedRatio += (ratio - this.airspeedRatio) * 0.25f
+        }
+        val free = !localRide && !remoteRide && !this.isOrderedToSit()
+        val maneuver = this.maneuverKind()
+        val elapsed = this.maneuverElapsed()
+        if (free && PhantomManeuvers.active(maneuver, elapsed) && maneuver != null) {
+            val pose = PhantomManeuvers.attitude(maneuver, elapsed, this.maneuverSide)
+            this.hoverBlend = PhantomHover.step(this.hoverBlend, true)
+            this.acroPitch = unwrapNear(this.acroPitch, pose.pitch)
+            this.bank = unwrapNear(this.bank, pose.roll)
+            this.bankTarget = this.bank
+            this.headYawTarget = 0f
+            this.flightTuck = pose.tuck
+            this.flightEffort = pose.effort
+        } else if (free) {
             val moving = !PhantomFlightAttitude.wantsHover(forward, strafe)
             this.hoverBlend = PhantomHover.step(this.hoverBlend, moving)
             val pose = PhantomFlightAttitude.pose(forward, strafe, vertical, this.hoverBlend)
-            this.bankTarget = pose.bank
+            val turnBank = this.turnYawDelta * PhantomFlightModel.TURN_BANK * this.airspeedRatio.coerceIn(0f, 1.6f)
+            this.bankTarget = (pose.bank + turnBank).coerceIn(-45f, 45f)
             this.headYawTarget = pose.headYaw
+            this.acroPitch = settleTurn(this.acroPitch, 12f)
+            val stooping = vertical < -0.3 && this.airspeedRatio > 1.1f
+            this.flightTuck = PhantomFlightModel.approach(this.flightTuck, if (stooping) 1f else 0f, 0.08f)
+            val work = when {
+                this.hoverBlend > 0.5f -> 1f
+                vertical > 0.06 -> 0.9f
+                this.airspeedRatio < 0.4f -> 0.7f
+                else -> 0.35f
+            }
+            this.flightEffort = PhantomFlightModel.approach(this.flightEffort, work * (1f - this.flightTuck), 0.12f)
         }
         if (!this.isVehicle || this.crawlLock) {
             this.headYawTarget = 0f
@@ -1260,54 +1440,18 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 this.setRot(this.yRot, this.xRot)
             }
         }
-        if (localRide) {
-            val pilot = this.controllingPassenger as Player
-            val (ascending, descending) = PilotInputAccess.read(
-                this.level().isClientSide,
-                this.pilotAscending,
-                this.pilotDescending,
-            )
-            val climb = when {
-                ascending && !descending -> 1f
-                descending && !ascending -> -1f
-                else -> 0f
-            }
-            val acrobatic = PhantomAcrobatics.allows(
-                pilot.zza.toDouble(),
-                pilot.xxa.toDouble(),
-                crawling = this.crawlLock,
-                sitting = this.isOrderedToSit(),
-                ridden = true,
-            )
-            val stepped = PhantomAcrobatics.step(
-                this.acroPitch,
-                this.bank,
-                this.loopProgress,
-                acrobatic,
-                climb,
-                pilot.xxa,
-                PhantomAcrobatics.configuredStep(),
-            )
-            this.acroPitch = stepped.pitch
-            this.loopProgress = stepped.loop
-            this.acrobatic = acrobatic
-            if (acrobatic) {
-                this.bank = stepped.roll
-                this.bankTarget = stepped.roll
-            }
-            if (stepped.completedLoop && this.isOwnedBy(pilot)) {
-                this.loopReadyToReport = true
-            }
-        }
-        if (!remoteRide && !(localRide && this.acrobatic)) {
+        if (!remoteRide && !localRide && !PhantomManeuvers.active(maneuver, elapsed)) {
+            this.bank = settleTurn(this.bank, 12f)
             this.bank = PhantomHeadLook.approachDegrees(this.bank, this.bankTarget, 6f)
         }
         val yawTarget = this.headYawTarget.coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
         this.headBankYaw = PhantomHeadLook.approachDegrees(this.headBankYaw, yawTarget, 3.5f)
             .coerceIn(-PhantomFlightAttitude.HEAD_YAW, PhantomFlightAttitude.HEAD_YAW)
+        // Хвост как руль высоты: на выходе из пике и в петле опускается сильнее, чем от одного подъёма.
+        val pull = PhantomHeadLook.wrapDegrees(this.acroPitch - this.acroPitchO) * 0.9f
         this.tailPitch = PhantomHeadLook.approachDegrees(
             this.tailPitch,
-            PhantomFlightAttitude.tailPitchDegrees(vertical),
+            (PhantomFlightAttitude.tailPitchDegrees(vertical) - pull).coerceIn(-30f, 30f),
             4.5f,
         )
         this.swimBlend = if (this.isUnderWater) {
@@ -1315,6 +1459,30 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         } else {
             (this.swimBlend - 0.05f).coerceAtLeast(0f)
         }
+        val fastSweep = ((this.airspeedRatio - 1.2f) / 0.8f).coerceIn(0f, 1f) * 0.35f
+        this.wingSweep = PhantomFlightModel.approach(this.wingSweep, maxOf(this.flightTuck, fastSweep) * (1f - this.swimBlend), 0.12f)
+    }
+
+    private fun cruiseReference(): Double =
+        (ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK * PhantomFlightPace.pace(this) *
+            PhantomFlightPace.waterScale(this.isUnderWater)).coerceAtLeast(0.05)
+
+    /** Угол, близкий к прошлому: разворот через ±180 не крутит модель назад. */
+    private fun unwrapNear(previous: Float, raw: Float): Float = previous + PhantomHeadLook.wrapDegrees(raw - previous)
+
+    /** После фигуры угол доводится до ближайшего полного оборота, а не раскручивается обратно. */
+    private fun settleTurn(value: Float, step: Float): Float {
+        val target = Math.round(value / 360f) * 360f
+        return PhantomFlightModel.approach(value, target, step)
+    }
+
+    /** Большие обороты сдвигаются вместе с прошлым значением, интерполяция кадра не ломается. */
+    private fun normalizeTurns() {
+        fun shift(value: Float): Float = if (kotlin.math.abs(value) > 540f) Math.round(value / 360f) * 360f else 0f
+        shift(this.acroPitch).let { this.acroPitch -= it; this.acroPitchO -= it }
+        shift(this.bank).let { this.bank -= it; this.bankO -= it }
+        shift(this.cameraPitch).let { this.cameraPitch -= it; this.cameraPitchO -= it }
+        shift(this.cameraRoll).let { this.cameraRoll -= it; this.cameraRollO -= it }
     }
 
     private fun advanceWingPhase() {
@@ -1331,7 +1499,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val hover = this.hoverBlend.coerceIn(0f, 1f)
         val descending = PhantomWingbeat.descending(vertical, hover, this.wingGroundBlend)
         this.wingGlideBlend = PhantomWingbeat.stepGlide(this.wingGlideBlend, descending)
-        val pose = PhantomWingbeat.pose(
+        val motionPose = PhantomWingbeat.pose(
             vertical,
             horizontal,
             hover,
@@ -1340,6 +1508,15 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.wingGlideBlend,
             this.swimBlend,
         )
+        val airborne = (1f - this.wingGroundBlend) * (1f - this.wingTakeoffBlend)
+        val pose = PhantomWingbeat.effort(
+            motionPose,
+            this.flightEffort,
+            this.flightTuck,
+            airborne * (1f - this.swimBlend),
+            swim = this.swimBlend,
+            swimSpeed = this.airspeedRatio,
+        )
         this.wingFlapRate = pose.rate
         this.wingFlapAmp = pose.amplitude
         this.wingDroop = pose.droop
@@ -1347,13 +1524,60 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.wingPhase.isNaN()) {
             this.wingPhase = (this.tickCount - 1).toFloat()
         }
+        val previousPhase = this.wingPhase
         this.wingPhase += pose.rate
         this.wingCrawl = this.wingGroundBlend * (1f - this.wingTakeoffBlend)
         if (skimming) {
             val multiple = PhantomFlightPace.pace(this) * PhantomFlightPace.BASELINE
             this.crawlPhase += PhantomCrawl.advance(horizontal, multiple)
         }
+        this.emitWingEffects(previousPhase, this.wingPhase, pose.amplitude)
     }
+
+    /**
+     * Звук взмаха и частицы с кончиков крыльев идут в такт той же фазе, что и модель.
+     * Ванильный такт по номеру тика `PhantomSitFlapMixin` у этого фантома глушит.
+     */
+    private fun emitWingEffects(previousPhase: Float, phase: Float, amplitude: Float) {
+        if (this.isOrderedToSit()) return
+        val step = PhantomWingbeat.DEGREES_PER_TICK * Mth.DEG_TO_RAD
+        val offset = this.uniqueFlapTickOffset.toFloat()
+        val before = Mth.cos((offset + previousPhase) * step + Mth.PI)
+        val now = Mth.cos((offset + phase) * step + Mth.PI)
+        val level = this.level()
+        if (before > 0f && now <= 0f && amplitude > 0.22f && !this.isSilent) {
+            level.playLocalSound(
+                this.x,
+                this.y,
+                this.z,
+                SoundEvents.PHANTOM_FLAP,
+                this.soundSource,
+                0.95f * amplitude.coerceIn(0.35f, 1.25f),
+                0.95f + this.random.nextFloat() * 0.05f,
+                false,
+            )
+        }
+        val size = this.phantomSize
+        val yaw = this.yRot * Mth.DEG_TO_RAD
+        val reachX = Mth.cos(yaw) * (1.3f + 0.21f * size)
+        val reachZ = Mth.sin(yaw) * (1.3f + 0.21f * size)
+        val height = (0.3f + now * 0.45f * amplitude.coerceIn(0f, 1.3f)) * (size * 0.2f + 1f)
+        val particle = this.wingParticle()
+        level.addParticle(particle, this.x + reachX, this.y + height, this.z + reachZ, 0.0, 0.0, 0.0)
+        level.addParticle(particle, this.x - reachX, this.y + height, this.z - reachZ, 0.0, 0.0, 0.0)
+    }
+
+    /** Частицы крыльев: ванильный мицелий или пыль цвета краски тела. */
+    fun wingParticle(): ParticleOptions {
+        val dye = this.bodyDye
+        if (dye < 0) return ParticleTypes.MYCELIUM
+        return dustOf(DyeColor.byId(dye).textureDiffuseColor, 0.75f)
+    }
+
+    private fun dustOf(rgb: Int, scale: Float): ParticleOptions = DustParticleOptions(
+        Vector3f(((rgb shr 16) and 0xFF) / 255f, ((rgb shr 8) and 0xFF) / 255f, (rgb and 0xFF) / 255f),
+        scale,
+    )
 
     private fun tickRiderNightVision() {
         for (passenger in this.passengers) {
@@ -1503,10 +1727,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun travelControlled(pilot: Player) {
-        val forwardInput = pilot.zza
+        val client = this.level().isClientSide
+        val forwardInput = if (client && this.clientCruise) 1f else pilot.zza
         val strafeInput = pilot.xxa
         val (ascending, descending) = PilotInputAccess.read(
-            this.level().isClientSide,
+            client,
             this.pilotAscending,
             this.pilotDescending,
         )
@@ -1515,23 +1740,63 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             descending && !ascending -> -1.0
             else -> 0.0
         }
-        val climbY = wantedY
         val lift = this.surfaceTakeoffScale(wantedY)
-        val reversing = forwardInput < -1.0E-4f
-        val flyingForward = forwardInput > 1.0E-4f
-        this.hoverBlend = PhantomHover.step(this.hoverBlend, flyingForward)
-        val attitude = PhantomFlightAttitude.pose(
-            forwardInput.toDouble(),
-            strafeInput.toDouble(),
-            climbY * 0.4,
-            this.hoverBlend,
-        )
-        this.bankTarget = attitude.bank
-        this.headYawTarget = attitude.headYaw
 
+        val yawDelta = if (this.lastPilotYaw.isNaN()) 0f else PhantomHeadLook.wrapDegrees(pilot.yRot - this.lastPilotYaw)
+        this.lastPilotYaw = pilot.yRot
         this.yRot = pilot.yRot
         this.yRotO = this.yRot
-        this.xRot = attitude.pitch
+
+        val cruiseSpeed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK *
+            PhantomFlightPace.pace(this).toDouble() *
+            PhantomFlightPace.waterScale(this.isUnderWater) *
+            PhantomEffectSpeed.scale(this) *
+            PhantomEffectSpeed.scale(pilot)
+        this.cruiseSpeedUsed = cruiseSpeed
+        val medium = when {
+            this.isUnderWater -> PhantomFlightModel.Medium.WATER
+            this.crawlLock -> PhantomFlightModel.Medium.GROUND
+            else -> PhantomFlightModel.Medium.AIR
+        }
+        val out = this.flightModel.step(
+            PhantomFlightModel.Input(
+                forward = forwardInput,
+                strafe = strafeInput,
+                climb = wantedY.toFloat(),
+                cruiseSpeed = cruiseSpeed,
+                yawDelta = yawDelta,
+                medium = medium,
+                lift = lift,
+                loopRequest = this.clientLoopRequest,
+                rollRequest = this.clientRollRequest,
+            ),
+        )
+        this.clientLoopRequest = false
+        this.clientRollRequest = 0
+        if (this.flightModel.completedLoop && this.isOwnedBy(pilot)) {
+            this.loopReadyToReport = true
+        }
+
+        // Корпус идёт по траектории. Выше предела наклона угол уходит в фигуру, его рисует рендерер.
+        this.hoverBlend = this.flightModel.hover
+        val path = this.flightModel.pathPitch
+        val visual = path + (PhantomHover.pitchOffset(1f) - path) * this.hoverBlend
+        this.xRot = visual.coerceIn(-BODY_PITCH_LIMIT, BODY_PITCH_LIMIT)
+        this.acroPitch = unwrapNear(this.acroPitch, visual - this.xRot)
+        this.bank = unwrapNear(this.bank, this.flightModel.roll)
+        this.bankTarget = this.bank
+        this.headYawTarget = -strafeInput.coerceIn(-1f, 1f) * PhantomFlightAttitude.HEAD_YAW
+        this.acrobatic = this.flightModel.looping || PhantomAcrobatics.allows(
+            forwardInput.toDouble(),
+            strafeInput.toDouble(),
+            crawling = this.crawlLock,
+            sitting = this.isOrderedToSit(),
+            ridden = true,
+        )
+        this.flightTuck = this.flightModel.tuck
+        this.flightEffort = this.flightModel.effort
+        this.airspeedRatio = (kotlin.math.abs(this.flightModel.speed) / cruiseSpeed).toFloat()
+
         this.setRot(this.yRot, this.xRot)
         this.yBodyRot = this.yRot
         this.yHeadRot = this.yBodyRot
@@ -1539,39 +1804,17 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val yawRad = Math.toRadians(this.yRot.toDouble())
         val sin = Math.sin(yawRad)
         val cos = Math.cos(yawRad)
-
-        val forwardX = -sin * forwardInput
-        val forwardZ = cos * forwardInput
-        val strafeX = cos * strafeInput
-        val strafeZ = sin * strafeInput
-
-        var wantedX = forwardX + strafeX
-        var wantedZ = forwardZ + strafeZ
-        val horizontalLenSq = wantedX * wantedX + wantedZ * wantedZ
-        if (horizontalLenSq > 1.0) {
-            val norm = 1.0 / sqrt(horizontalLenSq)
-            wantedX *= norm
-            wantedZ *= norm
-        }
-
-        var speed = ModConfig.FLIGHT_SPEED_BLOCKS_PER_TICK *
-            PhantomFlightPace.pace(this).toDouble() *
-            PhantomFlightPace.waterScale(this.isUnderWater) *
-            PhantomEffectSpeed.scale(this) *
-            PhantomEffectSpeed.scale(pilot)
-        if (reversing) speed *= PhantomHover.REVERSE_SPEED
-        if (climbY < 0.0 && !this.crawlLock) {
-            this.diveEnergy = (this.diveEnergy + 0.016).coerceAtMost(1.0)
-        } else {
-            this.diveEnergy = (this.diveEnergy - 0.04).coerceAtLeast(0.0)
-        }
-        val dive = 1.0 + this.diveEnergy * 0.9
-        val diveVertical = 1.0 + this.diveEnergy * 0.45
-        val vSpeed = speed * ModConfig.VERTICAL_SPEED_FACTOR * diveVertical
-        val targetVelocity = Vec3(wantedX * speed * dive, climbY * vSpeed * lift, wantedZ * speed * dive)
-        val accel = if (lift < 0.999) 0.55 else ModConfig.FLIGHT_ACCELERATION
-
-        this.deltaMovement = this.deltaMovement.lerp(targetVelocity, accel)
+        val target = Vec3(
+            -sin * out.forward + cos * out.lateral,
+            out.vertical,
+            cos * out.forward + sin * out.lateral,
+        )
+        // На большой скорости разворот вписывается дугой: скорость доворачивает за курсом не сразу.
+        val grip = if (this.airspeedRatio > 1.4f) 0.3 else 0.55
+        this.deltaMovement = this.deltaMovement.lerp(target, grip)
         this.move(MoverType.SELF, this.deltaMovement)
+        if (this.horizontalCollision && medium == PhantomFlightModel.Medium.AIR && this.airspeedRatio > 0.6f) {
+            this.flightModel.onCollision()
+        }
     }
 }

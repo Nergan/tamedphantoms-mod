@@ -48,6 +48,7 @@ kotlin {
     jvmToolchain(21)
     sourceSets.named("main") {
         kotlin.srcDir("src/neoforge/kotlin")
+        kotlin.srcDir("src/gametest/kotlin")
     }
 }
 
@@ -61,6 +62,7 @@ tasks.withType<KotlinCompile>().configureEach {
 sourceSets.main {
     java.srcDir("src/neoforge/java")
     resources.srcDir("src/neoforge/resources")
+    resources.srcDir("src/gametest/resources")
     resources {
         // Ресурсы, сгенерированные датагеном / шаблонизацией mods.toml.
         srcDir("src/generated/resources")
@@ -78,7 +80,11 @@ repositories {
 }
 
 neoForge {
-    version = neoVersion
+    enable {
+        version = neoVersion
+        // CI sets this automatically. Locally it skips Vineflower, which needs more RAM than this machine has.
+        setDisableRecompilation(true)
+    }
 
     parchment {
         mappingsVersion = parchmentMappingsVersion
@@ -198,6 +204,8 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 tasks.jar {
+    // Игровые тесты и их пустая структура нужны только runGameTestServer.
+    exclude("com/tamedphantoms/mod/gametest/**", "data/tamedphantoms/structure/**")
     manifest {
         attributes(
             "Specification-Title" to modId,

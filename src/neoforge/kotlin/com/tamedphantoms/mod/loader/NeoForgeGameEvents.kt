@@ -4,12 +4,15 @@ import com.tamedphantoms.mod.event.PhantomDamageHandler
 import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomGuideHandler
 import com.tamedphantoms.mod.event.PhantomInteractionHandler
+import com.tamedphantoms.mod.event.PhantomLeashTie
 import com.tamedphantoms.mod.event.PhantomOwnerRecallHandler
 import com.tamedphantoms.mod.event.PhantomSpawnScaler
 import com.tamedphantoms.mod.event.PhantomTemptHandler
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import net.minecraft.server.level.ServerLevel
+import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.Mob
+import net.neoforged.bus.api.EventPriority
 import net.neoforged.neoforge.common.NeoForge
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent
 import net.neoforged.neoforge.event.entity.living.FinalizeSpawnEvent
@@ -24,6 +27,7 @@ object NeoForgeGameEvents {
     fun register() {
         val bus = NeoForge.EVENT_BUS
         bus.addListener(::onEntityInteract)
+        bus.addListener(EventPriority.HIGH, ::onRightClickBlock)
         bus.addListener(::onUseItem)
         bus.addListener(::onDamage)
         bus.addListener(::onJoin)
@@ -39,6 +43,13 @@ object NeoForgeGameEvents {
 
     private fun onEntityInteract(event: PlayerInteractEvent.EntityInteract) {
         val result = PhantomInteractionHandler.onEntityInteract(event.entity, event.target, event.hand) ?: return
+        event.isCanceled = true
+        event.cancellationResult = result
+    }
+
+    private fun onRightClickBlock(event: PlayerInteractEvent.RightClickBlock) {
+        if (event.hand != InteractionHand.MAIN_HAND) return
+        val result = PhantomLeashTie.onUseBlock(event.entity, event.level, event.pos) ?: return
         event.isCanceled = true
         event.cancellationResult = result
     }

@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack
 import com.mojang.math.Axis
 import com.tamedphantoms.mod.client.texture.PhantomTextureProcessor
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.core.BlockPos
 import net.minecraft.client.model.PhantomModel
 import net.minecraft.client.renderer.entity.EntityRendererProvider
 import net.minecraft.client.renderer.entity.PhantomRenderer
@@ -52,9 +53,15 @@ class TamedPhantomRenderer(context: EntityRendererProvider.Context) : PhantomRen
 
     override fun getTextureLocation(entity: Phantom): ResourceLocation {
         if (entity is TamedPhantomEntity) {
-            return PhantomTextureProcessor.bodyTexture()
+            return PhantomTextureProcessor.bodyTexture(entity.bodyDye)
         }
         return super.getTextureLocation(entity)
+    }
+
+    /** Фантом со светящимися чернилами рисуется в полную яркость, как светящийся спрут. */
+    override fun getBlockLightLevel(entity: Phantom, pos: BlockPos): Int {
+        if (entity is TamedPhantomEntity && entity.luminous) return 15
+        return super.getBlockLightLevel(entity, pos)
     }
 
     override fun setupRotations(

@@ -7,6 +7,7 @@ import com.tamedphantoms.mod.client.render.VanillaPackFiles
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.ResourceLocation
+import net.minecraft.world.item.DyeColor
 import java.io.InputStream
 
 /**
@@ -39,6 +40,9 @@ object PhantomTextureProcessor {
     private val RED_EYES_GLOW = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/angry_phantom_eyes_glow")
     private val SADDLE_TEX = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle")
 
+    private val dyedBodies = HashMap<Int, ResourceLocation?>()
+    private val dyedSaddles = HashMap<Int, ResourceLocation?>()
+
     private var bodyReady = false
     private var foreignLook: Boolean? = null
     private var eyesReady = false
@@ -53,7 +57,34 @@ object PhantomTextureProcessor {
         return if (bodyReady) RECOLORED_BODY else VANILLA_BODY
     }
 
+    /** Тело в краске красителя [dye] (id `DyeColor`). [NO_DYE] и неудача — обычное тело. */
+    fun bodyTexture(dye: Int): ResourceLocation {
+        if (dye < 0) return bodyTexture()
+        val made = dyedBodies.getOrPut(dye) {
+            val destination = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_body_dye_$dye")
+            val color = DyeColor.byId(dye).textureDiffuseColor
+            val ok = tryGenerate(VANILLA_BODY, destination, fromVanillaPack = true) { argb ->
+                PhantomColorMath.dyePixel(argb, color)
+            }
+            if (ok) destination else null
+        }
+        return made ?: bodyTexture()
+    }
+
+    /** Седло в краске красителя [dye]. Обычное седло для [NO_DYE]. */
+    fun saddleTexture(dye: Int): ResourceLocation {
+        if (dye < 0) return saddleTexture()
+        val made = dyedSaddles.getOrPut(dye) {
+            val destination = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle_dye_$dye")
+            val color = DyeColor.byId(dye).textureDiffuseColor
+            if (tryGenerateSaddle(destination) { argb -> PhantomColorMath.dyePixel(argb, color) }) destination else null
+        }
+        return made ?: saddleTexture()
+    }
+
     fun resetGeneratedTextures() {
+        dyedBodies.clear()
+        dyedSaddles.clear()
         bodyReady = false
         foreignLook = null
         eyesReady = false
@@ -134,7 +165,7 @@ object PhantomTextureProcessor {
         return SADDLE_TEX
     }
 
-    private fun tryGenerateSaddle(destination: ResourceLocation): Boolean {
+    private fun tryGenerateSaddle(destination: ResourceLocation, transform: (Int) -> Int = { it }): Boolean {
         return try {
             val width = 32
             val height = 16
@@ -148,12 +179,13 @@ object PhantomTextureProcessor {
                     val border = x == 0 || y == 0 || x == width - 1 || y == height - 1 || x == 15
                     val stitchDot = (x + y) % 5 == 0 && !border
                     val mid = x in 8..12 && y in 3..6
-                    val color = when {
+                    val base = when {
                         border -> dark
                         stitchDot -> stitch
                         mid -> highlight
                         else -> leather
                     }
+                    val color = transform(base)
                     image.setPixelRGBA(x, y, argbToNative(color))
                 }
             }

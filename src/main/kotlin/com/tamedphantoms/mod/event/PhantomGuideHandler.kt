@@ -34,6 +34,16 @@ object PhantomGuideHandler {
         player.storedData.putBoolean(TAG_RECEIVED, true)
     }
 
+    /**
+     * Смерть и выход из Энда создают нового игрока, а постоянные данные мода
+     * сами не переезжают. Без этого книга выдавалась бы снова при следующем входе.
+     */
+    fun copyTo(newPlayer: Player, oldPlayer: Player) {
+        if (oldPlayer.storedData.getBoolean(TAG_RECEIVED)) {
+            newPlayer.storedData.putBoolean(TAG_RECEIVED, true)
+        }
+    }
+
     fun createBookStack(): ItemStack? {
         if (!isPatchouliLoaded()) return null
         val item = BuiltInRegistries.ITEM.get(ResourceLocation.parse("patchouli:guide_book"))
