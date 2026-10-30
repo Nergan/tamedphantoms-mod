@@ -16,7 +16,7 @@
 
 | Файл                               | Обязателен | Что это                                                                  |
 | ---------------------------------- | ---------- | ------------------------------------------------------------------------ |
-| `tamedphantoms-neoforge-1.21.1-1.0.5.jar` | Да | этот мод, NeoForge 1.21.1 |
+| `tamedphantoms-neoforge-1.21.1-1.0.6.jar` | Да | этот мод, NeoForge 1.21.1 |
 | `kotlinforforge-5.8.0-all.jar`     | Да         | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)            |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | Нет        | [Patchouli](https://modrinth.com/mod/patchouli), только если нужна книга |
 
@@ -24,7 +24,7 @@
 
 | Файл                                      | Обязателен | Что это                                                                                    |
 | ----------------------------------------- | ---------- | ------------------------------------------------------------------------------------------ |
-| `tamedphantoms-fabric-1.21.1-1.0.5.jar` | Да | этот мод, Fabric 1.21.1 |
+| `tamedphantoms-fabric-1.21.1-1.0.6.jar` | Да | этот мод, Fabric 1.21.1 |
 | `fabric-api-0.116.17+1.21.1.jar`          | Да         | [Fabric API](https://modrinth.com/mod/fabric-api)                                          |
 | `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Да   | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                  |
 | `cloth-config-15.0.140-fabric.jar`        | Да         | [Cloth Config](https://modrinth.com/mod/cloth-config), экран настроек                      |
@@ -79,19 +79,19 @@ NeoForge:
 
 1. Установите NeoForge 1.21.1.
 2. Скачайте jar для NeoForge из [последнего Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
-3. Положите в `mods` файлы `tamedphantoms-neoforge-1.21.1-1.0.5.jar` и `kotlinforforge-5.8.0-all.jar`.
+3. Положите в `mods` файлы `tamedphantoms-neoforge-1.21.1-1.0.6.jar` и `kotlinforforge-5.8.0-all.jar`.
 4. По желанию добавьте оттуда же `Patchouli-1.21.1-93-NEOFORGE.jar`.
 
 Fabric:
 
 1. Установите Fabric Loader 0.16.10 или новее для Minecraft 1.21.1. Loader 0.19.x подходит. Версию загрузчика 0.100.3 искать не нужно: такого Loader нет.
 2. Скачайте jar для Fabric из того же релиза. Каждый пуш заменяет список файлов релиза, поэтому старых имён `tamedphantoms-1.0.0.jar` и `tamedphantoms-fabric-1.0.0.jar` в текущем наборе нет.
-3. Положите в `mods` все эти файлы: `tamedphantoms-fabric-1.21.1-1.0.5.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` и `cloth-config-15.0.140-fabric.jar`.
+3. Положите в `mods` все эти файлы: `tamedphantoms-fabric-1.21.1-1.0.6.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` и `cloth-config-15.0.140-fabric.jar`.
 4. По желанию добавьте Mod Menu, Placeholder API и `Patchouli-1.21.1-93-FABRIC.jar`.
 
 Если игра пишет, что Patchouli требует **fabric** 0.100.3 или что Tamed Phantoms требует **fabric-api**, в папке нет `fabric-api-0.116.17+1.21.1.jar`. У Fabric API идентификатор `fabric-api`, и он же объявляет идентификатор `fabric`. Это jar из релиза, а не более новый Fabric Loader.
 
-Мод нужен и на клиенте, и на сервере. Зависимости можно взять и с Modrinth; версия Fabric там называется `1.0.5-fabric`.
+Мод нужен и на клиенте, и на сервере. Зависимости можно взять и с Modrinth; версия Fabric там называется `1.0.6-fabric`.
 
 ## Управление полётом
 

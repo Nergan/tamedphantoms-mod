@@ -96,6 +96,9 @@ fun rewriteFor26(line: String): String {
             "val server = (owner as? net.minecraft.server.level.ServerPlayer)?.level()?.getServer() ?: return",
         "fun isFullMoonNight(level: ServerLevel): Boolean = level.moonPhase == 0 && level.isNight" to
             "fun isFullMoonNight(level: ServerLevel): Boolean = ((level.getOverworldClockTime() / 24000L) % 8L).toInt() == 0 && level.isDarkOutside",
+        // 26.3 has no interactAt: the click point arrives in the event, relative to the target.
+        "PhantomInteractionHandler.onEntityInteract(event.entity, event.target, event.hand)" to
+            "PhantomInteractionHandler.onEntityInteract(event.entity, event.target, event.hand, event.target.position().add(event.location))",
         "night = !level.isDay," to "night = level.isDarkOutside,",
         "moonPhase = level.moonPhase," to "moonPhase = ((level.getOverworldClockTime() / 24000L) % 8L).toInt(),",
     )
@@ -150,7 +153,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "flight-model-1")
+    inputs.property("rewriteStamp", "interact-location-1")
     filter { line -> rewriteIdentifiers(line) }
 }
 
