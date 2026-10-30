@@ -79,6 +79,38 @@ object PhantomGameTests {
         helper.succeed()
     }
 
+    private fun released(helper: GameTestHelper, at: BlockPos): TamedPhantomEntity =
+        helper.spawn(ModEntities.TAMED_PHANTOM.get(), at).apply { isNoAi = true }
+
+    @GameTest(template = TEMPLATE)
+    @JvmStatic
+    fun releasedPhantomsDefendEachOther(helper: GameTestHelper) {
+        val player = helper.makeMockServerPlayerInLevel()
+        val first = released(helper, BlockPos(2, 2, 2))
+        val mate = released(helper, BlockPos(4, 2, 4))
+        val pet = tamedBy(helper, helper.makeMockPlayer(GameType.SURVIVAL), BlockPos(3, 2, 1))
+        first.provokeBy(player)
+        helper.assertTrue(first.isDefending(), "the provoked phantom should defend itself")
+        helper.assertTrue(mate.isDefending(), "a released phantom nearby should join the pack")
+        helper.assertTrue(!pet.isDefending(), "a tamed phantom should not join released ones")
+        helper.succeed()
+    }
+
+    @GameTest(template = TEMPLATE)
+    @JvmStatic
+    fun ownersPhantomsDefendEachOther(helper: GameTestHelper) {
+        val owner = helper.makeMockServerPlayerInLevel()
+        val first = tamedBy(helper, owner, BlockPos(2, 2, 2))
+        val mate = tamedBy(helper, owner, BlockPos(4, 2, 4))
+        val strangers = tamedBy(helper, helper.makeMockPlayer(GameType.SURVIVAL), BlockPos(3, 2, 1))
+        val free = released(helper, BlockPos(1, 2, 3))
+        first.provokeBy(owner)
+        helper.assertTrue(mate.isDefending(), "the owner's other phantom should join, even against the owner")
+        helper.assertTrue(!strangers.isDefending(), "another owner's phantom should stay calm")
+        helper.assertTrue(!free.isDefending(), "a released phantom should not join a tamed pack")
+        helper.succeed()
+    }
+
     @GameTest(template = TEMPLATE)
     @JvmStatic
     fun guideIsNotGivenAgainAfterRespawn(helper: GameTestHelper) {

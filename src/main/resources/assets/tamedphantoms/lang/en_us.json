@@ -101,7 +101,7 @@
 
   "tamedphantoms.guide.entry.defense": "Self-Defense",
   "tamedphantoms.guide.page.defense.1": "If a tamed or released phantom is hurt, it turns on whoever struck it. This lasts about ten seconds and can be changed in the server settings. Even the owner is not spared. While it is ready to attack, its eyes glow $(warn)blood-red$(). When the anger passes, they return to green or yellow.",
-  "tamedphantoms.guide.page.defense.2": "A released phantom defends itself in the same way. A tamed phantom also keeps wild phantoms from crowding its owner.",
+  "tamedphantoms.guide.page.defense.2": "A released phantom defends itself in the same way. A tamed phantom also keeps wild phantoms from crowding its owner. Phantoms stand together against a player: anger a released phantom, and every released phantom within thirty-two blocks joins in; anger someone's tamed phantom, even your own, and all of that owner's phantoms turn on you.",
 
   "tamedphantoms.guide.entry.scream": "The Scream",
   "tamedphantoms.guide.page.scream.1": "While the owner is riding, press $(k:key.tamedphantoms.scream)$() (R by default). The phantom lets out a deep, much louder cry. For one second its eyes burn red, and a glow outlines its body. Mobs within range flee and go blind for that second. Anyone sitting on this phantom is spared. The owner on the ground is not, if the phantom screams while defending itself. The first time you do this, you earn the advancement $(thing)Winged Beast$().",

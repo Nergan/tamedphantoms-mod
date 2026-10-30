@@ -27,6 +27,7 @@ import com.tamedphantoms.mod.input.PilotInputAccess
 import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
 import com.tamedphantoms.mod.util.PhantomAcrobatics
 import com.tamedphantoms.mod.util.PhantomAngerLogic
+import com.tamedphantoms.mod.util.PhantomPack
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import com.tamedphantoms.mod.event.ModAdvancements
 import com.tamedphantoms.mod.event.PhantomDismount
@@ -707,7 +708,24 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     // Урон / самозащита
     // =====================================================================
 
+    /** Злится на обидчика. Если это игрок, злится и стая ([PhantomPack]): только она, дальше по цепочке не зовёт. */
     fun startDefending(attackerId: UUID) {
+        this.defend(attackerId)
+        val level = this.level() as? ServerLevel ?: return
+        if (level.getEntity(attackerId) !is Player) return
+        val mates = if (this.tamed) {
+            level.getEntities(ModEntities.TAMED_PHANTOM.get()) { it !== this }
+        } else {
+            level.getEntitiesOfClass(TamedPhantomEntity::class.java, this.boundingBox.inflate(PhantomPack.RELEASED_RADIUS)) { it !== this }
+        }
+        for (mate in mates) {
+            if (mate.isAlive && PhantomPack.joins(this.tamed, this.ownerUUID, mate.tamed, mate.ownerUUID, mate.distanceToSqr(this))) {
+                mate.defend(attackerId)
+            }
+        }
+    }
+
+    private fun defend(attackerId: UUID) {
         this.setOrderedToSit(false, playEffects = false)
         this.angerState = PhantomAngerLogic.onHurtBy(attackerId, ServerConfig.defendDurationTicks())
         this.setDefending(true)

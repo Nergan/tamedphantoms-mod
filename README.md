@@ -16,7 +16,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                               | Required | What it is                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `tamedphantoms-neoforge-1.21.1-1.0.7.jar` | Yes | this mod, NeoForge 1.21.1 |
+| `tamedphantoms-neoforge-1.21.1-1.0.8.jar` | Yes | this mod, NeoForge 1.21.1 |
 | `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
@@ -24,7 +24,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                                      | Required | What it is                                                                                         |
 | ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
-| `tamedphantoms-fabric-1.21.1-1.0.7.jar` | Yes | this mod, Fabric 1.21.1 |
+| `tamedphantoms-fabric-1.21.1-1.0.8.jar` | Yes | this mod, Fabric 1.21.1 |
 | `fabric-api-0.116.17+1.21.1.jar`          | Yes      | [Fabric API](https://modrinth.com/mod/fabric-api)                                                  |
 | `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                    |
 | `cloth-config-15.0.140-fabric.jar`        | Yes      | [Cloth Config](https://modrinth.com/mod/cloth-config), the config screen                           |
@@ -43,6 +43,7 @@ The release workflow builds both jars and fetches the companion jars from Modrin
 - **Saddle and flight.** The owner equips a saddle and mounts. Movement uses the usual walk keys; jump climbs; Left Control descends. Keys can be remapped. Night vision is granted while flying. A second player can sit behind; the owner always takes the front seat, even if the other player climbed on first. More than eight blocks above the surface, the first Shift only warns both riders; a second press within a second dismounts. Remove the saddle with shears.
 - **Healing.** Anyone can feed a tamed phantom ordinary food. If it is hurt and the owner or another player holds that food nearby — anything except a poisonous potato or the release item — the phantom stops, turns its head toward them, and nods. At full health it does not nod. A poisonous potato or the release item still makes it stop, turn its head toward them, and shake; only the owner can give those, and someone else's click also puffs angry villager particles. The motion stops as soon as the item leaves their hands. Food held by a rider of that phantom does not count, and a phantom that already has a rider does not stop.
 - **Self-defense.** If the phantom is hit, it attacks the attacker for about ten seconds — including the owner. Duration is configurable. Each hit heals the phantom for the damage it dealt. While it is defending, it can scream once the scream is ready.
+- **Pack.** Phantoms stand together against a player. Anger a released phantom for any reason, and every released phantom within 32 blocks joins in. Anger someone's tamed phantom, even your own, and all of that owner's phantoms turn on you.
 - **Scream.** The owner, while riding, presses R (remap under Tamed Phantoms). The phantom plays a louder, deeper ambient cry. For one second its eyes turn red, its body glows, and mobs in range flee and are blinded. Players sitting on that phantom are spared; the owner on the ground is blinded if the phantom screams in self-defense. Cooldown is 4 seconds; if it is not ready, a red action-bar line says how many seconds remain. The first use grants the advancement Winged Beast. Radius and cooldown are server settings. The client volume slider does not quiet this cry. On a full moon, a released phantom may cry on its own even when it is not attacking: the eyes stay yellow, the glow still appears, mobs still flee, blindness is not applied, and the moon turns a sickly yellow for that second. Anyone who has that chunk loaded can hear it. Hearing that cry grants the secret advancement Sick Moon.
 - **Flight.** The phantom keeps its speed: climbing spends it, diving builds it, and wingbeats push only up to cruising speed. Without forward it glides, slowly losing height and speed, until it hovers; back brakes harder. The body banks into turns, and a sharp turn at speed bleeds a little speed. A dive without forward folds the wings back like a falcon's, and the extra speed lasts a few seconds after leveling out. Wing sweep, the tail, and an elytra-like wind sound follow the speed; the wind fades out smoothly. On the ground the phantom walks on its wings, and in water it swims with ray-like strokes.
 - **Maneuvers.** Double-tap jump while flying fast enough: the phantom flies a whole loop. Too slow, and it stalls before the top and drops its nose. Double-tap left or right for a quick barrel roll that also slips aside. The camera follows part of a climb or dive and all of a loop.
@@ -79,19 +80,19 @@ NeoForge:
 
 1. Install NeoForge 1.21.1.
 2. Download the NeoForge jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
-3. Put `tamedphantoms-neoforge-1.21.1-1.0.7.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
+3. Put `tamedphantoms-neoforge-1.21.1-1.0.8.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
 4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
 Fabric:
 
 1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1. Loader 0.19.x is fine. Do not look for loader version 0.100.3: that number is not a loader.
 2. Download the Fabric jars from the same release. The release replaces its file list on each push, so old names such as `tamedphantoms-1.0.0.jar` and `tamedphantoms-fabric-1.0.0.jar` are not part of the current set.
-3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.7.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
+3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.8.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
 4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
 
 If the game says Patchouli requires **fabric** 0.100.3 or that Tamed Phantoms requires **fabric-api**, the `fabric-api-0.116.17+1.21.1.jar` file is missing. Fabric API’s id is `fabric-api`, and it also provides the id `fabric`. That is the jar from this release, not a newer Fabric Loader.
 
-The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.7-fabric`.
+The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.8-fabric`.
 
 ## Flight controls
 
