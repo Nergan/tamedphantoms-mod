@@ -2,12 +2,12 @@ package com.tamedphantoms.mod.client.texture
 
 import com.mojang.blaze3d.platform.NativeImage
 import com.tamedphantoms.mod.TamedPhantomsMod
+import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomColorMath
 import com.tamedphantoms.mod.client.render.VanillaPackFiles
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.ResourceLocation
-import net.minecraft.world.item.DyeColor
 import java.io.InputStream
 
 /**
@@ -62,9 +62,8 @@ object PhantomTextureProcessor {
         if (dye < 0) return bodyTexture()
         val made = dyedBodies.getOrPut(dye) {
             val destination = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_body_dye_$dye")
-            val color = DyeColor.byId(dye).textureDiffuseColor
-            val ok = tryGenerate(VANILLA_BODY, destination, fromVanillaPack = true) { argb ->
-                PhantomColorMath.dyePixel(argb, color)
+            val ok = tryGenerateMapped(VANILLA_BODY, destination, fromVanillaPack = true) { x, y, argb ->
+                PhantomColorMath.dyeBodyPixel(argb, dye, x, y)
             }
             if (ok) destination else null
         }
@@ -76,8 +75,7 @@ object PhantomTextureProcessor {
         if (dye < 0) return saddleTexture()
         val made = dyedSaddles.getOrPut(dye) {
             val destination = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "generated/tamed_phantom_saddle_dye_$dye")
-            val color = DyeColor.byId(dye).textureDiffuseColor
-            if (tryGenerateSaddle(destination) { argb -> PhantomColorMath.dyePixel(argb, color) }) destination else null
+            if (tryGenerateSaddle(destination, dye)) destination else null
         }
         return made ?: saddleTexture()
     }
@@ -160,32 +158,28 @@ object PhantomTextureProcessor {
 
     fun saddleTexture(): ResourceLocation {
         if (!saddleReady) {
-            saddleReady = tryGenerateSaddle(SADDLE_TEX)
+            saddleReady = tryGenerateSaddle(SADDLE_TEX, TamedPhantomEntity.NO_DYE)
         }
         return SADDLE_TEX
     }
 
-    private fun tryGenerateSaddle(destination: ResourceLocation, transform: (Int) -> Int = { it }): Boolean {
+    private fun tryGenerateSaddle(destination: ResourceLocation, dye: Int): Boolean {
         return try {
             val width = 32
             val height = 16
             val image = NativeImage(NativeImage.Format.RGBA, width, height, false)
-            val leather = 0xFF6B4226.toInt()
-            val dark = 0xFF3A2416.toInt()
-            val highlight = 0xFF8B5A2B.toInt()
-            val stitch = 0xFF2A1810.toInt()
+            val (leather, dark, highlight, stitch) = PhantomColorMath.saddleColors(dye)
             for (y in 0 until height) {
                 for (x in 0 until width) {
                     val border = x == 0 || y == 0 || x == width - 1 || y == height - 1 || x == 15
                     val stitchDot = (x + y) % 5 == 0 && !border
                     val mid = x in 8..12 && y in 3..6
-                    val base = when {
+                    val color = when {
                         border -> dark
                         stitchDot -> stitch
                         mid -> highlight
                         else -> leather
                     }
-                    val color = transform(base)
                     image.setPixelRGBA(x, y, argbToNative(color))
                 }
             }
@@ -243,6 +237,14 @@ object PhantomTextureProcessor {
         destination: ResourceLocation,
         fromVanillaPack: Boolean = false,
         transform: (Int) -> Int,
+    ): Boolean = tryGenerateMapped(source, destination, fromVanillaPack) { _, _, argb -> transform(argb) }
+
+    /** [transform] получает место пикселя на развёртке [PhantomColorMath.UV_GRID] и сам пиксель. */
+    private fun tryGenerateMapped(
+        source: ResourceLocation,
+        destination: ResourceLocation,
+        fromVanillaPack: Boolean = false,
+        transform: (Int, Int, Int) -> Int,
     ): Boolean {
         return try {
             val minecraft = Minecraft.getInstance()
@@ -291,12 +293,12 @@ object PhantomTextureProcessor {
         }
     }
 
-    private fun recolor(image: NativeImage, transform: (Int) -> Int) {
+    private fun recolor(image: NativeImage, transform: (Int, Int, Int) -> Int) {
         for (y in 0 until image.height) {
             for (x in 0 until image.width) {
                 val native = image.getPixelRGBA(x, y)
                 val argb = nativeToArgb(native)
-                val newArgb = transform(argb)
+                val newArgb = transform(x * PhantomColorMath.UV_GRID / image.width, y * PhantomColorMath.UV_GRID / image.height, argb)
                 image.setPixelRGBA(x, y, argbToNative(newArgb))
             }
         }

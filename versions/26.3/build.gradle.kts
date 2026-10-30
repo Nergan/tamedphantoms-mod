@@ -62,11 +62,6 @@ fun rewriteFor26(line: String): String {
         "phantom.swing(net.minecraft.world.InteractionHand.MAIN_HAND)" to
             "phantom.swing(net.minecraft.world.InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, true)",
         "player.drop(book, false)" to "player.drop(book, false, net.minecraft.util.Prediction.SERVER_ONLY)",
-        "BuiltInRegistries.ITEM.get(Identifier.parse(\"patchouli:guide_book\"))" to
-            "BuiltInRegistries.ITEM.get(Identifier.parse(\"patchouli:guide_book\")).orElse(null)",
-        "if (item === Items.AIR) return null" to "if (item == null || item.value() === Items.AIR) return null",
-        "BuiltInRegistries.DATA_COMPONENT_TYPE.get(Identifier.parse(\"patchouli:book\"))" to
-            "BuiltInRegistries.DATA_COMPONENT_TYPE.get(Identifier.parse(\"patchouli:book\")).orElse(null)",
         ".getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())" to ".getListOrEmpty(TAG_OWNED)",
         "list.getCompound(i)" to "list.getCompoundOrEmpty(i)",
         "stored.getCompound(i)" to "stored.getCompoundOrEmpty(i)",
@@ -142,6 +137,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/client/VanillaPhantomBuffers.kt",
     "com/tamedphantoms/mod/mixin/VanillaPhantomBufferMixin.kt",
     "com/tamedphantoms/mod/mixin/PhantomFlapMixin.kt",
+    "com/tamedphantoms/mod/mixin/PlayerRideBankMixin.kt",
     "com/tamedphantoms/mod/client/FlightAwareSectionScreen.kt",
     "com/tamedphantoms/mod/client/ClientModEvents.kt",
     "com/tamedphantoms/mod/TamedPhantomsNeoForge.kt",
@@ -153,7 +149,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "interact-location-1")
+    inputs.property("rewriteStamp", "guide-book-2")
     filter { line -> rewriteIdentifiers(line) }
 }
 
@@ -164,7 +160,6 @@ val sharedJava by tasks.registering(Sync::class) {
     inputs.property("sharedJavaStamp", "util-fog-1")
     exclude(
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
-        "com/tamedphantoms/mod/mixin/PlayerRideBankMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",
     )

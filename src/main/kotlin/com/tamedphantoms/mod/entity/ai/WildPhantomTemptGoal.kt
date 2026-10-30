@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.entity.ai
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.PhantomMoveTargetAccess
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import com.tamedphantoms.mod.util.PhantomTemptPath
 import net.minecraft.world.entity.ai.goal.Goal
 import net.minecraft.world.entity.monster.Phantom
 import net.minecraft.world.entity.player.Player
@@ -39,7 +40,8 @@ class WildPhantomTemptGoal(private val phantom: Phantom) : Goal() {
     override fun tick() {
         val target = player ?: return
         phantom.target = null
-        PhantomMoveTargetAccess.set(phantom, Vec3(target.x, target.y + 1.4, target.z))
+        val aim = PhantomTemptPath.aim(phantom.x, phantom.y, phantom.z, target.x, target.y + 1.4, target.z)
+        PhantomMoveTargetAccess.set(phantom, Vec3(aim.x, aim.y, aim.z))
     }
 
     override fun stop() {

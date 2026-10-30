@@ -1,0 +1,9 @@
+{
+  "name": "tamedphantoms.guide.name",
+  "description": "tamedphantoms.guide.md.landing",
+  "tooltip": "tamedphantoms.guide.subtitle",
+  "display_mode": "index",
+  "creative_tab": "minecraft:tools_and_utilities",
+  "generate_book_item": true,
+  "show_recently_unlocked": false
+}

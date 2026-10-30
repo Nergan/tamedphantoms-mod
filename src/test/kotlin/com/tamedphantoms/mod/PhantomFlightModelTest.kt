@@ -150,4 +150,13 @@ class PhantomFlightModelTest {
         repeat(40) { model.step(Input(1f, 0f, 0f, vc, medium = PhantomFlightModel.Medium.GROUND)) }
         assertEquals(vc * PhantomFlightModel.GROUND_SPEED, model.speed, vc * 0.02)
     }
+
+    @Test
+    @DisplayName("У земли без подъёма фантом садится, с подъёмом — взлетает")
+    fun groundSettlesUnlessClimbing() {
+        val settle = PhantomFlightModel().step(Input(0f, 0f, 0f, vc, medium = PhantomFlightModel.Medium.GROUND))
+        assertTrue(settle.vertical < 0.0, "vertical ${settle.vertical}")
+        val climb = PhantomFlightModel().step(Input(0f, 0f, 1f, vc, medium = PhantomFlightModel.Medium.GROUND))
+        assertTrue(climb.vertical > 0.0, "vertical ${climb.vertical}")
+    }
 }

@@ -1,0 +1,36 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:riding/flight",
+  "category": "tamedphantoms:riding",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.flight",
+  "icon": "minecraft:feather",
+  "sort_number": 1,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.md.page.flight.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.page.flight.2"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p3",
+      "title": "",
+      "text": "tamedphantoms.guide.page.flight.3"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p4",
+      "title": "",
+      "text": "tamedphantoms.guide.page.flight.4"
+    }
+  ]
+}

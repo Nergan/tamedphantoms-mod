@@ -1,0 +1,24 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:combat/defense",
+  "category": "tamedphantoms:combat",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.defense",
+  "icon": "minecraft:iron_sword",
+  "sort_number": 0,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.md.page.defense.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.page.defense.2"
+    }
+  ]
+}

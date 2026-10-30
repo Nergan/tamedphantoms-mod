@@ -5,7 +5,10 @@ import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.player.Player
 
-/** Крен и тангаж камеры повторяют модель в полёте вперёд. Знаки противоположны повороту модели: так горизонт совпадает с ней. */
+/**
+ * Крен и тангаж камеры повторяют модель в полёте вперёд. Знаки противоположны повороту модели: так горизонт совпадает с ней.
+ * У земли наклон гаснет вместе с позой ползания, а не обрывается.
+ */
 object PhantomRideBank {
 
     data class Angles(val pitch: Float, val roll: Float)
@@ -14,9 +17,10 @@ object PhantomRideBank {
         val rider = entity as? Player ?: return null
         val phantom = rider.vehicle as? TamedPhantomEntity ?: return null
         if (phantom.isOrderedToSit()) return null
-        if (phantom.crawlVisual(partialTick) > 0.45f) return null
-        val ridePitch = Mth.lerp(partialTick, phantom.cameraPitchO, phantom.cameraPitch)
-        val rideRoll = Mth.lerp(partialTick, phantom.cameraRollO, phantom.cameraRoll)
+        val fade = 1f - phantom.crawlVisual(partialTick)
+        if (fade <= 0f) return null
+        val ridePitch = Mth.lerp(partialTick, phantom.cameraPitchO, phantom.cameraPitch) * fade
+        val rideRoll = Mth.lerp(partialTick, phantom.cameraRollO, phantom.cameraRoll) * fade
         return Angles(pitch - ridePitch, roll + rideRoll)
     }
 }

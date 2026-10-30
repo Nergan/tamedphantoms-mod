@@ -1,0 +1,36 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:taming/care",
+  "category": "tamedphantoms:taming",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.care",
+  "icon": "minecraft:cooked_beef",
+  "sort_number": 1,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.page.care.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.page.care.4"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p3",
+      "title": "",
+      "text": "tamedphantoms.guide.page.care.3"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p4",
+      "title": "",
+      "text": "tamedphantoms.guide.page.care.2"
+    }
+  ]
+}

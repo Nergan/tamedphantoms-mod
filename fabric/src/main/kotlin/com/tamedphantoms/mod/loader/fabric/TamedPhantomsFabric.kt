@@ -115,8 +115,12 @@ class TamedPhantomsFabric : ModInitializer {
         }
         UseItemCallback.EVENT.register { player, _, hand ->
             val stack = player.getItemInHand(hand)
-            val result = PhantomInteractionHandler.onUseItem(player, hand)
-            if (result == null) InteractionResultHolder.pass(stack) else InteractionResultHolder.consume(stack)
+            when (PhantomInteractionHandler.onUseItem(player, hand)) {
+                null -> InteractionResultHolder.pass(stack)
+                // Только SUCCESS на клиенте отправляет клик на сервер.
+                InteractionResult.SUCCESS -> InteractionResultHolder.success(stack)
+                else -> InteractionResultHolder.consume(stack)
+            }
         }
         ServerLivingEntityEvents.AFTER_DAMAGE.register { entity, source, _, taken, _ ->
             PhantomDamageHandler.onLivingDamage(entity, source, taken)

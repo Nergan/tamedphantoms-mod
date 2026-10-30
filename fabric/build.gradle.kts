@@ -95,6 +95,11 @@ val patchKotlinRefmap by tasks.registering {
                 "Lnet/minecraft/world/level/Level;addParticle(Lnet/minecraft/core/particles/ParticleOptions;DDDDDD)V" to
                     "Lnet/minecraft/class_1937;method_8406(Lnet/minecraft/class_2394;DDDDDD)V",
             ),
+            "com/tamedphantoms/mod/mixin/PlayerRideBankMixin" to mapOf(
+                "render(Lnet/minecraft/world/entity/LivingEntity;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V" to
+                    "Lnet/minecraft/class_922;method_4054(Lnet/minecraft/class_1309;FFLnet/minecraft/class_4587;Lnet/minecraft/class_4597;I)V",
+                "Lcom/mojang/blaze3d/vertex/PoseStack;pushPose()V" to "Lnet/minecraft/class_4587;method_22903()V",
+            ),
             "com/tamedphantoms/mod/mixin/VanillaPhantomBufferMixin" to mapOf(
                 "getCompleteBuffer" to "Lnet/minecraft/class_4237;method_19743(Lnet/minecraft/class_2960;)Ljava/util/concurrent/CompletableFuture;",
                 "getStream" to "Lnet/minecraft/class_4237;method_19744(Lnet/minecraft/class_2960;Z)Ljava/util/concurrent/CompletableFuture;",

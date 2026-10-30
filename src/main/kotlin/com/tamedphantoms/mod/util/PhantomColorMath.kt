@@ -91,27 +91,110 @@ object PhantomColorMath {
     fun recolorEyePixelRedGlow(argb: Int): Int = recolorEyeRgb(argb, BLOOD_GLOW_R, BLOOD_GLOW_G, BLOOD_GLOW_B)
 
     /**
-     * Краска тела или седла: рисунок остаётся, цвет берётся у красителя.
-     * Яркость пикселя растянута так, чтобы тёмная шкура фантома в цвете ещё читалась,
-     * а светлые места оставались светлее тёмных. Прозрачные пиксели не трогаются.
+     * Палитра краски: тень, середина и свет шкуры со сдвигом оттенка, светлые брюхо и кости,
+     * акцент для лиловых кромок. У тёмных красок на крыльях звёзды, как ночное небо.
      */
-    fun dyePixel(argb: Int, dyeRgb: Int): Int {
+    private class DyeStyle(
+        val shadow: Int,
+        val mid: Int,
+        val light: Int,
+        val belly: Int,
+        val accent: Int,
+        val stars: Boolean = false,
+    )
+
+    /**
+     * По номеру `DyeColor`: white, orange, magenta, light_blue, yellow, lime, pink, gray,
+     * light_gray, cyan, purple, blue, brown, green, red, black.
+     */
+    private val STYLES = arrayOf(
+        DyeStyle(0x66748F, 0xB8C3D6, 0xF4F7FC, 0xFFF6E8, 0x9AA8C2),
+        DyeStyle(0x6E2410, 0xD8641C, 0xFFB35C, 0xFFE3B8, 0xA83A14),
+        DyeStyle(0x4E0E48, 0xB8329F, 0xF28ADD, 0xFBD7F2, 0x7E2290),
+        DyeStyle(0x24527E, 0x58ACE0, 0xB2E4FF, 0xE8F8FF, 0x3A7DB8),
+        DyeStyle(0x6E4E0C, 0xDDB52C, 0xFFF27C, 0xFFF9DC, 0xB07E16),
+        DyeStyle(0x2A5410, 0x74C02A, 0xCBF47C, 0xF1FFD6, 0x46901C),
+        DyeStyle(0x7E3252, 0xE985AC, 0xFFD2E3, 0xFFF2F7, 0xB8527C),
+        DyeStyle(0x24262C, 0x535862, 0x8E949F, 0xC8C2B6, 0x3E424B),
+        DyeStyle(0x5E636B, 0x9EA3AB, 0xD6D9DE, 0xF0ECE4, 0x7D828B),
+        DyeStyle(0x0C464C, 0x1C9098, 0x6ADCDC, 0xD8FAF6, 0x13707A),
+        DyeStyle(0x26104A, 0x6430A6, 0xAE78E8, 0xE9DCFA, 0x421E78, stars = true),
+        DyeStyle(0x0E1850, 0x2A44AE, 0x6E8AF0, 0xD8E2FF, 0x1A2C88, stars = true),
+        DyeStyle(0x331E10, 0x704628, 0xB0845A, 0xEAD5B4, 0x52321C),
+        DyeStyle(0x16320E, 0x3A7226, 0x80B456, 0xDEEBC6, 0x28521A),
+        DyeStyle(0x440C0E, 0xA82226, 0xEE5E56, 0xFFDCCF, 0x701216),
+        DyeStyle(0x08080C, 0x1A1A24, 0x383850, 0x8E8698, 0x2A2640, stars = true),
+    )
+
+    private const val STAR = 0xE6E2FF
+
+    /** Сторона ванильной развёртки фантома, к ней приводятся координаты пикселя. */
+    const val UV_GRID = 64
+
+    /**
+     * Пиксель тела в краске [dye] (номер `DyeColor`). Шкура идёт по палитре от тени к свету,
+     * брюхо и кости светлеют в тон, кромки берут акцент. [x], [y] — место на развёртке [UV_GRID]:
+     * концы крыльев светлее, у тёмных красок на крыльях звёзды. Глаза и прозрачность не трогаются.
+     */
+    fun dyeBodyPixel(argb: Int, dye: Int, x: Int, y: Int): Int {
         val alpha = (argb ushr 24) and 0xFF
         if (alpha == 0) return argb
+        val style = STYLES.getOrNull(dye) ?: return argb
         val r = (argb ushr 16) and 0xFF
         val g = (argb ushr 8) and 0xFF
         val b = argb and 0xFF
-        val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
-        val shade = (DYE_FLOOR + luminance * DYE_GAIN).coerceIn(0.0, DYE_CEILING)
-        val dr = (((dyeRgb ushr 16) and 0xFF) * shade).toInt().coerceIn(0, 255)
-        val dg = (((dyeRgb ushr 8) and 0xFF) * shade).toInt().coerceIn(0, 255)
-        val db = ((dyeRgb and 0xFF) * shade).toInt().coerceIn(0, 255)
-        return (alpha shl 24) or (dr shl 16) or (dg shl 8) or db
+        val hsb = Color.RGBtoHSB(r, g, b, null)
+        val hue = hsb[0]
+        val sat = hsb[1]
+        val lum = ((0.299 * r + 0.587 * g + 0.114 * b) / 255.0).toFloat()
+        if (hue in 0.22f..0.45f && sat > 0.5f && hsb[2] > 0.4f) return argb
+        val rgb = when {
+            lum < 0.07f -> mix(0x000000, style.shadow, 0.7f)
+            sat < 0.2f && lum > 0.62f -> mix(style.mid, style.belly, 0.7f + (lum - 0.62f) * 0.8f)
+            hue in 0.03f..0.17f && sat >= 0.12f ->
+                mix(style.mid, style.belly, 0.45f + ((lum - 0.35f) / 0.45f).coerceIn(0f, 1f) * 0.55f)
+            (hue >= 0.8f || hue < 0.03f) && sat >= 0.12f ->
+                ramp(style.shadow, style.accent, style.light, 0.35f + ((lum - 0.2f) / 0.45f).coerceIn(0f, 1f) * 0.45f)
+            style.stars && onWing(x, y) && isStar(x, y) -> STAR
+            else -> ramp(style.shadow, style.mid, style.light, (lum - 0.1f) / 0.42f + if (onWingTip(x, y)) 0.12f else 0f)
+        }
+        return (alpha shl 24) or rgb
     }
 
-    private const val DYE_FLOOR = 0.3
-    private const val DYE_GAIN = 1.15
-    private const val DYE_CEILING = 1.2
+    /** Седло: кожа, кант, блик и нитки. Без краски — обычная кожа, в краске — её палитра со светлыми нитками. */
+    fun saddleColors(dye: Int): IntArray {
+        val style = STYLES.getOrNull(dye)
+            ?: return intArrayOf(0xFF6B4226.toInt(), 0xFF3A2416.toInt(), 0xFF8B5A2B.toInt(), 0xFF2A1810.toInt())
+        return intArrayOf(
+            opaque(style.mid),
+            opaque(style.shadow),
+            opaque(mix(style.mid, style.light, 0.5f)),
+            opaque(style.belly),
+        )
+    }
+
+    private fun onWingTip(x: Int, y: Int): Boolean = x in 16 until 60 && y in 24 until 34
+
+    private fun onWing(x: Int, y: Int): Boolean = (x in 23 until 53 && y in 12 until 23) || onWingTip(x, y)
+
+    private fun isStar(x: Int, y: Int): Boolean = (((x * 73856093) xor (y * 19349663)) and 0x7FFFFFFF) % 29 == 0
+
+    private fun opaque(rgb: Int): Int = (0xFF shl 24) or (rgb and 0xFFFFFF)
+
+    private fun ramp(shadow: Int, mid: Int, light: Int, t: Float): Int {
+        val k = t.coerceIn(0f, 1f)
+        return if (k < 0.5f) mix(shadow, mid, k * 2f) else mix(mid, light, (k - 0.5f) * 2f)
+    }
+
+    private fun mix(from: Int, to: Int, t: Float): Int {
+        val k = t.coerceIn(0f, 1f)
+        fun channel(shift: Int): Int {
+            val a = (from ushr shift) and 0xFF
+            val b = (to ushr shift) and 0xFF
+            return Math.round(a + (b - a) * k).coerceIn(0, 255) shl shift
+        }
+        return channel(16) or channel(8) or channel(0)
+    }
 
     private fun recolorEyeRgb(argb: Int, red: Int, green: Int, blue: Int): Int {
         val alpha = (argb ushr 24) and 0xFF

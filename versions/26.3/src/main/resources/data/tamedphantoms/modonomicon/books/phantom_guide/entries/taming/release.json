@@ -1,0 +1,24 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:taming/release",
+  "category": "tamedphantoms:taming",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.release",
+  "icon": "minecraft:poisonous_potato",
+  "sort_number": 2,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.md.page.release.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.page.release.2"
+    }
+  ]
+}

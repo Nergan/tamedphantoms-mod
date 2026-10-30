@@ -16,7 +16,7 @@ permissions:
 
 # Пуш в main (и тег v<mod_version> / ручной запуск) пересобирает 1.21.1 и 26.3
 # и обновляет четыре страницы GitHub Release: версия Minecraft и загрузчик.
-# Patchouli только на страницах 1.21.1. CDN публикует только NeoForge 1.21.1.
+# Гайдбук: Patchouli на страницах 1.21.1, Modonomicon на 26.3. CDN публикует только NeoForge 1.21.1.
 
 jobs:
   release:
@@ -154,7 +154,8 @@ jobs:
             "$(prop26 fabric_kotlin_version)" \
             "$(prop26 cloth_config_modrinth_version)" \
             "$(prop26 modmenu_version)" \
-            "$(prop26 placeholder_api_version)"
+            "$(prop26 placeholder_api_version)" \
+            "$(prop26 modonomicon_version)"
           ls -lh release-assets companions-26.3
 
       - name: Publish split GitHub releases
@@ -197,18 +198,20 @@ jobs:
             release-assets/Patchouli-*-FABRIC.jar
           stage minecraft-26.3-neoforge \
             "tamed phantoms for minecraft 26.3 neoforge" \
-            "Minecraft **26.3** / NeoForge. The mod jar and Kotlin for Forge 6.4.0 are required. Patchouli has no 26.3 build. \`all-jars.zip\` contains every jar on this page." \
+            "Minecraft **26.3** / NeoForge. The mod jar and Kotlin for Forge 6.4.0 are required. Modonomicon is optional and only adds the guidebook (Patchouli has no 26.3 build). \`all-jars.zip\` contains every jar on this page." \
             release-assets/tamedphantoms-neoforge-26.3-*.jar \
-            companions-26.3/kotlinforforge-*.jar
+            companions-26.3/kotlinforforge-*.jar \
+            companions-26.3/modonomicon-26.3-neoforge-*.jar
           stage minecraft-26.3-fabric \
             "tamed phantoms for minecraft 26.3 fabric" \
-            "Minecraft **26.3** / Fabric. The mod jar, Fabric API, Fabric Language Kotlin, and Cloth Config are required. Mod Menu and Placeholder API open the config screen. Patchouli has no 26.3 build. \`all-jars.zip\` contains every jar on this page." \
+            "Minecraft **26.3** / Fabric. The mod jar, Fabric API, Fabric Language Kotlin, and Cloth Config are required. Mod Menu and Placeholder API open the config screen. Modonomicon is optional and only adds the guidebook (Patchouli has no 26.3 build). \`all-jars.zip\` contains every jar on this page." \
             release-assets/tamedphantoms-fabric-26.3-*.jar \
             companions-26.3/fabric-api-*.jar \
             companions-26.3/fabric-language-kotlin-*.jar \
             companions-26.3/cloth-config-*.jar \
             companions-26.3/modmenu-*.jar \
-            companions-26.3/placeholder-api-*.jar
+            companions-26.3/placeholder-api-*.jar \
+            companions-26.3/modonomicon-26.3-fabric-*.jar
           python3 .github/scripts/publish-split-releases.py release-split
 
       - name: Replace Modrinth versions
@@ -301,6 +304,7 @@ jobs:
           files: release-assets/tamedphantoms-neoforge-26.3-${{ steps.versions.outputs.mod_version }}.jar
           dependencies: |
             kotlin-for-forge(required){modrinth:ordsPcFz}
+            modonomicon(optional){modrinth:692GClaE}
 
       - name: Publish Modrinth 26.3 Fabric
         if: steps.modrinth.outputs.ready == 'true'
@@ -327,6 +331,7 @@ jobs:
             cloth-config(required){modrinth:9s6osm5g}
             modmenu(optional){modrinth:mOgUt4GM}
             placeholder-api(optional){modrinth:eXts2L7r}
+            modonomicon(optional){modrinth:692GClaE}
 
       - name: Delete replaced Modrinth versions
         if: steps.modrinth.outputs.ready == 'true'

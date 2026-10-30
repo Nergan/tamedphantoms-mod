@@ -28,12 +28,36 @@ object TamedPhantomsApi {
         fun onReleased(phantom: TamedPhantomEntity, previousOwner: Player?)
     }
 
+    /**
+     * Предмет, которым седок пользуется на своём фантоме прямо с седла. Прицел своего маунта
+     * не выбирает, поэтому клик в воздух таким предметом уходит в [Interaction] как клик по той
+     * части фантома, куда смотрит седок. Регистрировать на обеих сторонах: клиент решает, слать ли клик.
+     */
+    fun interface RiderTool {
+        fun accepts(stack: ItemStack): Boolean
+    }
+
     private val interactions = CopyOnWriteArrayList<Interaction>()
     private val releaseListeners = CopyOnWriteArrayList<ReleaseListener>()
+    private val riderTools = CopyOnWriteArrayList<RiderTool>()
 
     @JvmStatic
     fun registerInteraction(handler: Interaction) {
         interactions += handler
+    }
+
+    @JvmStatic
+    fun registerRiderTool(tool: RiderTool) {
+        riderTools += tool
+    }
+
+    internal fun isRiderTool(stack: ItemStack): Boolean = riderTools.any { tool ->
+        try {
+            tool.accepts(stack)
+        } catch (error: Throwable) {
+            TamedPhantomsMod.LOGGER.warn("Аддон упал на проверке предмета седока.", error)
+            false
+        }
     }
 
     @JvmStatic

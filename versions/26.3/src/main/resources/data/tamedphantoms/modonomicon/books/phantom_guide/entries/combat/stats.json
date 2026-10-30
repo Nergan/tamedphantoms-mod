@@ -1,0 +1,24 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:combat/stats",
+  "category": "tamedphantoms:combat",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.stats",
+  "icon": "minecraft:golden_apple",
+  "sort_number": 1,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.page.stats.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.page.stats.2"
+    }
+  ]
+}

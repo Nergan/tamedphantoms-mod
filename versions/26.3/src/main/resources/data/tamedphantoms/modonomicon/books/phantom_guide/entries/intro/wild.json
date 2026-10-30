@@ -1,0 +1,26 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:intro/wild",
+  "category": "tamedphantoms:intro",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.wild",
+  "icon": "minecraft:phantom_membrane",
+  "sort_number": 1,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.md.page.wild.1"
+    },
+    {
+      "type": "modonomicon:entity",
+      "id": "p2",
+      "entity_id": "minecraft:phantom",
+      "entity_name": "entity.minecraft.phantom",
+      "scale": 0.65,
+      "text": "tamedphantoms.guide.md.page.wild.2"
+    }
+  ]
+}

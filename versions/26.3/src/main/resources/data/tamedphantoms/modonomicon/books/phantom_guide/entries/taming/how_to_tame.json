@@ -1,0 +1,24 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:taming/how_to_tame",
+  "category": "tamedphantoms:taming",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.tame",
+  "icon": "minecraft:cookie",
+  "sort_number": 0,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.md.page.tame.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.md.page.tame.2"
+    }
+  ]
+}

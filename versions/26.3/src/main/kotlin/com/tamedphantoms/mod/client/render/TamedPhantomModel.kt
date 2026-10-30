@@ -103,7 +103,8 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         val crawl = Mth.lerp(partial, pet.wingCrawlO, pet.wingCrawl).coerceIn(0f, 1f)
         val takeoff = Mth.lerp(partial, pet.wingTakeoffO, pet.wingTakeoffBlend).coerceIn(0f, 1f)
         val swim = Mth.lerp(partial, pet.swimBlendO, pet.swimBlend).coerceIn(0f, 1f)
-        val step = com.tamedphantoms.mod.compat.FloatMath.sin(Mth.lerp(partial, pet.crawlPhaseO, pet.crawlPhase))
+        val stride = Mth.lerp(partial, pet.crawlStrideO, pet.crawlStride)
+        val step = com.tamedphantoms.mod.compat.FloatMath.sin(Mth.lerp(partial, pet.crawlPhaseO, pet.crawlPhase)) * stride
         val sweep = step * PhantomCrawl.SWEEP
         val tipSweep = step * PhantomCrawl.TIP_SWEEP
         val lift = PhantomCrawl.LIFT
@@ -114,6 +115,7 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         var rightTipZ = flightRight
         var leftBaseY = 0f
         var rightBaseY = 0f
+        var twist = 0f
 
         if (takeoff > 0.01f) {
             val strokePhase = angle * 2.5f
@@ -137,15 +139,17 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         }
 
         if (swim > 0.01f) {
-            // Под водой волна бежит от корня к кончику, как у ската, и растёт со скоростью.
+            // Под водой крыло идёт волной, как у ската: корень почти не машет, кончик отстаёт,
+            // а плоскость крыла поворачивается вслед за взмахом, и волна бежит к задней кромке.
             val stroke = amplitude.coerceIn(0.05f, 0.8f)
             val ripple = time * SWIM_STROKE
-            val baseWave = com.tamedphantoms.mod.compat.FloatMath.sin(ripple) * (0.08f + stroke * 0.55f)
-            val tipWave = com.tamedphantoms.mod.compat.FloatMath.sin(ripple - 1.05f) * (0.13f + stroke * 0.8f)
+            val baseWave = com.tamedphantoms.mod.compat.FloatMath.sin(ripple) * (0.06f + stroke * 0.38f)
+            val tipWave = com.tamedphantoms.mod.compat.FloatMath.sin(ripple - 1.4f) * (0.12f + stroke * 0.62f)
             leftBaseZ = Mth.lerp(swim, leftBaseZ, baseWave)
             rightBaseZ = Mth.lerp(swim, rightBaseZ, -baseWave)
             leftTipZ = Mth.lerp(swim, leftTipZ, tipWave - baseWave)
             rightTipZ = Mth.lerp(swim, rightTipZ, -(tipWave - baseWave))
+            twist = com.tamedphantoms.mod.compat.FloatMath.cos(ripple) * (0.08f + stroke * 0.3f) * swim
         }
 
         leftWingBase.zRot = Mth.lerp(crawl, leftBaseZ, -lift)
@@ -157,6 +161,10 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel(root) {
         rightWingBase.yRot = Mth.lerp(crawl, rightBaseY, sweep)
         leftWingTip.yRot = Mth.lerp(crawl, -fold * SWEEP_TIP, tipSweep)
         rightWingTip.yRot = Mth.lerp(crawl, fold * SWEEP_TIP, tipSweep)
+        leftWingBase.xRot = twist
+        rightWingBase.xRot = twist
+        leftWingTip.xRot = twist * 0.6f
+        rightWingTip.xRot = twist * 0.6f
         if (crawl > 0f) {
             val flat = 1f - crawl
             leftWingBase.xRot *= flat

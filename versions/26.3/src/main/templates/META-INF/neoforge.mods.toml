@@ -8,7 +8,7 @@ issueTrackerURL = "https://github.com/Nergan/tamedphantoms-mod/issues"
 modId = "${mod_id}"
 version = "${mod_version}"
 displayName = "${mod_name}"
-logoFile = "logo.png"
+iconFile = "logo.png"
 displayURL = "https://github.com/Nergan/tamedphantoms-mod"
 authors = "${mod_authors}"
 description = '''
@@ -49,7 +49,7 @@ ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.${mod_id}]]
-modId = "patchouli"
+modId = "modonomicon"
 type = "optional"
 versionRange = "[0,)"
 ordering = "NONE"

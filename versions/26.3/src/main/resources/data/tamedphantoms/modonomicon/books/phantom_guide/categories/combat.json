@@ -1,0 +1,7 @@
+{
+  "name": "tamedphantoms.guide.cat.combat",
+  "description": "tamedphantoms.guide.cat.combat.desc",
+  "icon": "minecraft:iron_sword",
+  "sort_number": 3,
+  "display_mode": "index"
+}

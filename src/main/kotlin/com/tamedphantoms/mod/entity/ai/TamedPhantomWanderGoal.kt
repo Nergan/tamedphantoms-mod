@@ -19,7 +19,7 @@ import kotlin.math.sin
  * ([PhantomSurroundings.temperament]), времени суток, Луны, погоды и местности:
  * ночью летает выше и чаще крутит фигуры, в полнолуние особенно, днём больше отдыхает,
  * над водой идёт бреющим полётом, в жару парит широкими кругами, в грозу мечется.
- * Держится рядом с другими освобождёнными, иногда облетает игрока посмотреть.
+ * Держится рядом с другими освобождёнными, прилетает играть с игроками, как дельфины.
  * Если игрок держит предмет приручения — летит к нему.
  */
 class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
@@ -36,6 +36,16 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
         private const val TEMPT_RANGE = 16.0
         private const val FLOCK_RANGE = 24.0
         private const val VISIT_RANGE = 24.0
+
+        /** С этой скорости игрока, блоки за тик, фантом идёт рядом, а не кружит. */
+        private const val ESCORT_SPEED = 0.18
+
+        private val PLAY_TRICKS = arrayOf(
+            PhantomManeuvers.Kind.ROLL,
+            PhantomManeuvers.Kind.ROLL,
+            PhantomManeuvers.Kind.LOOP,
+            PhantomManeuvers.Kind.WINGOVER,
+        )
     }
 
     private var heading = 0.0
@@ -51,6 +61,9 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
     private var visited: Player? = null
     private var visitAngle = 0.0
     private var visitCooldown = 600
+    private var playTrick = 0
+    private var dash = Vec3.ZERO
+    private var dashTicks = 0
     private var soarAngle = 0.0
     private var flockCooldown = 0
     private var flockHeading: Double? = null
@@ -108,13 +121,15 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
                 return
             }
         }
-        if (visitCooldown <= 0 && random.nextFloat() < 0.004f * (0.3f + temper.curiosity)) {
+        if (visitCooldown <= 0 && random.nextFloat() < 0.006f * (0.4f + temper.curiosity)) {
             val player = phantom.level().getNearestPlayer(phantom, VISIT_RANGE)
             if (player != null && player.isAlive && !player.isSpectator) {
                 visited = player
                 visitAngle = atan2(phantom.z - player.z, phantom.x - player.x)
                 mode = Mode.VISIT
-                modeTicks = 120 + random.nextInt(80)
+                modeTicks = 220 + random.nextInt(200)
+                playTrick = 40 + random.nextInt(60)
+                dashTicks = 0
                 return
             }
         }
@@ -165,24 +180,67 @@ class TamedPhantomWanderGoal(private val phantom: TamedPhantomEntity) : Goal() {
         phantom.moveControl.setWantedPosition(targetX, targetY, targetZ, pace)
     }
 
+    /**
+     * Играет с игроком, как дельфин с лодкой: за летящим или бегущим держится сбоку и чуть впереди,
+     * у стоящего кружит то ближе, то дальше, иногда проносится мимо и крутит фигуры у него на глазах.
+     */
     private fun tickVisit() {
         modeTicks--
         val player = visited
-        if (player == null || !player.isAlive || modeTicks <= 0 || phantom.distanceToSqr(player) > VISIT_RANGE * VISIT_RANGE * 2.0) {
+        if (player == null || !player.isAlive || player.isSpectator || modeTicks <= 0 ||
+            phantom.distanceToSqr(player) > VISIT_RANGE * VISIT_RANGE * 2.0
+        ) {
             visited = null
             mode = Mode.FLY
-            visitCooldown = 900 + phantom.random.nextInt(900)
+            visitCooldown = 700 + phantom.random.nextInt(900)
             return
         }
-        visitAngle += 0.05
-        val radius = 6.5
-        phantom.moveControl.setWantedPosition(
-            player.x + cos(visitAngle) * radius,
-            player.y + 3.0,
-            player.z + sin(visitAngle) * radius,
-            0.42,
-        )
         phantom.lookControl.setLookAt(player, 20f, 20f)
+        val random = phantom.random
+        val temper = PhantomSurroundings.temperament(phantom)
+        val moveX = player.x - player.xo
+        val moveZ = player.z - player.zo
+        val speed = hypot(moveX, moveZ)
+        val time = phantom.tickCount.toDouble()
+        when {
+            speed > ESCORT_SPEED -> {
+                val dirX = moveX / speed
+                val dirZ = moveZ / speed
+                val side = if (phantom.id and 1 == 0) 1.0 else -1.0
+                val ahead = 3.0 + speed * 12.0
+                phantom.moveControl.setWantedPosition(
+                    player.x + dirX * ahead - dirZ * side * 3.5,
+                    player.y + 1.5 + sin(time * 0.12) * 1.2,
+                    player.z + dirZ * ahead + dirX * side * 3.5,
+                    (0.55 + speed).coerceAtMost(1.0),
+                )
+            }
+            dashTicks > 0 -> {
+                dashTicks--
+                phantom.moveControl.setWantedPosition(dash.x, dash.y, dash.z, 0.75)
+            }
+            else -> {
+                visitAngle += 0.06 + temper.playfulness * 0.04
+                val radius = 4.0 + 1.6 * sin(time * 0.07)
+                val lift = 2.2 + 1.4 * sin(time * 0.11)
+                phantom.moveControl.setWantedPosition(
+                    player.x + cos(visitAngle) * radius,
+                    player.y + lift,
+                    player.z + sin(visitAngle) * radius,
+                    0.48,
+                )
+                if (random.nextInt(140) == 0) {
+                    // Пролёт мимо: точка напротив, чуть в стороне от линии через игрока.
+                    val across = atan2(phantom.z - player.z, phantom.x - player.x) + Math.PI + 0.35
+                    dash = Vec3(player.x + cos(across) * 6.0, player.y + 1.2, player.z + sin(across) * 6.0)
+                    dashTicks = 30
+                }
+            }
+        }
+        if (--playTrick <= 0) {
+            playTrick = 70 + random.nextInt(90)
+            PhantomManeuverPilot.tryStart(phantom, PLAY_TRICKS[random.nextInt(PLAY_TRICKS.size)])
+        }
     }
 
     /** Свои рядом: подстраивает курс под соседей, не сбиваясь в кучу. */

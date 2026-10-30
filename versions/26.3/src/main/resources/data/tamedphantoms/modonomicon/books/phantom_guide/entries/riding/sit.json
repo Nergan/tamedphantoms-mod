@@ -1,0 +1,24 @@
+{
+  "type": "modonomicon:content",
+  "id": "tamedphantoms:riding/sit",
+  "category": "tamedphantoms:riding",
+  "x": 0,
+  "y": 0,
+  "name": "tamedphantoms.guide.entry.sit",
+  "icon": "minecraft:red_bed",
+  "sort_number": 2,
+  "pages": [
+    {
+      "type": "modonomicon:text",
+      "id": "p1",
+      "title": "",
+      "text": "tamedphantoms.guide.page.sit.1"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p2",
+      "title": "",
+      "text": "tamedphantoms.guide.page.sit.2"
+    }
+  ]
+}

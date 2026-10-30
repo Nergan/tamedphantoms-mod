@@ -82,6 +82,10 @@ class PhantomFlightModel {
     var completedLoop: Boolean = false
         private set
 
+    /** Идёт бочка. */
+    val rolling: Boolean
+        get() = rollLeft > 0f
+
     private var loopTurned = 0f
     private var loopDirection = 1f
     private var rollLeft = 0f
@@ -283,6 +287,7 @@ class PhantomFlightModel {
         effort = approach(effort, if (abs(input.forward) > FORWARD_EPS) 0.3f else 0f, 0.2f)
         var vertical = climb * vc * HOVER_CLIMB
         if (vertical > 0.0) vertical *= input.lift
+        if (climb == 0f) vertical = -GROUND_SETTLE
         val lateral = input.strafe.coerceIn(-1f, 1f) * vc * GROUND_SPEED * 0.8
         return Output(speed, lateral, vertical)
     }
@@ -356,6 +361,9 @@ class PhantomFlightModel {
 
         const val GROUND_SPEED = 0.45
         const val GROUND_GRIP = 0.2
+
+        /** У земли без подъёма фантом садится, а не висит в полублоке над ней. */
+        const val GROUND_SETTLE = 0.08
         const val WATER_GRIP = 0.07
         const val WATER_GLIDE = 0.03
         const val WATER_CLIMB = 0.55

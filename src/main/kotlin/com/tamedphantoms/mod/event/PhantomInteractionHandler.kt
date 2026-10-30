@@ -84,22 +84,40 @@ object PhantomInteractionHandler {
         return if (saddle) TamedPhantomsApi.Part.SADDLE else TamedPhantomsApi.Part.BODY
     }
 
-    /** Кормление верхом. null — ванильное использование предмета. */
+    /**
+     * Кормление и инструменты аддонов верхом. null — ванильное использование предмета.
+     * На клиенте ответ SUCCESS: Fabric отправляет клик на сервер только с ним.
+     */
     fun onUseItem(player: Player, hand: InteractionHand): InteractionResult? {
         val phantom = player.vehicle as? TamedPhantomEntity ?: return null
         if (!phantom.tamed) return null
         val stack = player.getItemInHand(hand)
+        riderToolUse(player, phantom, hand, stack)?.let { return it }
         if (PhantomHeldLook.isRefusal(stack) && !phantom.isOwnedBy(player)) {
-            if (!player.level().isClientSide) phantom.rejectOffering(player)
+            if (player.level().isClientSide) return InteractionResult.SUCCESS
+            phantom.rejectOffering(player)
             return InteractionResult.CONSUME
         }
         val releaseItem = ServerConfig.resolveReleaseItem()
         if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return null
         if (stack.get(DataComponents.FOOD) == null) return null
         if (!PhantomTamingLogic.canHeal(phantom.health, phantom.maxHealth)) return null
-        if (player.level().isClientSide) return InteractionResult.CONSUME
+        if (player.level().isClientSide) return InteractionResult.SUCCESS
         return if (tryHeal(player, phantom, stack)) InteractionResult.CONSUME else null
     }
+
+    /** Инструмент аддона верхом: клик по той части фантома, куда смотрит седок, см. [TamedPhantomsApi.RiderTool]. */
+    private fun riderToolUse(player: Player, phantom: TamedPhantomEntity, hand: InteractionHand, stack: ItemStack): InteractionResult? {
+        if (stack.isEmpty || !TamedPhantomsApi.isRiderTool(stack)) return null
+        val eye = player.getEyePosition(1f)
+        val reach = eye.add(player.getViewVector(1f).scale(RIDER_REACH))
+        val hit = phantom.boundingBox.inflate(RIDER_PICK_MARGIN).clip(eye, reach).orElse(null) ?: return null
+        if (player.level().isClientSide) return InteractionResult.SUCCESS
+        return TamedPhantomsApi.interact(player, phantom, hand, stack, partOf(phantom, hit))
+    }
+
+    private const val RIDER_REACH = 5.0
+    private const val RIDER_PICK_MARGIN = 0.3
 
     private fun handleWildPhantom(player: Player, phantom: Phantom, stack: ItemStack) {
         val level = phantom.level()

@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "neoforge:conditions": [
+    {
+      "type": "neoforge:mod_loaded",
+      "modid": "modonomicon"
+    }
+  ],
+  "fabric:load_conditions": [
+    {
+      "condition": "fabric:all_mods_loaded",
+      "values": ["modonomicon"]
+    }
+  ],
+  "category": "misc",
+  "ingredients": [
+    "minecraft:book",
+    "minecraft:phantom_membrane"
+  ],
+  "result": {
+    "id": "modonomicon:modonomicon",
+    "count": 1,
+    "components": {
+      "modonomicon:book_id": "tamedphantoms:phantom_guide"
+    }
+  }
+}

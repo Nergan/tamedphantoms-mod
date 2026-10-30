@@ -30,7 +30,7 @@
     "cloth-config": "*"
   },
   "suggests": {
-    "patchouli": "*",
+    "modonomicon": "*",
     "modmenu": "*"
   }
 }

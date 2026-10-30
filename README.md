@@ -16,7 +16,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                               | Required | What it is                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `tamedphantoms-neoforge-1.21.1-1.0.6.jar` | Yes | this mod, NeoForge 1.21.1 |
+| `tamedphantoms-neoforge-1.21.1-1.0.7.jar` | Yes | this mod, NeoForge 1.21.1 |
 | `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
@@ -24,7 +24,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                                      | Required | What it is                                                                                         |
 | ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
-| `tamedphantoms-fabric-1.21.1-1.0.6.jar` | Yes | this mod, Fabric 1.21.1 |
+| `tamedphantoms-fabric-1.21.1-1.0.7.jar` | Yes | this mod, Fabric 1.21.1 |
 | `fabric-api-0.116.17+1.21.1.jar`          | Yes      | [Fabric API](https://modrinth.com/mod/fabric-api)                                                  |
 | `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                    |
 | `cloth-config-15.0.140-fabric.jar`        | Yes      | [Cloth Config](https://modrinth.com/mod/cloth-config), the config screen                           |
@@ -49,14 +49,14 @@ The release workflow builds both jars and fetches the companion jars from Modrin
 - **Cruise.** Double-tap forward while flying: the phantom flies on by itself and still turns with the camera. Any movement key, jump, descend, or Shift hands control back. Both changes are shown above the hotbar.
 - **Immortal phantoms.** With the server option `immortal_phantoms` on, a full loop grants the secret advancement “Dead Loop!”, and that phantom glows permanently and cannot die. The option is off by default. While it is off, loops grant nothing, and phantoms that are already immortal become ordinary tamed phantoms. The change applies without a restart.
 - **Leash.** A tamed phantom can be leashed and unleashed with an empty hand. Click a fence to tie it: every phantom on your lead within 12 blocks is tied, a sitting one too. A click that lands on the phantom with the fence right behind it also ties it. A released phantom drifts aside and snaps the lead.
-- **Behavior.** A tamed phantom keeps a comfortable distance from its owner, neither far away nor in your face, and sometimes plays around them. A released phantom has its own temperament and flies loops, rolls, wingovers, and stoops. It reacts to terrain, biome, time of day, moon phase, and weather. After leaving water a phantom shakes itself dry, but not in rain; in snowfall or in a desert it shakes as usual.
+- **Behavior.** A tamed phantom keeps a comfortable distance from its owner, neither far away nor in your face, and sometimes plays around them. A released phantom has its own temperament and flies loops, rolls, wingovers, and stoops. It reacts to terrain, biome, time of day, moon phase, and weather. Like a dolphin, it comes to play with players: it flies alongside and a little ahead of someone who is running or flying, circles someone who stands still, swoops past, and shows off tricks. Now and then it screams at a mob nearby just to watch it run; that cry does not blind. After leaving water a phantom shakes itself dry, but not in rain; in snowfall or in a desert it shakes as usual.
 - **Stats.** Tamed and released phantoms have 40 health, 12 attack damage, and fly faster than a vanilla phantom (1.25 times by default, the server option `flight_speed`). They do not burn in sunlight and do not drown. On death they drop 1–12 phantom membranes.
 - **Repel.** Wild phantoms fear tamed and released ones (64 blocks by default): they drop their target, climb away, and circle somewhere else instead of swooping at players nearby.
 - **Obstacles.** Wild, tamed, and released phantoms steer around trunks, cacti, and other narrow obstacles, and they climb away from lava, fire, magma, campfires, cobwebs, berry bushes, and wither roses. A ridden phantom still follows the rider.
 - **Release.** Right-click with the release item (poisonous potato by default). Ownership ends, the saddle drops, and the eyes turn yellow. A released phantom can be tamed again.
 - **Advancements.** “Winged Companion” for taming, “No Longer Responsible” for releasing, “Winged Beast” the first time the owner makes a phantom scream, the secret “Dead Loop!” for a full loop (only with `immortal_phantoms` on), and the secret “Sick Moon” for hearing a released phantom’s full-moon cry.
 - **Other mods.** If another mod replaces the phantom model, animation, texture, or sound, that replacement stays on wild phantoms. A tamed phantom and a released one keep the model, animation, and sounds this mod uses when it is the only phantom mod. Shift and right-click still toggles sit after a finished dead loop, even when another mod also takes a right-click on the mob.
-- **Guidebook (optional).** With [Patchouli](https://modrinth.com/mod/patchouli) installed, the first join into a world gives *Phantom Taming Guide* once per player; death and respawn do not give a second copy. Craft it with a book and a phantom membrane. Without Patchouli the rest of the mod works as usual.
+- **Guidebook (optional).** With [Patchouli](https://modrinth.com/mod/patchouli) on 1.21.1 or [Modonomicon](https://modrinth.com/mod/modonomicon) on 26.3 (Patchouli has no 26.3 build), the first join into a world gives *Phantom Taming Guide* once per player; death and respawn do not give a second copy. Craft it with a book and a phantom membrane. Without a book mod the rest of the mod works as usual.
 - **Addons.** [Tamed Phantoms Colors](https://modrinth.com/project/tamed-phantoms-colors) dyes tamed phantoms and their saddles and makes them glow.
 
 ## Requirements
@@ -79,19 +79,19 @@ NeoForge:
 
 1. Install NeoForge 1.21.1.
 2. Download the NeoForge jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
-3. Put `tamedphantoms-neoforge-1.21.1-1.0.6.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
+3. Put `tamedphantoms-neoforge-1.21.1-1.0.7.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
 4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
 Fabric:
 
 1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1. Loader 0.19.x is fine. Do not look for loader version 0.100.3: that number is not a loader.
 2. Download the Fabric jars from the same release. The release replaces its file list on each push, so old names such as `tamedphantoms-1.0.0.jar` and `tamedphantoms-fabric-1.0.0.jar` are not part of the current set.
-3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.6.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
+3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.7.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
 4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
 
 If the game says Patchouli requires **fabric** 0.100.3 or that Tamed Phantoms requires **fabric-api**, the `fabric-api-0.116.17+1.21.1.jar` file is missing. Fabric API’s id is `fabric-api`, and it also provides the id `fabric`. That is the jar from this release, not a newer Fabric Loader.
 
-The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.6-fabric`.
+The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.7-fabric`.
 
 ## Flight controls
 
@@ -153,6 +153,7 @@ An invalid item id falls back to the default and a warning is written to the log
 
 - `registerInteraction` gets a right-click on a tamed or released phantom before the built-in actions, with the clicked part (`BODY` or `SADDLE`). Return `null` to pass.
 - `registerReleaseListener` is called when a phantom is released, while the saddle is still on.
+- `registerRiderTool` names items that also work from the saddle. A rider cannot target their own mount, so a right-click in the air with such an item goes to `registerInteraction` as a click on the part of the phantom the rider looks at. Register it on both sides: the client decides whether to send the click.
 
 The phantom keeps and syncs its look itself: `bodyDye` and `saddleDye` (a `DyeColor` id or `NO_DYE`), `luminous`, `startShake(style)`, and `provokeBy(player)`. A removed saddle loses its dye.
 

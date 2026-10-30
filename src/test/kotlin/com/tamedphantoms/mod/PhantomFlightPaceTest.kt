@@ -207,6 +207,18 @@ class PhantomCrawlTest {
         assertTrue(fast > normal)
         assertEquals(0f, PhantomCrawl.advance(0.0, 2.5), 0.0001f)
     }
+
+    @Test
+    @DisplayName("Остаточный дрейф не крутит шаг, медленный ход шагает реже")
+    fun stillPhantomDoesNotWalkInPlace() {
+        assertEquals(0f, PhantomCrawl.advance(0.002, 1.25), 0.0001f)
+        val creep = PhantomCrawl.advance(0.01, 1.25)
+        val walk = PhantomCrawl.advance(0.08, 1.25)
+        assertTrue(creep > 0f && creep < walk * 0.2f)
+        var stride = 1f
+        repeat(30) { stride = PhantomCrawl.stride(stride, 0.0) }
+        assertTrue(stride < 0.05f)
+    }
 }
 
 class PhantomWetnessTest {
