@@ -115,6 +115,7 @@ fun rewriteFor26(line: String): String {
             "if (!player.addItem(bottle)) player.drop(bottle, false, net.minecraft.util.Prediction.SERVER_ONLY)",
         "MobEffects.HEAL ->" to "MobEffects.INSTANT_HEALTH ->",
         "MobEffects.HARM ->" to "MobEffects.INSTANT_DAMAGE ->",
+        "MobEffects.DAMAGE_RESISTANCE" to "MobEffects.RESISTANCE",
         "net.minecraft.sounds.SoundEvents.GENERIC_DRINK" to "net.minecraft.sounds.SoundEvents.GENERIC_DRINK.value()",
         "phantom.fallDistance = 0.0f" to "phantom.fallDistance = 0.0",
     )
