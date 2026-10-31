@@ -45,6 +45,7 @@ import com.tamedphantoms.mod.util.PhantomWingbeat
 import com.tamedphantoms.mod.util.PhantomAngerState
 import com.tamedphantoms.mod.util.PhantomSeatAssignment
 import com.tamedphantoms.mod.util.PhantomTamingLogic
+import com.tamedphantoms.mod.util.PhantomTreats
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.BlockParticleOption
 import net.minecraft.core.particles.ParticleTypes
@@ -170,7 +171,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private const val TAG_BODY_DYE = "BodyDye"
         private const val TAG_SADDLE_DYE = "SaddleDye"
         private const val TAG_GLOW = "Glow"
-        private const val TAG_WEAKNESS_FLIP = "WeaknessFlip"
 
         /**
          * Phantom НЕ предоставляет собственный публичный статический
@@ -306,11 +306,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.playSound(SoundEvents.PHANTOM_HURT, 1.0f, 0.55f + this.random.nextFloat() * 0.1f)
     }
 
-    /** Зелье слабости от хозяина: на спине, пока действует зелье. Седоков сбрасывает. */
-    fun flipFromWeakness(ticks: Int) {
-        this.weaknessFlip = true
-        this.addEffect(MobEffectInstance(MobEffects.WEAKNESS, ticks.coerceAtLeast(1), 0, false, true, true))
-        this.setOrderedToSit(true)
+    /** Огнестойкость фантому не нужна: то же зелье даёт сопротивление урону. */
+    override fun addEffect(effectInstance: MobEffectInstance, entity: Entity?): Boolean {
+        return super.addEffect(PhantomTreats.forPhantom(effectInstance), entity)
     }
 
     /** Ответ на крик хозяина. Новый круг ответов не поднимает. */
@@ -357,7 +355,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         set(value) = this.entityData.set(DATA_SCREAM_EYES, value)
 
     private var screamCooldown: Int = 0
-    private var weaknessFlip: Boolean = false
     private var screamTicks: Int = 0
     private var screamFears: Boolean = false
     var trackingLook: Boolean
@@ -621,7 +618,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         output.putInt(TAG_BODY_DYE, this.bodyDye)
         output.putInt(TAG_SADDLE_DYE, this.saddleDye)
         output.putBoolean(TAG_GLOW, this.luminous)
-        output.putBoolean(TAG_WEAKNESS_FLIP, this.weaknessFlip)
     }
 
     override fun readAdditionalSaveData(input: ValueInput) {
@@ -645,7 +641,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.bodyDye = input.getIntOr(TAG_BODY_DYE, NO_DYE)
         this.saddleDye = input.getIntOr(TAG_SADDLE_DYE, NO_DYE)
         this.luminous = input.getBooleanOr(TAG_GLOW, false)
-        this.weaknessFlip = input.getBooleanOr(TAG_WEAKNESS_FLIP, false)
     }
 
     override fun onSyncedDataUpdated(key: EntityDataAccessor<*>) {
@@ -1022,7 +1017,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.tickLavaExit()
         this.tickRideHead()
         this.tickAngerTimer()
-        this.tickWeaknessFlip()
         this.tickScream(level)
         this.tickAcrobatics()
         if (this.takeoffHoldTicks > 0) {
@@ -1331,16 +1325,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private fun tickAngerTimer() {
         this.angerState = PhantomAngerLogic.tick(this.angerState)
         this.setDefending(this.angerState.isActive)
-    }
-
-    private fun tickWeaknessFlip() {
-        if (!this.weaknessFlip) return
-        if (this.hasEffect(MobEffects.WEAKNESS)) {
-            if (!this.isOrderedToSit()) this.setOrderedToSit(true, playEffects = false)
-            return
-        }
-        this.weaknessFlip = false
-        if (this.isOrderedToSit()) this.setOrderedToSit(false, playEffects = false)
     }
 
     fun tryOwnerScream(player: Player) {

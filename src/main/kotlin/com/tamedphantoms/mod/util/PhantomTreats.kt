@@ -14,7 +14,7 @@ import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import java.util.WeakHashMap
 
-/** Еда и обычные зелья. Взрывные зелья сюда не попадают. */
+/** Еда и обычные зелья. Взрывное зелье сюда не попадает: его эффект приходит в [TamedPhantomEntity.addEffect]. */
 object PhantomTreats {
 
     private val fedAt = WeakHashMap<TamedPhantomEntity, Int>()
@@ -53,17 +53,12 @@ object PhantomTreats {
         val contents = stack.get(DataComponents.POTION_CONTENTS)
         var aggro = false
         var nastyHeal = 0f
-        var flipped = false
         var inverted = false
         if (contents != null) {
             for (effect in contents.getAllEffects()) {
                 when (effect.effect) {
                     MobEffects.HEAL -> aggro = true
                     MobEffects.HARM -> nastyHeal += 6f * (1 shl effect.amplifier.coerceAtLeast(0))
-                    MobEffects.WEAKNESS -> if (phantom.isOwnedBy(player)) {
-                        flipped = true
-                        phantom.flipFromWeakness(effect.duration)
-                    }
                     MobEffects.NIGHT_VISION -> {
                         inverted = true
                         phantom.addEffect(MobEffectInstance(effect))
@@ -77,12 +72,27 @@ object PhantomTreats {
         if (player is ServerPlayer) {
             if (aggro) ModAdvancements.grantFilth(player)
             if (nastyHeal > 0f) ModAdvancements.grantNastyHeal(player)
-            if (flipped) ModAdvancements.grantEnough(player)
             if (inverted) ModAdvancements.grantOverload(player)
         }
         consume(player, stack, Items.GLASS_BOTTLE)
         level.playSound(null, phantom.blockPosition(), net.minecraft.sounds.SoundEvents.GENERIC_DRINK, net.minecraft.sounds.SoundSource.NEUTRAL, 0.6f, 1.0f)
         return true
+    }
+
+    /**
+     * Фантом и так не горит. Огнестойкость из бутылочки, взрывного или туманного зелья
+     * становится сопротивлением урону на то же время и ту же силу.
+     */
+    fun forPhantom(effect: MobEffectInstance): MobEffectInstance {
+        if (effect.effect != MobEffects.FIRE_RESISTANCE) return effect
+        return MobEffectInstance(
+            MobEffects.DAMAGE_RESISTANCE,
+            effect.duration,
+            effect.amplifier,
+            effect.isAmbient,
+            effect.isVisible,
+            effect.showIcon(),
+        )
     }
 
     private fun containerOf(stack: ItemStack): Item? = when {
