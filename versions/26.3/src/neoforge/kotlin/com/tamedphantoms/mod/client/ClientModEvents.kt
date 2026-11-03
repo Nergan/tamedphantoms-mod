@@ -47,7 +47,17 @@ object ClientModEvents {
             }
         }
         bus.addListener { event: ViewportEvent.ComputeCameraAngles ->
-            val angles = PhantomRideBank.adjust(event.camera.entity(), event.partialTick.toFloat(), event.pitch, event.roll)
+            val camera = event.camera
+            if (!camera.isDetached()) {
+                val cockpit = PhantomCockpitCamera.update(camera.entity(), event.partialTick.toFloat())
+                if (cockpit != null) {
+                    event.yaw = cockpit.yaw
+                    event.pitch = cockpit.pitch
+                    event.roll = cockpit.roll
+                    return@addListener
+                }
+            }
+            val angles = PhantomRideBank.adjust(camera.entity(), event.partialTick.toFloat(), event.pitch, event.roll)
                 ?: return@addListener
             event.pitch = angles.pitch
             event.roll = angles.roll
@@ -61,6 +71,7 @@ object ClientModEvents {
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             PhantomDiveWind.update(phantom)
+            PhantomCloudWisp.afterClientTick(phantom)
         }
 
         modContainer.registerExtensionPoint(
@@ -98,6 +109,7 @@ object ClientModEvents {
                 onClientThread {
                     PhantomTextureProcessor.resetGeneratedTextures()
                     PhantomTextureProcessor.prepareEyeTextures()
+                    PhantomCloudWisp.forget()
                 }
             },
         )

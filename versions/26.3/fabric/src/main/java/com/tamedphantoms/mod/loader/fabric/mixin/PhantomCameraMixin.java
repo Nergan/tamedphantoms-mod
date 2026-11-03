@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.loader.fabric.mixin;
 
+import com.tamedphantoms.mod.client.PhantomCockpitCamera;
 import com.tamedphantoms.mod.client.PhantomRideBank;
 import net.minecraft.client.Camera;
 import net.minecraft.client.DeltaTracker;
@@ -35,6 +36,10 @@ public abstract class PhantomCameraMixin {
     @Shadow @Final private static Vector3fc LEFT;
 
     @Unique private boolean tamedphantoms$baseSet;
+    @Unique private boolean tamedphantoms$cockpitReady;
+    @Unique private boolean tamedphantoms$cockpit;
+    @Unique private float tamedphantoms$cockpitYaw;
+    @Unique private float tamedphantoms$cockpitPitch;
     @Unique private float tamedphantoms$roll;
     @Unique private float tamedphantoms$activeRoll;
     @Unique private float tamedphantoms$partial;
@@ -42,13 +47,45 @@ public abstract class PhantomCameraMixin {
     @Inject(method = "update", at = @At("HEAD"))
     private void tamedphantoms$begin(DeltaTracker delta, CallbackInfo ci) {
         this.tamedphantoms$baseSet = false;
+        this.tamedphantoms$cockpitReady = false;
+        this.tamedphantoms$cockpit = false;
         this.tamedphantoms$partial = delta.getGameTimeDeltaPartialTick(true);
         this.tamedphantoms$roll = 0.0f;
         this.tamedphantoms$activeRoll = 0.0f;
     }
 
+    @Unique
+    private void tamedphantoms$cockpitView() {
+        if (this.tamedphantoms$cockpitReady) {
+            return;
+        }
+        this.tamedphantoms$cockpitReady = true;
+        if (((Camera) (Object) this).isDetached()) {
+            return;
+        }
+        PhantomCockpitCamera.View view = PhantomCockpitCamera.INSTANCE.update(this.entity, this.tamedphantoms$partial);
+        if (view == null) {
+            return;
+        }
+        this.tamedphantoms$cockpit = true;
+        this.tamedphantoms$cockpitYaw = view.getYaw();
+        this.tamedphantoms$cockpitPitch = view.getPitch();
+        this.tamedphantoms$roll = view.getRoll();
+        this.tamedphantoms$activeRoll = view.getRoll();
+    }
+
+    @ModifyVariable(method = "setRotation", at = @At("HEAD"), ordinal = 0, argsOnly = true)
+    private float tamedphantoms$yaw(float yaw) {
+        this.tamedphantoms$cockpitView();
+        return this.tamedphantoms$cockpit ? this.tamedphantoms$cockpitYaw : yaw;
+    }
+
     @ModifyVariable(method = "setRotation", at = @At("HEAD"), ordinal = 1, argsOnly = true)
     private float tamedphantoms$pitch(float pitch) {
+        this.tamedphantoms$cockpitView();
+        if (this.tamedphantoms$cockpit) {
+            return this.tamedphantoms$cockpitPitch;
+        }
         if (!this.tamedphantoms$baseSet) {
             this.tamedphantoms$baseSet = true;
             PhantomRideBank.Angles angles = PhantomRideBank.INSTANCE.adjust(

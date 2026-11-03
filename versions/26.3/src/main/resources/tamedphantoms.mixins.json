@@ -17,7 +17,9 @@
     "MoonFogMixin",
     "NightInvertMixin",
     "KeyMappingFields",
-    "SharedPhysicalKeyMixin"
+    "SharedPhysicalKeyMixin",
+    "PhantomCockpitSeatMixin",
+    "PhantomCockpitAimMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -4,6 +4,7 @@ import com.tamedphantoms.mod.api.TamedPhantomsApi
 import com.tamedphantoms.mod.config.ModConfig
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.event.PhantomInteractionHandler
+import com.tamedphantoms.mod.util.PhantomCockpit
 import com.tamedphantoms.mod.util.PhantomFlightModel
 import com.tamedphantoms.mod.util.PhantomManeuvers
 import net.minecraft.core.particles.DustParticleOptions
@@ -97,7 +98,8 @@ import kotlin.math.sqrt
  * — в докстринге на companion object и в README).
  */
 class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: Level) :
-    Phantom(entityType, level) {
+    Phantom(entityType, level),
+    PhantomCockpit {
 
     companion object {
         private val DATA_TAMED: EntityDataAccessor<Boolean> =
@@ -505,6 +507,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return if (this.isVehicle || crawl > 0f) shown + acro else this.xRot + acro
     }
 
+    /** Седок наклоняется вместе с моделью. Сервер позы не рисует и берёт ту, что прислал пилот. */
+    override fun cockpitAttitude(partial: Float): PhantomCockpit.Attitude? {
+        if (this.isOrderedToSit()) return null
+        if (this.level().isClientSide) {
+            return PhantomCockpit.Attitude(this.renderedBodyYaw(partial), this.renderedBodyPitch(partial), this.bankVisual(partial))
+        }
+        if (PhantomGroundSkim.pressed(this)) return PhantomCockpit.Attitude(this.yRot, 0f, 0f)
+        return PhantomCockpit.Attitude(
+            this.yRot,
+            this.xRot + this.entityData.get(DATA_ACRO_PITCH),
+            this.entityData.get(DATA_ACRO_ROLL),
+        )
+    }
+
     /** Куда сейчас смотреть. Выставляют цели взгляда и самообороны, крутит [TamedPhantomLookControl]. */
     var glanceTarget: LivingEntity? = null
 
@@ -584,6 +600,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var clientCruise: Boolean = false
     var clientLoopRequest: Boolean = false
     var clientRollRequest: Int = 0
+    var clientZoomRequest: Boolean = false
+
+    /** Клиент пилота: в петле можно рвануть вверх. */
+    val zoomWindowOpen: Boolean
+        get() = this.flightModel.zoomReady
+
+    /** Рывок начался: пилот сообщает серверу, тот показывает порыв ветра всем вокруг. */
+    var zoomReadyToReport: Boolean = false
 
     private val flightModel = PhantomFlightModel()
     private var lastPilotYaw: Float = Float.NaN
@@ -1871,12 +1895,18 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 lift = lift,
                 loopRequest = this.clientLoopRequest,
                 rollRequest = this.clientRollRequest,
+                zoomRequest = this.clientZoomRequest,
+                zoomBoost = ServerConfig.zoomBoost(),
             ),
         )
         this.clientLoopRequest = false
         this.clientRollRequest = 0
+        this.clientZoomRequest = false
         if (this.flightModel.completedLoop && this.isOwnedBy(pilot)) {
             this.loopReadyToReport = true
+        }
+        if (this.flightModel.zoomStarted && this.isOwnedBy(pilot)) {
+            this.zoomReadyToReport = true
         }
 
         // Корпус идёт по траектории. Выше предела наклона угол уходит в фигуру, его рисует рендерер.
@@ -1890,7 +1920,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.bank = unwrapNear(this.bank, this.flightModel.roll)
         this.bankTarget = this.bank
         this.headYawTarget = -strafeInput.coerceIn(-1f, 1f) * PhantomFlightAttitude.HEAD_YAW
-        this.acrobatic = this.flightModel.looping || PhantomAcrobatics.allows(
+        this.acrobatic = this.flightModel.looping || this.flightModel.zooming || PhantomAcrobatics.allows(
             forwardInput.toDouble(),
             strafeInput.toDouble(),
             crawling = this.crawlLock,

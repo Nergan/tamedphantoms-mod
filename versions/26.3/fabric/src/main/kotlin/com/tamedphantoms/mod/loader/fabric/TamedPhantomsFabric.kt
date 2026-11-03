@@ -1,6 +1,7 @@
 package com.tamedphantoms.mod.loader.fabric
 
 import com.tamedphantoms.mod.TamedPhantomsMod
+import com.tamedphantoms.mod.config.RideExtras
 import com.tamedphantoms.mod.entity.ModEntities
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDamageHandler
@@ -51,6 +52,7 @@ class TamedPhantomsFabric : ModInitializer {
 
     override fun onInitialize() {
         TamedPhantomsMod.LOGGER.info("Инициализация Tamed Phantoms (Fabric)")
+        RideExtras.enabled = true
         FabricSettings.bind()
         ModAccess.persistentData = { (it as PersistentDataCarrier).tamedphantomsPersistentData() }
         ModAccess.addGoal = { mob, priority, goal ->

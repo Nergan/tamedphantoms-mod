@@ -11,7 +11,9 @@ import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
+import com.tamedphantoms.mod.network.PhantomZoomPayload
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import com.tamedphantoms.mod.util.PhantomZoomBurst
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.minecraft.server.level.ServerPlayer
@@ -24,6 +26,7 @@ object FabricNetworking {
         PayloadTypeRegistry.serverboundPlay().register(PhantomScreamPayload.TYPE, PhantomScreamPayload.STREAM_CODEC)
         PayloadTypeRegistry.serverboundPlay().register(PhantomRosterPayload.TYPE, PhantomRosterPayload.STREAM_CODEC)
         PayloadTypeRegistry.serverboundPlay().register(PhantomLoopPayload.TYPE, PhantomLoopPayload.STREAM_CODEC)
+        PayloadTypeRegistry.serverboundPlay().register(PhantomZoomPayload.TYPE, PhantomZoomPayload.STREAM_CODEC)
         PayloadTypeRegistry.serverboundPlay().register(PhantomDismountTapPayload.TYPE, PhantomDismountTapPayload.STREAM_CODEC)
         PayloadTypeRegistry.clientboundPlay().register(PhantomMoonPulsePayload.TYPE, PhantomMoonPulsePayload.STREAM_CODEC)
         PayloadTypeRegistry.clientboundPlay().register(PhantomDismountAllowPayload.TYPE, PhantomDismountAllowPayload.STREAM_CODEC)
@@ -61,6 +64,11 @@ object FabricNetworking {
                 val player = context.player()
                 val vehicle = player.vehicle
                 if (vehicle is TamedPhantomEntity) vehicle.tryOwnerLoop(player)
+            }
+        }
+        ServerPlayNetworking.registerGlobalReceiver(PhantomZoomPayload.TYPE) { _, context ->
+            context.server().execute {
+                PhantomZoomBurst.onRequest(context.player())
             }
         }
         ServerPlayNetworking.registerGlobalReceiver(PhantomDismountTapPayload.TYPE) { _, context ->

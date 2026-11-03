@@ -157,7 +157,6 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/client/render/**",
     "com/tamedphantoms/mod/client/ClientPhantomInputSender.kt",
     "com/tamedphantoms/mod/client/ModKeyMappings.kt",
-    "com/tamedphantoms/mod/client/PhantomCockpitCamera.kt",
     "com/tamedphantoms/mod/mixin/PhantomCockpitEyeMixin.kt",
     "com/tamedphantoms/mod/mixin/PhantomCockpitAimMixin.kt",
     "com/tamedphantoms/mod/client/ClientPhantomSoundHandler.kt",

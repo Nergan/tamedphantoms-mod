@@ -2,6 +2,7 @@ package com.tamedphantoms.mod.loader.fabric
 
 import com.tamedphantoms.mod.TamedPhantomsMod
 import com.tamedphantoms.mod.client.ClientFlightSpeedSender
+import com.tamedphantoms.mod.client.PhantomCloudWisp
 import com.tamedphantoms.mod.client.ClientPhantomInputSender
 import com.tamedphantoms.mod.client.ModKeyMappings
 import com.tamedphantoms.mod.client.PhantomMoonLight
@@ -59,6 +60,7 @@ class TamedPhantomsFabricClient : ClientModInitializer {
                 val work = {
                     PhantomTextureProcessor.resetGeneratedTextures()
                     PhantomTextureProcessor.prepareEyeTextures()
+                    PhantomCloudWisp.forget()
                 }
                 if (minecraft.isSameThread) work() else minecraft.execute { work() }
             }
@@ -71,6 +73,7 @@ class TamedPhantomsFabricClient : ClientModInitializer {
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             com.tamedphantoms.mod.client.PhantomDiveWind.update(phantom)
+            PhantomCloudWisp.afterClientTick(phantom)
         }
 
         ClientPlayNetworking.registerGlobalReceiver(PhantomMoonPulsePayload.TYPE) { _, context ->
