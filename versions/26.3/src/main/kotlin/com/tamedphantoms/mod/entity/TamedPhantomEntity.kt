@@ -1677,8 +1677,38 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val reachZ = com.tamedphantoms.mod.compat.FloatMath.sin(yaw) * (1.3f + 0.21f * size)
         val height = (0.3f + now * 0.45f * amplitude.coerceIn(0f, 1.3f)) * (size * 0.2f + 1f)
         val particle = this.wingParticle()
-        level.addParticle(particle, this.x + reachX, this.y + height, this.z + reachZ, 0.0, 0.0, 0.0)
-        level.addParticle(particle, this.x - reachX, this.y + height, this.z - reachZ, 0.0, 0.0, 0.0)
+        val leftX = this.x + reachX
+        val rightX = this.x - reachX
+        val leftZ = this.z + reachZ
+        val rightZ = this.z - reachZ
+        val py = this.y + height
+        val folded = ((this.wingSweep - 0.5f) / 0.35f).coerceIn(0f, 1f)
+        if (folded <= 0f) {
+            level.addParticle(particle, leftX, py, leftZ, 0.0, 0.0, 0.0)
+            level.addParticle(particle, rightX, py, rightZ, 0.0, 0.0, 0.0)
+            return
+        }
+        val tail = this.tailTip()
+        level.addParticle(particle, leftX + (tail.x - leftX) * folded, py + (tail.y - py) * folded, leftZ + (tail.z - leftZ) * folded, 0.0, 0.0, 0.0)
+        level.addParticle(particle, rightX + (tail.x - rightX) * folded, py + (tail.y - py) * folded, rightZ + (tail.z - rightZ) * folded, 0.0, 0.0, 0.0)
+    }
+
+    /** Конец хвоста в мире. Та же сетка, что в сборке 1.21.1. */
+    private fun tailTip(): Vec3 {
+        val scale = 1.0 + 0.15 * this.phantomSize
+        val back = 1.0 * scale
+        val lift = 0.28 * scale
+        val yaw = this.yRot * Mth.DEG_TO_RAD
+        val pitch = (this.xRot + this.acroPitch + this.tailPitch) * Mth.DEG_TO_RAD
+        val fx = -com.tamedphantoms.mod.compat.FloatMath.sin(yaw).toDouble()
+        val fz = com.tamedphantoms.mod.compat.FloatMath.cos(yaw).toDouble()
+        val cp = com.tamedphantoms.mod.compat.FloatMath.cos(pitch).toDouble()
+        val sp = com.tamedphantoms.mod.compat.FloatMath.sin(pitch).toDouble()
+        return Vec3(
+            this.x + (-fx * cp) * back + (fx * sp) * lift,
+            this.y + sp * back + cp * lift,
+            this.z + (-fz * cp) * back + (fz * sp) * lift,
+        )
     }
 
     /** Частицы крыльев: ванильный мицелий или пыль цвета краски тела. */

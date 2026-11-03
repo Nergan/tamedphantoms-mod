@@ -15,9 +15,18 @@
 
 Перед правкой загрузчика прочитай подходящий скилл из https://github.com/SirEdvin/minecraft-modding-skills (`fabric-modding`, `neoforge-modding`, `neoforge-legacy-modding`, `minecraft-26-1-migration`, `modrinth-api`). Версии бери из `gradle.properties` этого репозитория: если скилл с ними разошёлся, верь файлу.
 
-Перед багфиксом открой https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail/SKILL.md. Раздел «Готово» этот скилл не отменяет.Для этого мода читай `neoforge-modding` и `fabric-modding`. Вторую сборку не добавляй и не снимай, пока задача этого не просит. Ставится один набор, не оба сразу. Версию 26.3 не трогай, пока задача её прямо не назовёт.
+Перед багфиксом открой https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail/SKILL.md. Раздел «Готово» этот скилл не отменяет.Для этого мода читай `neoforge-modding` и `fabric-modding`. Вторую сборку не добавляй и не снимай, пока задача этого не просит. Ставится один набор, не оба сразу. Игровая правка входит в уже выпускаемые сборки 1.21.1 и 26.3, Fabric и NeoForge. Новую версию или загрузчик не заводить.
 
 Для правок `versions/26.3` дополнительно читай `minecraft-26-1-migration`.
+
+## Полная актуализация
+
+Игрок видит одно и то же во всех четырёх jar: 1.21.1 и 26.3, Fabric и NeoForge. `TamedPhantomEntity.kt`, ввод, сеть и клиент 26.3 — отдельные копии: правка только родительского файла в jar 26.3 не попадает. Выпущенный `mod_version` не перезаписывается.
+
+1. Поднять `mod_version`, README и `modrinth.md`.
+2. Запушить `main`. Workflow обновляет четыре страницы GitHub Release, Modrinth и CDN (CDN — NeoForge 1.21.1).
+3. В `tamedphantoms-colors-mod` поднять `tamedphantoms_version` и диапазон до этого номера и запушить аддон, когда jar родителя уже скачивается. На каждой странице релиза аддона лежит jar родителя той же версии и того же загрузчика.
+4. В Kidou прямая ссылка на новый `tamedphantoms-fabric-1.21.1-<версия>.jar`. В папке клиента тот же jar, старый файл убрать. У Colors в `fabric.mod.json` зависимость `tamedphantoms` равна этому номеру.
 
 ## Правила
 
