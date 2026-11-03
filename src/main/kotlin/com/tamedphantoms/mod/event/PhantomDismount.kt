@@ -183,7 +183,7 @@ object PhantomDismount {
         armed.remove(id)
         val serverPlayer = player as? ServerPlayer ?: return
         val task = Runnable { this.parkMount(serverPlayer) }
-        val server = serverPlayer.server ?: return
+        val server = serverPlayer.serverLevel().getServer() ?: return
         if (server.isSameThread) task.run() else server.execute(task)
     }
 
@@ -196,7 +196,7 @@ object PhantomDismount {
     private fun parkMount(player: ServerPlayer) {
         val phantom = player.vehicle as? TamedPhantomEntity ?: return
         if (!phantom.isAlive) return
-        player.storedData.putUUID(TAG_RESUME, phantom.uuid)
+        player.storedData.putString(TAG_RESUME, phantom.uuid.toString())
         PhantomOwnerRecall.remember(player, phantom)
         this.forceDismount(player, phantom)
     }
@@ -204,9 +204,10 @@ object PhantomDismount {
     fun resumeAfterLogin(player: Player) {
         val serverPlayer = player as? ServerPlayer ?: return
         val data = serverPlayer.storedData
-        if (!data.hasUUID(TAG_RESUME)) return
-        val id = data.getUUID(TAG_RESUME)
+        if (!data.contains(TAG_RESUME)) return
+        val rideId = data.getString(TAG_RESUME)
         data.remove(TAG_RESUME)
+        val id = runCatching { UUID.fromString(rideId) }.getOrNull() ?: return
         val phantom = this.findLoaded(serverPlayer, id) ?: return
         if (!phantom.isAlive || !phantom.tamed || !phantom.isSaddled || phantom.isOrderedToSit() || !phantom.isOwnedBy(serverPlayer)) {
             return
@@ -278,7 +279,7 @@ object PhantomDismount {
     }
 
     private fun findLoaded(player: ServerPlayer, id: UUID): TamedPhantomEntity? {
-        val server = player.server ?: return null
+        val server = player.serverLevel().getServer() ?: return null
         for (level in server.allLevels) {
             val found = level.getEntity(id) as? TamedPhantomEntity
             if (found != null) return found

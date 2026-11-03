@@ -71,6 +71,8 @@ fun rewriteFor26(line: String): String {
         "tag.getDouble(\"Z\")" to "tag.getDoubleOr(\"Z\", 0.0)",
         "tag.hasUUID(\"U\")" to "tag.getString(\"U\").isPresent",
         "tag.getUUID(\"U\")" to "java.util.UUID.fromString(tag.getString(\"U\").orElse(\"\"))",
+        "data.contains(TAG_RESUME)" to "data.getString(TAG_RESUME).isPresent",
+        "val rideId = data.getString(TAG_RESUME)" to "val rideId = data.getStringOr(TAG_RESUME, \"\")",
         "entry.putUUID(\"U\", phantom.uuid)" to "entry.putString(\"U\", phantom.uuid.toString())",
         "entry.putUUID(\"U\", " to "entry.putString(\"U\", ",
         ".dimension().location()" to ".dimension().identifier()",
@@ -175,7 +177,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "ride-effects-4")
+    inputs.property("rewriteStamp", "resume-ride-1")
     filter { line -> rewriteIdentifiers(line) }
 }
 
