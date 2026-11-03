@@ -39,6 +39,9 @@ class TamedPhantomsFabricClient : ClientModInitializer {
         KeyMappingHelper.registerKeyMapping(ModKeyMappings.FLY_UP)
         KeyMappingHelper.registerKeyMapping(ModKeyMappings.FLY_DOWN)
         KeyMappingHelper.registerKeyMapping(ModKeyMappings.SCREAM)
+        KeyMappingHelper.registerKeyMapping(ModKeyMappings.LOOP)
+        KeyMappingHelper.registerKeyMapping(ModKeyMappings.ROLL_LEFT)
+        KeyMappingHelper.registerKeyMapping(ModKeyMappings.ROLL_RIGHT)
         ModKeyMappings.init()
 
         EntityRendererRegistry.register(ModEntities.TAMED_PHANTOM.get(), ::TamedPhantomRenderer)

@@ -29,6 +29,26 @@ object ModKeyMappings {
         CATEGORY,
     )
 
+    /** По умолчанию пробел: двойное нажатие — мёртвая петля, как раньше двойной взлёт. */
+    val LOOP: KeyMapping = KeyMapping(
+        "key.tamedphantoms.loop",
+        InputConstants.KEY_SPACE,
+        CATEGORY,
+    )
+
+    /** По умолчанию A и D: двойное нажатие — бочка, как раньше двойной шаг в сторону. */
+    val ROLL_LEFT: KeyMapping = KeyMapping(
+        "key.tamedphantoms.roll_left",
+        InputConstants.KEY_A,
+        CATEGORY,
+    )
+
+    val ROLL_RIGHT: KeyMapping = KeyMapping(
+        "key.tamedphantoms.roll_right",
+        InputConstants.KEY_D,
+        CATEGORY,
+    )
+
     fun init() {
         TamedPhantomsMod.LOGGER.debug("Регистрирую клавиши управления полётом Tamed Phantoms")
     }

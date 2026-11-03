@@ -1,9 +1,10 @@
 package com.tamedphantoms.mod.util
 
 /**
- * Двойные нажатия верхом: «вперёд» — круиз, «вверх» — петля,
- * «влево» или «вправо» — бочка. Круиз гаснет от любой новой клавиши движения.
- * Окно двойного нажатия то же, что у ванильного рывка: 7 тиков.
+ * Двойные нажатия верхом: «вперёд» — круиз, клавиша петли — петля,
+ * клавиши бочки — бочка. Если отдельная клавиша не задана, петля читает «вверх»,
+ * а бочка — «влево» и «вправо». Круиз гаснет от любой новой клавиши движения
+ * и от нажатия петли или бочки. Окно двойного нажатия то же, что у ванильного рывка: 7 тиков.
  */
 class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
 
@@ -15,6 +16,11 @@ class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
         val up: Boolean = false,
         val down: Boolean = false,
         val sneak: Boolean = false,
+        /** Отдельная клавиша петли. null — та же, что [up]. */
+        val loop: Boolean? = null,
+        /** Отдельные клавиши бочки. null — те же, что [left] и [right]. */
+        val rollLeft: Boolean? = null,
+        val rollRight: Boolean? = null,
     )
 
     enum class CruiseChange { NONE, STARTED, STOPPED }
@@ -40,6 +46,9 @@ class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
     }
 
     fun tick(now: Int, keys: Keys, flying: Boolean): Result {
+        val loopDown = keys.loop ?: keys.up
+        val rollLeftDown = keys.rollLeft ?: keys.left
+        val rollRightDown = keys.rollRight ?: keys.right
         val pressedForward = keys.forward && !previous.forward
         val pressedBack = keys.back && !previous.back
         val pressedLeft = keys.left && !previous.left
@@ -47,8 +56,12 @@ class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
         val pressedUp = keys.up && !previous.up
         val pressedDown = keys.down && !previous.down
         val pressedSneak = keys.sneak && !previous.sneak
+        val pressedLoop = loopDown && !(previous.loop ?: previous.up)
+        val pressedRollLeft = rollLeftDown && !(previous.rollLeft ?: previous.left)
+        val pressedRollRight = rollRightDown && !(previous.rollRight ?: previous.right)
         previous = keys
-        val otherPressed = pressedBack || pressedLeft || pressedRight || pressedUp || pressedDown || pressedSneak
+        val otherPressed = pressedBack || pressedLeft || pressedRight || pressedUp || pressedDown || pressedSneak ||
+            pressedLoop || pressedRollLeft || pressedRollRight
 
         var change = CruiseChange.NONE
         if (cruising) {
@@ -66,9 +79,9 @@ class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
             cruiseArmed = false
             change = CruiseChange.STARTED
         }
-        val loop = tap(UP, pressedUp, now) && flying
-        val left = tap(LEFT, pressedLeft, now) && flying
-        val right = tap(RIGHT, pressedRight, now) && flying
+        val loop = tap(UP, pressedLoop, now) && flying
+        val left = tap(LEFT, pressedRollLeft, now) && flying
+        val right = tap(RIGHT, pressedRollRight, now) && flying
         val roll = when {
             left && !right -> 1
             right && !left -> -1

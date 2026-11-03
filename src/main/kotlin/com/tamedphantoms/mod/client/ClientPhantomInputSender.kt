@@ -71,6 +71,9 @@ object ClientPhantomInputSender {
             up = ascending,
             down = descending,
             sneak = shiftDown,
+            loop = held(ModKeyMappings.LOOP),
+            rollLeft = held(ModKeyMappings.ROLL_LEFT),
+            rollRight = held(ModKeyMappings.ROLL_RIGHT),
         )
         // Чат, пауза и потеря фокуса отпускают клавиши. Это не посадка и не новый ввод:
         // круиз остаётся, пока окно без экрана и фантом в воздухе не получит настоящую кнопку.

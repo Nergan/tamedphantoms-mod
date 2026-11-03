@@ -8,6 +8,9 @@
   "key.tamedphantoms.fly_up": "Fly Up",
   "key.tamedphantoms.fly_down": "Fly Down",
   "key.tamedphantoms.scream": "Phantom Scream",
+  "key.tamedphantoms.loop": "Dead Loop",
+  "key.tamedphantoms.roll_left": "Barrel Roll Left",
+  "key.tamedphantoms.roll_right": "Barrel Roll Right",
 
   "tamedphantoms.configuration.taming": "Taming",
   "tamedphantoms.configuration.taming.tame_item": "Taming item",
@@ -108,8 +111,8 @@
   "tamedphantoms.guide.entry.flight": "In the Air",
   "tamedphantoms.guide.page.flight.1": "While you are riding, the movement keys send the phantom forward, back, and to the sides. Jump makes it climb. The left Control key makes it descend. It turns with your look. You and anyone sitting behind you receive $(thing)Night Vision$() for as long as you stay in the air. More than eight blocks above the surface, the first Shift only asks if that is a bit high. A second press within a second lets either the owner or the rider behind get down.",
   "tamedphantoms.guide.page.flight.2": "These keys can be changed in the game controls, under the Tamed Phantoms section. The phantom keeps its speed: climbing spends it, diving builds it, and beating wings push only up to cruising speed. Let go of forward and it glides on, slowly losing height and speed, until it hangs in the air. Back brakes harder and then hovers. Its body leans into turns, and a sharp turn at speed bleeds a little speed.",
-  "tamedphantoms.guide.page.flight.3": "Dive without forward and the phantom folds its wings back like a falcon: the fall is steeper and much faster, and that speed stays for a few seconds after you level out. Climb on it, or fly far with it. Double-tap jump while flying forward fast enough, and the phantom flies a whole loop. Too slow, and it stalls before the top and drops its nose. Double-tap left or right for a quick barrel roll that also slips aside.",
-  "tamedphantoms.guide.page.flight.4": "Double-tap forward for cruise: the phantom flies on by itself, and the camera still steers it. Any movement key hands control back, and both changes are shown above the hotbar. The camera follows part of a climb or dive and all of a loop. If the server allows immortal phantoms, a full loop grants a secret advancement, and that phantom glows from then on and will not die. The setting is off by default.",
+  "tamedphantoms.guide.page.flight.3": "Dive without forward and the phantom folds its wings back like a falcon: the fall is steeper and much faster, and that speed stays for a few seconds after you level out. Climb on it, or fly far with it. Double-tap $(k:key.tamedphantoms.loop)$() (Space by default) while flying forward fast enough, and the phantom flies a whole loop. Too slow, and it stalls before the top and drops its nose. Double-tap $(k:key.tamedphantoms.roll_left)$() or $(k:key.tamedphantoms.roll_right)$() (strafe left and right by default) for a quick barrel roll that also slips aside.",
+  "tamedphantoms.guide.page.flight.4": "Double-tap forward for cruise: the phantom flies on by itself, and the camera still steers it. Any movement key, the loop, or a barrel roll hands control back, and both changes are shown above the hotbar. The camera follows part of a climb or dive and all of a loop. If the server allows immortal phantoms, a full loop grants a secret advancement, and that phantom glows from then on and will not die. The setting is off by default.",
 
   "tamedphantoms.guide.entry.sit": "Sitting Still",
   "tamedphantoms.guide.page.sit.1": "Only the owner can ask a phantom to sit, and only while not riding it. If there is no saddle, use the right mouse button. If there is a saddle, sneak and use the right mouse button. The phantom turns over, falls, and stays where it lands. Falling does not hurt it. A breath of wind marks the command.",

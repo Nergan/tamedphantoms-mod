@@ -64,6 +64,9 @@ object ClientPhantomInputSender {
             up = ascending,
             down = descending,
             sneak = shiftDown,
+            loop = held(ModKeyMappings.LOOP),
+            rollLeft = held(ModKeyMappings.ROLL_LEFT),
+            rollRight = held(ModKeyMappings.ROLL_RIGHT),
         )
         val result = flightKeys.tick(player.tickCount, keys, pilot && openScreen(minecraft) == null && phantom.airborne())
         phantom.clientCruise = flightKeys.cruising

@@ -80,4 +80,33 @@ class PhantomFlightKeysTest {
         keys.tick(21, Keys(), true)
         assertEquals(-1, keys.tick(22, Keys(right = true), true).roll)
     }
+
+    @Test
+    @DisplayName("Своя клавиша петли не следует за взлётом, а своя бочка — за шагом")
+    fun dedicatedManeuverKeys() {
+        val keys = PhantomFlightKeys()
+        keys.tick(0, Keys(up = true, loop = false), true)
+        keys.tick(1, Keys(loop = false), true)
+        assertFalse(keys.tick(2, Keys(up = true, loop = false), true).loop)
+        keys.tick(10, Keys(loop = true, up = false), true)
+        keys.tick(11, Keys(), true)
+        assertTrue(keys.tick(12, Keys(loop = true, up = false), true).loop)
+
+        keys.tick(20, Keys(left = true, rollLeft = false), true)
+        keys.tick(21, Keys(rollLeft = false), true)
+        assertEquals(0, keys.tick(22, Keys(left = true, rollLeft = false), true).roll)
+        keys.tick(30, Keys(rollRight = true, right = false), true)
+        keys.tick(31, Keys(), true)
+        assertEquals(-1, keys.tick(32, Keys(rollRight = true, right = false), true).roll)
+    }
+
+    @Test
+    @DisplayName("Нажатие отдельной клавиши петли возвращает управление из круиза")
+    fun dedicatedLoopStopsCruise() {
+        val keys = PhantomFlightKeys()
+        tapForwardTwice(keys)
+        keys.tick(10, Keys(), true)
+        assertEquals(CruiseChange.STOPPED, keys.tick(30, Keys(loop = true), true).cruise)
+        assertFalse(keys.cruising)
+    }
 }

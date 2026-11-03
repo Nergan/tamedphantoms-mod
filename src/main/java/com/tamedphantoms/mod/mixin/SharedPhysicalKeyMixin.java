@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Ваниль держит в {@code MAP} одну привязку на физическую клавишу: кто
  * попал туда последним, тот и получает {@code set}/{@code click}.
- * «Снижение» по умолчанию сидит на левом Ctrl, «Взлёт» — на пробеле,
- * поэтому спринт или прыжок остаются false, пока фантом забрал слот.
+ * «Снижение» по умолчанию сидит на левом Ctrl, «Взлёт» и петля — на пробеле,
+ * бочки — на A и D. Иначе спринт, прыжок или шаг остаются false, пока фантом забрал слот.
  *
  * Пока одна из наших привязок использует эту клавишу, событие доходит
  * до каждой привязки с тем же кодом. На земле Ctrl снова включает бег,
@@ -77,8 +77,14 @@ public class SharedPhysicalKeyMixin {
 
     @Unique
     private static boolean tamedphantoms$claims(InputConstants.Key key) {
+        if (key.equals(InputConstants.UNKNOWN)) {
+            return false;
+        }
         return tamedphantoms$boundTo(ModKeyMappings.INSTANCE.getFLY_UP(), key)
-            || tamedphantoms$boundTo(ModKeyMappings.INSTANCE.getFLY_DOWN(), key);
+            || tamedphantoms$boundTo(ModKeyMappings.INSTANCE.getFLY_DOWN(), key)
+            || tamedphantoms$boundTo(ModKeyMappings.INSTANCE.getLOOP(), key)
+            || tamedphantoms$boundTo(ModKeyMappings.INSTANCE.getROLL_LEFT(), key)
+            || tamedphantoms$boundTo(ModKeyMappings.INSTANCE.getROLL_RIGHT(), key);
     }
 
     @Unique

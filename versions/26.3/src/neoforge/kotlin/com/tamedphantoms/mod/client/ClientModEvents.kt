@@ -82,6 +82,9 @@ object ClientModEvents {
         event.register(ModKeyMappings.FLY_UP)
         event.register(ModKeyMappings.FLY_DOWN)
         event.register(ModKeyMappings.SCREAM)
+        event.register(ModKeyMappings.LOOP)
+        event.register(ModKeyMappings.ROLL_LEFT)
+        event.register(ModKeyMappings.ROLL_RIGHT)
     }
 
     private fun onClientSetup(event: FMLClientSetupEvent) {
