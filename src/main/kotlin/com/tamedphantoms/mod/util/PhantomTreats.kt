@@ -38,8 +38,7 @@ object PhantomTreats {
 
     /** Еда, которая делает что-то кроме сытости: эффект, телепорт, свечение, снятие яда. */
     fun hasBonus(stack: ItemStack): Boolean {
-        val food = stack.get(DataComponents.FOOD)
-        if (food != null && food.effects().isNotEmpty()) return true
+        if (PhantomTreatApply.hasBonusEffect(stack)) return true
         if (stack.get(DataComponents.SUSPICIOUS_STEW_EFFECTS) != null) return true
         return stack.`is`(Items.CHORUS_FRUIT) || stack.`is`(Items.GLOW_BERRIES) || stack.`is`(Items.HONEY_BOTTLE)
     }

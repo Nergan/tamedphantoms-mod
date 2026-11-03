@@ -13,6 +13,11 @@ import net.minecraft.world.item.Items
 /** Эффекты еды на 1.21.1. На 26.3 этот файл заменён своей копией. */
 object PhantomTreatApply {
 
+    fun hasBonusEffect(stack: ItemStack): Boolean {
+        val food = stack.get(DataComponents.FOOD) ?: return false
+        return food.effects().isNotEmpty()
+    }
+
     fun applyFood(level: ServerLevel, phantom: TamedPhantomEntity, stack: ItemStack) {
         val food = stack.get(DataComponents.FOOD)
         if (food != null) {

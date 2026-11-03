@@ -8,6 +8,11 @@ import net.minecraft.world.item.ItemStack
 /** Эффекты еды на 26.3: их несёт компонент consumable, а не FoodProperties. */
 object PhantomTreatApply {
 
+    fun hasBonusEffect(stack: ItemStack): Boolean {
+        val consumable = stack.get(DataComponents.CONSUMABLE) ?: return false
+        return consumable.onConsumeEffects().isNotEmpty()
+    }
+
     fun applyFood(level: ServerLevel, phantom: TamedPhantomEntity, stack: ItemStack) {
         val consumable = stack.get(DataComponents.CONSUMABLE)
         if (consumable != null) {
