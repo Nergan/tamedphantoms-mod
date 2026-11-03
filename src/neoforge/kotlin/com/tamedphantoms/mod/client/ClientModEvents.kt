@@ -65,6 +65,7 @@ object ClientModEvents {
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             PhantomDiveWind.update(phantom)
+            PhantomCloudWisp.afterClientTick(phantom)
         }
 
         modContainer.registerExtensionPoint(
@@ -99,6 +100,7 @@ object ClientModEvents {
         event.registerReloadListener(ResourceManagerReloadListener { _: ResourceManager ->
             PhantomTextureProcessor.resetGeneratedTextures()
             PhantomTextureProcessor.prepareEyeTextures()
+            PhantomCloudWisp.forget()
         })
     }
 }

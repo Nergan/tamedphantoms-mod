@@ -34,6 +34,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/client/ClientPhantomInputSender.kt",
     "com/tamedphantoms/mod/client/ModKeyMappings.kt",
     "com/tamedphantoms/mod/client/PhantomCockpitCamera.kt",
+    "com/tamedphantoms/mod/client/PhantomCloudWisp.kt",
     "com/tamedphantoms/mod/mixin/PhantomCockpitEyeMixin.kt",
     "com/tamedphantoms/mod/mixin/PhantomCockpitAimMixin.kt",
     "com/tamedphantoms/mod/loader/fabric/mixin/PhantomCameraMixin.kt",
@@ -73,6 +74,7 @@ val sharedJava by tasks.registering(Sync::class) {
         "com/tamedphantoms/mod/loader/fabric/mixin/PhantomCameraMixin.java",
         "com/tamedphantoms/mod/loader/fabric/mixin/PhantomSoundMixin.java",
         "com/tamedphantoms/mod/mixin/NightInvertMixin.java",
+        "com/tamedphantoms/mod/mixin/CloudTickAccessor.java",
     )
 }
 

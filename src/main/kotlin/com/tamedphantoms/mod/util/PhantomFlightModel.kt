@@ -112,7 +112,8 @@ class PhantomFlightModel {
     private var rollTicks = 0
     private var stalled = false
     private var zoomTicks = 0
-    private var zoomThrust = 0
+    /** Скорость сразу после толчка. За окно рывка она линейно сходится к обычной. */
+    private var zoomPeak = 0.0
     private var zoomTarget = 0f
     private var zoomLoopLeft = 0f
     private var zoomGrace = 0
@@ -197,7 +198,7 @@ class PhantomFlightModel {
         stepRoll(input, vc)
         if (zooming) {
             zoomTicks--
-            if (zoomTicks <= 0 || (zoomThrust == 0 && speed < vc * ZOOM_END_SPEED)) endZoom()
+            if (zoomTicks <= 0) endZoom()
         }
 
         val pitchRad = Math.toRadians(pathPitch.toDouble())
@@ -218,6 +219,7 @@ class PhantomFlightModel {
     /**
      * Нос продолжает тянуться вверх в ту же сторону, что и в петле, до почти отвесного набора.
      * Замкнуть круг можно и самим рывком: петля засчитывается, когда поворот проходит полный оборот.
+     * Толчок один, на всю силу сразу. Окно набора не зависит от силы: скорость спадает к обычной.
      */
     private fun startZoom(vc: Double, boost: Double) {
         val strength = boost.coerceIn(0.0, ZOOM_MAX_BOOST)
@@ -230,17 +232,18 @@ class PhantomFlightModel {
         zoomGrace = 0
         zooming = true
         zoomStarted = true
-        zoomThrust = (ZOOM_THRUST_TICKS * strength).roundToInt()
-        zoomTicks = ZOOM_TICKS + zoomThrust
+        zoomTicks = ZOOM_TICKS
         val rise = ((ZOOM_ANGLE - pathPitch) % FULL_TURN + FULL_TURN) % FULL_TURN
         zoomTarget = pathPitch + rise
-        speed = max(speed, vc * (1.0 + ZOOM_KICK * strength)).coerceAtMost(vc * MAX_SPEED)
+        val kick = vc * (1.0 + ZOOM_KICK * strength)
+        speed = max(speed, kick)
+        zoomPeak = max(speed, vc * ZOOM_END_SPEED)
     }
 
     private fun endZoom() {
         zooming = false
         zoomTicks = 0
-        zoomThrust = 0
+        zoomPeak = 0.0
         zoomLoopLeft = 0f
         zoomGrace = 0
     }
@@ -294,17 +297,20 @@ class PhantomFlightModel {
     }
 
     private fun stepSpeed(vc: Double, flapping: Boolean, forward: Float, climb: Float, yawDelta: Float) {
+        if (zooming) {
+            // Импульс уже отдан. Потолок обычного полёта его не срезает, тяги по тикам нет.
+            val floor = vc * ZOOM_END_SPEED
+            val span = ZOOM_TICKS.toDouble().coerceAtLeast(1.0)
+            val remaining = (zoomTicks.toDouble() / span).coerceIn(0.0, 1.0)
+            speed = floor + (zoomPeak - floor) * remaining
+            effort = approach(effort, 0f, 0.25f)
+            return
+        }
         val pitchRad = Math.toRadians(pathPitch.toDouble())
         speed -= GRAVITY * vc * sin(pitchRad)
         val wanted = vc * forward.coerceAtLeast(0f)
         var work = 0f
-        if (zooming) {
-            // Крылья сложены: тянет толчок рывка, взмахов нет.
-            if (zoomThrust > 0) {
-                speed += ZOOM_THRUST * vc
-                zoomThrust--
-            }
-        } else if (flapping && speed < wanted) {
+        if (flapping && speed < wanted) {
             val gain = if (pathPitch > 5f) CLIMB_THRUST else THRUST
             speed += gain * (wanted - speed)
             work = ((wanted - speed) / vc * 3.0).toFloat().coerceIn(0.25f, 1f)
@@ -447,12 +453,11 @@ class PhantomFlightModel {
         /** Почти отвесный набор: курс ещё виден. */
         const val ZOOM_ANGLE = 80f
         const val ZOOM_PULL = 9f
-        /** Скорость сразу после толчка: 1 + это × сила, в крейсерских. */
+        /** Скорость сразу после толчка: 1 + это × сила, в крейсерских. Потолок обычного полёта её не режет. */
         const val ZOOM_KICK = 0.6
-        const val ZOOM_THRUST = 0.07
-        /** Толчок тянет столько тиков при силе 1. Сильнее рывок — дольше тяга. */
-        const val ZOOM_THRUST_TICKS = 12
-        const val ZOOM_TICKS = 40
+        /** Окно набора в тиках. Одно и то же при любой силе: сила меняет только скорость в начале. */
+        const val ZOOM_TICKS = 64
+        /** К концу окна скорость сходится сюда, в крейсерских, и дальше полёт обычный. */
         const val ZOOM_END_SPEED = 0.85
         const val ZOOM_MAX_BOOST = 16.0
         const val ZOOM_TUCK = 0.25f

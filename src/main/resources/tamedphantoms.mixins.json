@@ -20,7 +20,8 @@
     "KeyMappingFields",
     "SharedPhysicalKeyMixin",
     "PhantomCockpitEyeMixin",
-    "PhantomCockpitAimMixin"
+    "PhantomCockpitAimMixin",
+    "CloudTickAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

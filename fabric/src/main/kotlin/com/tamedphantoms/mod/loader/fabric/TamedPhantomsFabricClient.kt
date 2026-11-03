@@ -56,6 +56,7 @@ class TamedPhantomsFabricClient : ClientModInitializer {
             override fun onResourceManagerReload(resourceManager: ResourceManager) {
                 PhantomTextureProcessor.resetGeneratedTextures()
                 PhantomTextureProcessor.prepareEyeTextures()
+                com.tamedphantoms.mod.client.PhantomCloudWisp.forget()
             }
         })
 
@@ -66,6 +67,7 @@ class TamedPhantomsFabricClient : ClientModInitializer {
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             com.tamedphantoms.mod.client.PhantomDiveWind.update(phantom)
+            com.tamedphantoms.mod.client.PhantomCloudWisp.afterClientTick(phantom)
         }
 
         ClientPlayNetworking.registerGlobalReceiver(PhantomMoonPulsePayload.TYPE) { _, context ->

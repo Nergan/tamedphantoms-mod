@@ -168,6 +168,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/client/FlightAwareSectionScreen.kt",
     "com/tamedphantoms/mod/util/PhantomTreatApply.kt",
     "com/tamedphantoms/mod/client/ClientModEvents.kt",
+    "com/tamedphantoms/mod/client/PhantomCloudWisp.kt",
     "com/tamedphantoms/mod/TamedPhantomsNeoForge.kt",
     "com/tamedphantoms/mod/loader/NeoForgeRegistries.kt",
 )
@@ -191,6 +192,7 @@ val sharedJava by tasks.registering(Sync::class) {
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",
         "com/tamedphantoms/mod/mixin/NightInvertMixin.java",
+        "com/tamedphantoms/mod/mixin/CloudTickAccessor.java",
     )
 }
 

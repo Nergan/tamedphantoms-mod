@@ -134,14 +134,14 @@ class PhantomFlightModelTest {
     fun zoomShootsUp() {
         val model = PhantomFlightModel()
         loopUntilZoomWindow(model)
-        model.step(Input(1f, 0f, 0f, vc, zoomRequest = true))
+        val kicked = model.step(Input(1f, 0f, 0f, vc, zoomRequest = true, zoomBoost = 2.0))
         assertTrue(model.zooming)
         var completed = 0
-        var climb = 0.0
-        var maxPitch = -360f
-        var maxSpeed = 0.0
-        var maxTuck = 0f
-        var ticks = 0
+        var climb = if (kicked.vertical > 0.0) kicked.vertical else 0.0
+        var maxPitch = PhantomFlightModel.wrap(model.pathPitch)
+        var maxSpeed = model.speed
+        var maxTuck = model.tuck
+        var ticks = 1
         while (model.zooming && ticks < 200) {
             val out = model.step(Input(1f, 0f, 0f, vc))
             if (out.vertical > 0.0) climb += out.vertical
@@ -153,7 +153,8 @@ class PhantomFlightModelTest {
         }
         assertEquals(1, completed, "петля засчитывается один раз")
         assertTrue(maxPitch > PhantomFlightModel.ZOOM_ANGLE - 1f, "нос $maxPitch")
-        assertTrue(maxSpeed > vc * 1.9, "скорость $maxSpeed")
+        assertTrue(maxSpeed > vc * 2.1, "скорость $maxSpeed")
+        assertEquals(PhantomFlightModel.ZOOM_TICKS, ticks, "окно рывка $ticks")
         assertTrue(maxTuck > 0.95f, "крылья $maxTuck")
         assertTrue(climb > vc * 40, "подъём $climb")
         assertFalse(model.zooming, "рывок затух за $ticks тиков")
@@ -163,26 +164,39 @@ class PhantomFlightModelTest {
     }
 
     @Test
-    @DisplayName("Сила с сервера: сильнее рывок — выше подъём, 0 — рывка нет")
+    @DisplayName("Сила с сервера: выше толчок и тот же срок, 0 — рывка нет")
     fun zoomBoostScales() {
-        fun climbWith(boost: Double): Double {
+        data class Zoom(val ticks: Int, val climb: Double, val peak: Double, val end: Double)
+
+        fun measure(boost: Double): Zoom {
             val model = PhantomFlightModel()
             loopUntilZoomWindow(model)
-            model.step(Input(1f, 0f, 0f, vc, zoomRequest = true, zoomBoost = boost))
-            if (!model.zooming) return 0.0
-            var climb = 0.0
-            var ticks = 0
+            val first = model.step(Input(1f, 0f, 0f, vc, zoomRequest = true, zoomBoost = boost))
+            if (!model.zooming) return Zoom(0, 0.0, model.speed, model.speed)
+            var climb = if (first.vertical > 0.0) first.vertical else 0.0
+            var peak = model.speed
+            var ticks = 1
             while (model.zooming && ticks < 400) {
                 val out = model.step(Input(1f, 0f, 0f, vc, zoomBoost = boost))
                 if (out.vertical > 0.0) climb += out.vertical
+                peak = maxOf(peak, model.speed)
                 ticks++
             }
-            return climb
+            return Zoom(ticks, climb, peak, model.speed)
         }
-        val normal = climbWith(1.0)
-        val strong = climbWith(2.0)
-        assertEquals(0.0, climbWith(0.0))
-        assertTrue(strong > normal * 1.25, "сильный $strong, обычный $normal")
+
+        val off = measure(0.0)
+        val usual = measure(2.0)
+        val hard = measure(16.0)
+        assertEquals(0, off.ticks)
+        assertEquals(0.0, off.climb)
+        assertEquals(PhantomFlightModel.ZOOM_TICKS, usual.ticks, "срок на 2: ${usual.ticks}")
+        assertEquals(usual.ticks, hard.ticks, "срок на 16: ${hard.ticks}, на 2: ${usual.ticks}")
+        assertTrue(usual.peak > vc * 2.1, "толчок на 2: ${usual.peak}")
+        assertTrue(hard.peak > usual.peak * 4.0, "толчок на 16: ${hard.peak}, на 2: ${usual.peak}")
+        assertTrue(hard.climb > usual.climb * 2.0, "подъём на 16: ${hard.climb}, на 2: ${usual.climb}")
+        assertTrue(usual.end < usual.peak * 0.6, "скорость на 2 не спадает: ${usual.end} из ${usual.peak}")
+        assertTrue(hard.end < hard.peak * 0.2, "скорость на 16 не спадает: ${hard.end} из ${hard.peak}")
     }
 
     @Test
