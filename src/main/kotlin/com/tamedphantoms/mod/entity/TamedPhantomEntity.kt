@@ -1753,6 +1753,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     override fun isInvulnerableTo(source: DamageSource): Boolean {
         if (this.immortal) return true
+        val attacker = source.entity
+        if (attacker != null && (attacker.vehicle === this || attacker === this.controllingPassenger)) return true
         return super.isInvulnerableTo(source)
     }
 

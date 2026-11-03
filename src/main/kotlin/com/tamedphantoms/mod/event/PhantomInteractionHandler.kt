@@ -103,13 +103,23 @@ object PhantomInteractionHandler {
         if (stack.`is`(releaseItem) && !stack.`is`(Items.POISONOUS_POTATO)) return null
         val treat = stack.`is`(Items.POTION) || stack.`is`(Items.MILK_BUCKET) || stack.get(DataComponents.FOOD) != null
         if (!treat) return null
+        // Верхом еда идёт фантому, только если прицел смотрит в него. Иначе игрок ест сам.
+        // Удар по фантому сюда не попадает: сидящий седок не может его ранить.
+        if (!lookingAt(player, phantom)) return null
         if (player.level().isClientSide) return InteractionResult.SUCCESS
         val used = when {
             stack.`is`(Items.MILK_BUCKET) -> PhantomTreats.tryMilk(player, phantom, stack)
             stack.`is`(Items.POTION) -> PhantomTreats.tryPotion(player, phantom, stack)
             else -> PhantomTreats.tryFood(player, phantom, stack)
         }
-        return if (used) InteractionResult.CONSUME else null
+        return InteractionResult.CONSUME
+    }
+
+    /** Луч из глаз седока пересекает туловище фантома. */
+    private fun lookingAt(player: Player, phantom: TamedPhantomEntity): Boolean {
+        val eye = player.getEyePosition(1f)
+        val reach = eye.add(player.getViewVector(1f).scale(RIDER_REACH))
+        return phantom.boundingBox.inflate(RIDER_PICK_MARGIN).clip(eye, reach).isPresent
     }
 
     /** Инструмент аддона верхом: клик по той части фантома, куда смотрит седок, см. [TamedPhantomsApi.RiderTool]. */

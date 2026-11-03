@@ -23,6 +23,7 @@ object PhantomTreats {
         if (!phantom.tamed) return false
         if (PhantomHeldLook.isRefusal(stack) && !phantom.isOwnedBy(player)) return false
         if (stack.get(DataComponents.FOOD) == null && stack.get(DataComponents.SUSPICIOUS_STEW_EFFECTS) == null) return false
+        if (phantom.health >= phantom.maxHealth && !hasBonus(stack)) return false
         val level = phantom.level() as? ServerLevel ?: return false
         if (!once(phantom)) return false
         val food = stack.get(DataComponents.FOOD)
@@ -33,6 +34,14 @@ object PhantomTreats {
         if (food != null) phantom.healWithFood(food.nutrition())
         consume(player, stack, containerOf(stack))
         return true
+    }
+
+    /** Еда, которая делает что-то кроме сытости: эффект, телепорт, свечение, снятие яда. */
+    fun hasBonus(stack: ItemStack): Boolean {
+        val food = stack.get(DataComponents.FOOD)
+        if (food != null && food.effects().isNotEmpty()) return true
+        if (stack.get(DataComponents.SUSPICIOUS_STEW_EFFECTS) != null) return true
+        return stack.`is`(Items.CHORUS_FRUIT) || stack.`is`(Items.GLOW_BERRIES) || stack.`is`(Items.HONEY_BOTTLE)
     }
 
     /** Молоко снимает эффекты. Ведро остаётся в руке, фантом кивает, как на еду. */

@@ -72,7 +72,14 @@ object ClientPhantomInputSender {
             down = descending,
             sneak = shiftDown,
         )
-        val result = flightKeys.tick(player.tickCount, keys, pilot && minecraft.screen == null && phantom.airborne())
+        // Чат, пауза и потеря фокуса отпускают клавиши. Это не посадка и не новый ввод:
+        // круиз остаётся, пока окно без экрана и фантом в воздухе не получит настоящую кнопку.
+        val suspended = minecraft.screen != null || !minecraft.isWindowActive
+        val result = if (suspended) {
+            PhantomFlightKeys.Result(PhantomFlightKeys.CruiseChange.NONE, false, 0)
+        } else {
+            flightKeys.tick(player.tickCount, keys, pilot && phantom.airborne())
+        }
         phantom.clientCruise = flightKeys.cruising
         if (result.loop) phantom.clientLoopRequest = true
         if (result.roll != 0) phantom.clientRollRequest = result.roll
