@@ -8,12 +8,15 @@ import com.tamedphantoms.mod.network.PhantomDismountTapPayload
 import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
+import com.tamedphantoms.mod.network.PhantomZoomPayload
+import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.platform.ModNetwork
 import com.tamedphantoms.mod.util.PhantomFlightKeys
 import com.tamedphantoms.mod.util.PhantomFlightModel
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
+import net.minecraft.world.entity.player.Player
 import org.lwjgl.glfw.GLFW
 
 /**
@@ -42,17 +45,32 @@ object ClientPhantomInputSender {
         val shiftPressed = shiftDown && !dismountShiftWasDown
         dismountShiftWasDown = shiftDown
         val screamDown = ModKeyMappings.SCREAM.isDown
+        val screamPressed = screamDown && !screamWasDown
+        screamWasDown = screamDown
+        PhantomDismount.heal(player)
         val phantom = player.vehicle as? TamedPhantomEntity
         if (shiftPressed && minecraft.screen == null && phantom != null) {
+            PhantomDismount.noteLocalDismountRequest()
             ModNetwork.sendToServer(PhantomDismountTapPayload)
         }
-        if (phantom != null && screamDown && !screamWasDown && phantom.isOwnedBy(player)) {
-            ModNetwork.sendToServer(PhantomScreamPayload)
+        val pilot = phantom != null && phantom.isOwnedBy(player) && phantom.controllingPassenger === player
+        // В конце петли клавиша крика рвёт фантома вверх. В остальное время она кричит, как раньше.
+        val zoomOpen = phantom != null && pilot && phantom.zoomWindowOpen && ServerConfig.zoomBoost() > 0.0
+        if (phantom != null && screamPressed && phantom.isOwnedBy(player)) {
+            if (zoomOpen) {
+                phantom.clientZoomRequest = true
+            } else {
+                ModNetwork.sendToServer(PhantomScreamPayload)
+            }
         }
-        screamWasDown = screamDown
+        showZoomPrompt(player, zoomOpen && phantom?.clientZoomRequest != true)
         if (phantom != null && phantom.loopReadyToReport && phantom.isOwnedBy(player)) {
             phantom.loopReadyToReport = false
             ModNetwork.sendToServer(PhantomLoopPayload)
+        }
+        if (phantom != null && phantom.zoomReadyToReport && phantom.isOwnedBy(player)) {
+            phantom.zoomReadyToReport = false
+            ModNetwork.sendToServer(PhantomZoomPayload)
         }
         if (phantom == null) {
             flightKeys.stop()
@@ -62,7 +80,6 @@ object ClientPhantomInputSender {
         val options = minecraft.options
         val ascending = held(ModKeyMappings.FLY_UP)
         val descending = held(ModKeyMappings.FLY_DOWN)
-        val pilot = phantom.isOwnedBy(player) && phantom.controllingPassenger === player
         val keys = PhantomFlightKeys.Keys(
             forward = options.keyUp.isDown,
             back = options.keyDown.isDown,
@@ -110,6 +127,20 @@ object ClientPhantomInputSender {
     }
 
     private val flightKeys = PhantomFlightKeys()
+
+    private var zoomPromptShown = false
+
+    /** Подсказка над хотбаром висит, пока открыто окно рывка, и гаснет вместе с ним. */
+    private fun showZoomPrompt(player: Player, open: Boolean) {
+        if (open == zoomPromptShown) return
+        zoomPromptShown = open
+        val text = if (open) {
+            Component.translatable("tamedphantoms.zoom.prompt", ModKeyMappings.SCREAM.translatedKeyMessage)
+        } else {
+            Component.empty()
+        }
+        player.displayClientMessage(text, true)
+    }
 
     /**
      * Ваниль хранит в карте только одну привязку на физическую клавишу.

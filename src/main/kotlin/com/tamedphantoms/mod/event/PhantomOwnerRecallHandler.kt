@@ -20,6 +20,7 @@ object PhantomOwnerRecallHandler {
 
     fun onLogin(player: Player) {
         PhantomOwnerRecall.recallOwned(player)
+        PhantomDismount.resumeAfterLogin(player)
     }
 
     fun onPlayerTick(player: Player) {

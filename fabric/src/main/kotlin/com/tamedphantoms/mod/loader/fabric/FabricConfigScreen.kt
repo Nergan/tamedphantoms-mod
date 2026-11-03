@@ -1,5 +1,8 @@
 package com.tamedphantoms.mod.loader.fabric
 
+import com.tamedphantoms.mod.config.ClientConfig
+import com.tamedphantoms.mod.config.RideExtras
+import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import me.shedaniel.clothconfig2.api.ConfigBuilder
 import me.shedaniel.clothconfig2.api.ConfigCategory
@@ -76,6 +79,16 @@ object FabricConfigScreen {
         category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.owned_flight_speed", client.ownedSpeed.coerceIn(PhantomFlightPace.MIN, cap), 1.25, PhantomFlightPace.MIN, cap, false) {
             client.ownedSpeed = it.coerceIn(PhantomFlightPace.MIN, cap)
         })
+        if (!RideExtras.enabled) return
+        category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.zoom_boost", server.zoomBoostValue, ServerConfig.DEFAULT_ZOOM_BOOST, 0.0, ServerConfig.MAX_ZOOM_BOOST, remote) {
+            server.zoomBoostValue = it
+        })
+        category.addEntry(slider(entries, "tamedphantoms.configuration.flight.camera_horizon_hold", client.horizonHold, ClientConfig.DEFAULT_HORIZON_HOLD, ClientConfig.MAX_HORIZON_HOLD) {
+            client.horizonHold = it
+        })
+        category.addEntry(slider(entries, "tamedphantoms.configuration.flight.camera_smoothing", client.smoothing, ClientConfig.DEFAULT_CAMERA_SMOOTHING, ClientConfig.MAX_CAMERA_SMOOTHING) {
+            client.smoothing = it
+        })
     }
 
     private fun addScream(category: ConfigCategory, entries: ConfigEntryBuilder, server: FabricSettings.ServerValues, remote: Boolean) {
@@ -136,6 +149,20 @@ object FabricConfigScreen {
         .setMin(min)
         .setMax(max)
         .setSaveConsumer { if (!locked) save(it) }
+        .build()
+
+    private fun slider(
+        entries: ConfigEntryBuilder,
+        key: String,
+        value: Int,
+        default: Int,
+        max: Int,
+        save: (Int) -> Unit,
+    ) = entries.startIntSlider(Component.translatable(key), value.coerceIn(0, max), 0, max)
+        .setDefaultValue(default)
+        .setTextGetter { Component.translatable("$key.value", it) }
+        .setTooltip(Component.translatable("$key.tooltip"))
+        .setSaveConsumer(save)
         .build()
 
     private fun whole(

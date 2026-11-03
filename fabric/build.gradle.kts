@@ -105,6 +105,18 @@ val patchKotlinRefmap by tasks.registering {
                 "getStream" to "Lnet/minecraft/class_4237;method_19744(Lnet/minecraft/class_2960;Z)Ljava/util/concurrent/CompletableFuture;",
                 "clear" to "Lnet/minecraft/class_4237;method_19738()V",
             ),
+            "com/tamedphantoms/mod/mixin/PhantomCockpitEyeMixin" to mapOf(
+                "setup" to "Lnet/minecraft/class_4184;method_19321(Lnet/minecraft/class_1922;Lnet/minecraft/class_1297;ZZF)V",
+                "Lnet/minecraft/client/Camera;setPosition(DDD)V" to "Lnet/minecraft/class_4184;method_19327(DDD)V",
+            ),
+            "com/tamedphantoms/mod/mixin/PhantomCockpitAimMixin" to mapOf(
+                "getEyePosition(F)Lnet/minecraft/world/phys/Vec3;" to "Lnet/minecraft/class_1297;method_5836(F)Lnet/minecraft/class_243;",
+                "getViewVector(F)Lnet/minecraft/world/phys/Vec3;" to "Lnet/minecraft/class_1297;method_5828(F)Lnet/minecraft/class_243;",
+            ),
+            "com/tamedphantoms/mod/loader/fabric/mixin/PhantomCameraMixin" to mapOf(
+                "setup" to "Lnet/minecraft/class_4184;method_19321(Lnet/minecraft/class_1922;Lnet/minecraft/class_1297;ZZF)V",
+                "setRotation" to "Lnet/minecraft/class_4184;method_19325(FF)V",
+            ),
         )
         fun putAll(target: MutableMap<String, Any?>) {
             for ((mixin, methods) in extra) {
@@ -128,4 +140,20 @@ val patchKotlinRefmap by tasks.registering {
 
 tasks.named("classes") {
     dependsOn(patchKotlinRefmap)
+}
+
+loom {
+    runs {
+        named("client") {
+            vmArg("-Xms256m")
+            vmArg("-Xmx1024m")
+            vmArg("-XX:+UseSerialGC")
+        }
+        named("server") {
+            programArg("--nogui")
+            vmArg("-Xms128m")
+            vmArg("-Xmx512m")
+            vmArg("-XX:+UseSerialGC")
+        }
+    }
 }

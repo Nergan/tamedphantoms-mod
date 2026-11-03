@@ -99,6 +99,92 @@ class PhantomFlightModelTest {
         assertTrue(abs(PhantomFlightModel.wrap(model.pathPitch)) <= PhantomFlightModel.CLIMB_ANGLE + 1f)
     }
 
+    /** Петля до окна рывка. Возвращает, сколько набрано высоты к этому моменту. */
+    private fun loopUntilZoomWindow(model: PhantomFlightModel): Double {
+        cruise(model, 40)
+        var height = model.step(Input(1f, 0f, 1f, vc, loopRequest = true)).vertical
+        var guard = 0
+        while (!model.zoomReady) {
+            assertTrue(model.looping, "петля кончилась раньше окна рывка")
+            assertTrue(++guard < 120)
+            height += model.step(Input(1f, 0f, 1f, vc)).vertical
+        }
+        return height
+    }
+
+    @Test
+    @DisplayName("Рывок не начинается, пока нос в петле не посмотрит вниз")
+    fun zoomWindowOpensLate() {
+        val model = PhantomFlightModel()
+        cruise(model, 40)
+        model.step(Input(1f, 0f, 1f, vc, loopRequest = true))
+        var startedFrom = Float.NaN
+        repeat(90) {
+            if (model.zooming) return@repeat
+            val before = model.pathPitch
+            model.step(Input(1f, 0f, 1f, vc, zoomRequest = true))
+            if (model.zooming) startedFrom = before
+        }
+        assertTrue(model.zooming)
+        assertTrue(startedFrom >= PhantomFlightModel.ZOOM_WINDOW - 5f, "рывок начался с угла $startedFrom")
+    }
+
+    @Test
+    @DisplayName("Рывок из петли уносит вверх со сложенными крыльями, засчитывает петлю и затухает")
+    fun zoomShootsUp() {
+        val model = PhantomFlightModel()
+        loopUntilZoomWindow(model)
+        model.step(Input(1f, 0f, 0f, vc, zoomRequest = true))
+        assertTrue(model.zooming)
+        var completed = 0
+        var climb = 0.0
+        var maxPitch = -360f
+        var maxSpeed = 0.0
+        var maxTuck = 0f
+        var ticks = 0
+        while (model.zooming && ticks < 200) {
+            val out = model.step(Input(1f, 0f, 0f, vc))
+            if (out.vertical > 0.0) climb += out.vertical
+            if (model.completedLoop) completed++
+            maxPitch = maxOf(maxPitch, PhantomFlightModel.wrap(model.pathPitch))
+            maxSpeed = maxOf(maxSpeed, model.speed)
+            maxTuck = maxOf(maxTuck, model.tuck)
+            ticks++
+        }
+        assertEquals(1, completed, "петля засчитывается один раз")
+        assertTrue(maxPitch > PhantomFlightModel.ZOOM_ANGLE - 1f, "нос $maxPitch")
+        assertTrue(maxSpeed > vc * 1.9, "скорость $maxSpeed")
+        assertTrue(maxTuck > 0.95f, "крылья $maxTuck")
+        assertTrue(climb > vc * 40, "подъём $climb")
+        assertFalse(model.zooming, "рывок затух за $ticks тиков")
+        repeat(40) { model.step(Input(1f, 0f, 0f, vc)) }
+        assertTrue(abs(PhantomFlightModel.wrap(model.pathPitch)) < 5f, "после рывка нос ${model.pathPitch}")
+        assertTrue(model.tuck < 0.05f, "после рывка крылья ${model.tuck}")
+    }
+
+    @Test
+    @DisplayName("Сила с сервера: сильнее рывок — выше подъём, 0 — рывка нет")
+    fun zoomBoostScales() {
+        fun climbWith(boost: Double): Double {
+            val model = PhantomFlightModel()
+            loopUntilZoomWindow(model)
+            model.step(Input(1f, 0f, 0f, vc, zoomRequest = true, zoomBoost = boost))
+            if (!model.zooming) return 0.0
+            var climb = 0.0
+            var ticks = 0
+            while (model.zooming && ticks < 400) {
+                val out = model.step(Input(1f, 0f, 0f, vc, zoomBoost = boost))
+                if (out.vertical > 0.0) climb += out.vertical
+                ticks++
+            }
+            return climb
+        }
+        val normal = climbWith(1.0)
+        val strong = climbWith(2.0)
+        assertEquals(0.0, climbWith(0.0))
+        assertTrue(strong > normal * 1.25, "сильный $strong, обычный $normal")
+    }
+
     @Test
     @DisplayName("Петля без скорости срывается в сваливание и не засчитывается")
     fun slowLoopStalls() {

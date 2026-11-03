@@ -27,7 +27,11 @@ object ServerConfig {
         fun phantomGroupMultiplier(): Double
         fun phantomSize(): Int
         fun immortalPhantoms(): Boolean
+        fun zoomBoost(): Double = DEFAULT_ZOOM_BOOST
     }
+
+    const val DEFAULT_ZOOM_BOOST = 2.0
+    const val MAX_ZOOM_BOOST = 16.0
 
     var settings: Settings = Defaults
 
@@ -49,6 +53,9 @@ object ServerConfig {
 
     /** Выключено — мёртвая петля бессмертия не даёт, а уже бессмертные становятся обычными. */
     fun immortalPhantoms(): Boolean = settings.immortalPhantoms()
+
+    /** Сила рывка вверх из мёртвой петли. 0 — рывка нет. Клиент пилота берёт её у сервера. */
+    fun zoomBoost(): Double = settings.zoomBoost().coerceIn(0.0, MAX_ZOOM_BOOST)
 
     private var cachedTameItemId: String? = null
     private var cachedTameItem: Item? = null

@@ -18,7 +18,9 @@
     "MoonSkyMixin",
     "NightInvertMixin",
     "KeyMappingFields",
-    "SharedPhysicalKeyMixin"
+    "SharedPhysicalKeyMixin",
+    "PhantomCockpitEyeMixin",
+    "PhantomCockpitAimMixin"
   ],
   "injectors": {
     "defaultRequire": 1

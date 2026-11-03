@@ -22,12 +22,16 @@ class NeoForgeClientConfig(builder: ModConfigSpec.Builder) {
             ClientConfig.settings = object : ClientConfig.Settings {
                 override fun tamedSoundVolume() = cfg.tamedSoundVolume.get()
                 override fun ownedFlightSpeed() = cfg.ownedFlightSpeed.get()
+                override fun cameraHorizonHold() = cfg.cameraHorizonHold?.get() ?: ClientConfig.DEFAULT_HORIZON_HOLD
+                override fun cameraSmoothing() = cfg.cameraSmoothing?.get() ?: ClientConfig.DEFAULT_CAMERA_SMOOTHING
             }
         }
     }
 
     val tamedSoundVolume: ModConfigSpec.DoubleValue
     val ownedFlightSpeed: ModConfigSpec.DoubleValue
+    val cameraHorizonHold: ModConfigSpec.IntValue?
+    val cameraSmoothing: ModConfigSpec.IntValue?
 
     init {
         builder.push("sound")
@@ -51,6 +55,26 @@ class NeoForgeClientConfig(builder: ModConfigSpec.Builder) {
             )
             .translation("$KEY_PREFIX.flight.owned_flight_speed")
             .defineInRange("owned_flight_speed", 1.25, 0.25, 4.0)
+        if (RideExtras.enabled) {
+            cameraHorizonHold = builder
+                .comment(
+                    "Первое лицо верхом. Глаза всегда сидят на спине фантома.",
+                    "Пока фантом наклонён меньше этого угла, взгляд держит горизонт.",
+                    "Дальше фантом поворачивает взгляд за собой. 0 — взгляд всегда вместе с фантомом. Градусы.",
+                )
+                .translation("$KEY_PREFIX.flight.camera_horizon_hold")
+                .defineInRange("camera_horizon_hold", ClientConfig.DEFAULT_HORIZON_HOLD, 0, ClientConfig.MAX_HORIZON_HOLD)
+            cameraSmoothing = builder
+                .comment(
+                    "Первое лицо верхом. Насколько мягко взгляд идёт за фантомом и выравнивается обратно.",
+                    "0 — сразу, 100 — медленнее всего. Проценты.",
+                )
+                .translation("$KEY_PREFIX.flight.camera_smoothing")
+                .defineInRange("camera_smoothing", ClientConfig.DEFAULT_CAMERA_SMOOTHING, 0, ClientConfig.MAX_CAMERA_SMOOTHING)
+        } else {
+            cameraHorizonHold = null
+            cameraSmoothing = null
+        }
         builder.pop()
     }
 }

@@ -1,11 +1,13 @@
 package com.tamedphantoms.mod.network
 
+import com.tamedphantoms.mod.config.RideExtras
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomRoster
 import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import com.tamedphantoms.mod.util.PhantomZoomBurst
 import net.minecraft.server.level.ServerPlayer
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent
@@ -17,7 +19,17 @@ object ModNetworking {
     }
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
-        val registrar = event.registrar("6")
+        // У сборки с рывком из петли свой канал: версия отличает её от старых клиентов и серверов.
+        val registrar = event.registrar(if (RideExtras.enabled) "7" else "6")
+
+        if (RideExtras.enabled) {
+            registrar.playToServer(
+                PhantomZoomPayload.TYPE,
+                PhantomZoomPayload.STREAM_CODEC,
+            ) { _, context ->
+                PhantomZoomBurst.onRequest(context.player())
+            }
+        }
 
         registrar.playToServer(
             PhantomInputPayload.TYPE,

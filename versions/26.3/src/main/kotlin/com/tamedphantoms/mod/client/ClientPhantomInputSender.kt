@@ -35,8 +35,10 @@ object ClientPhantomInputSender {
         val shiftPressed = shiftDown && !dismountShiftWasDown
         dismountShiftWasDown = shiftDown
         val screamDown = ModKeyMappings.SCREAM.isDown
+        PhantomDismount.heal(player)
         val phantom = player.vehicle as? TamedPhantomEntity
         if (shiftPressed && openScreen(minecraft) == null && phantom != null) {
+            PhantomDismount.noteLocalDismountRequest()
             ModNetwork.sendToServer(PhantomDismountTapPayload)
         }
         if (phantom != null && screamDown && !screamWasDown && phantom.isOwnedBy(player)) {

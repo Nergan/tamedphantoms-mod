@@ -914,17 +914,23 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     // =====================================================================
 
     override fun canAddPassenger(passenger: Entity): Boolean {
+        PhantomDismount.releaseStale(this)
         if (!this.saddled || !this.tamed || this.isOrderedToSit()) return false
-        if (this.passengers.size >= 2) return false
+        val seated = this.passengers
+        if (seated.size >= 2) return false
         val mountingIsOwner = passenger is Player && this.isOwnedBy(passenger)
-        val pilotTaken = this.passengers.any { it is Player && this.isOwnedBy(it) }
-        val passengerTaken = this.passengers.any { !(it is Player && this.isOwnedBy(it)) }
+        val pilotTaken = seated.any { it is Player && this.isOwnedBy(it) }
+        val passengerTaken = seated.any { !(it is Player && this.isOwnedBy(it)) }
         return PhantomSeatAssignment.assignSeat(mountingIsOwner, pilotTaken, passengerTaken) != null
     }
 
     override fun getControllingPassenger(): LivingEntity? {
         val owner = this.ownerUUID ?: return null
-        return this.passengers.firstOrNull { it is Player && it.uuid == owner } as? LivingEntity
+        val riders = this.passengers.filter {
+            it is Player && it.uuid == owner && it.isAlive && !it.isRemoved
+        }
+        val local = riders.firstOrNull { it is Player && PhantomDismount.isLocalPlayer(it) }
+        return (local ?: riders.firstOrNull()) as? LivingEntity
     }
 
     /**
@@ -945,6 +951,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     // =====================================================================
 
     override fun tick() {
+        PhantomDismount.releaseStale(this)
         if (this.level().isClientSide) {
             this.clientHeadPitchO = this.clientHeadPitch
             this.clientHeadPitch = this.headLookPitch

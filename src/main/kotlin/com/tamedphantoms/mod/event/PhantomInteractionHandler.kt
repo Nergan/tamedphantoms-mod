@@ -6,6 +6,7 @@ import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomHeldLook
 import com.tamedphantoms.mod.util.PhantomHitParts
+import com.tamedphantoms.mod.util.PhantomRiderEye
 import com.tamedphantoms.mod.util.PhantomTamingLogic
 import com.tamedphantoms.mod.util.PhantomTreats
 import net.minecraft.world.phys.Vec3
@@ -117,16 +118,22 @@ object PhantomInteractionHandler {
 
     /** Луч из глаз седока пересекает туловище фантома. */
     private fun lookingAt(player: Player, phantom: TamedPhantomEntity): Boolean {
-        val eye = player.getEyePosition(1f)
-        val reach = eye.add(player.getViewVector(1f).scale(RIDER_REACH))
+        val eye = riderEye(player)
+        val reach = eye.add(player.lookAngle.scale(RIDER_REACH))
         return phantom.boundingBox.inflate(RIDER_PICK_MARGIN).clip(eye, reach).isPresent
     }
+
+    /**
+     * Глаза седока на спине фантома ([PhantomRiderEye]), как у камеры первого лица.
+     * Направление — ванильный взгляд: наклон шеи знает только клиент, а сервер должен решить так же.
+     */
+    private fun riderEye(player: Player): Vec3 = PhantomRiderEye.of(player, 1f) ?: player.getEyePosition(1f)
 
     /** Инструмент аддона верхом: клик по той части фантома, куда смотрит седок, см. [TamedPhantomsApi.RiderTool]. */
     private fun riderToolUse(player: Player, phantom: TamedPhantomEntity, hand: InteractionHand, stack: ItemStack): InteractionResult? {
         if (stack.isEmpty || !TamedPhantomsApi.isRiderTool(stack)) return null
-        val eye = player.getEyePosition(1f)
-        val reach = eye.add(player.getViewVector(1f).scale(RIDER_REACH))
+        val eye = riderEye(player)
+        val reach = eye.add(player.lookAngle.scale(RIDER_REACH))
         val hit = phantom.boundingBox.inflate(RIDER_PICK_MARGIN).clip(eye, reach).orElse(null) ?: return null
         if (player.level().isClientSide) return InteractionResult.SUCCESS
         return TamedPhantomsApi.interact(player, phantom, hand, stack, partOf(phantom, hit))
@@ -251,6 +258,7 @@ object PhantomInteractionHandler {
         }
 
         if (player.vehicle === phantom) {
+            if (player is ServerPlayer) PhantomDismount.resync(player, phantom)
             return
         }
 

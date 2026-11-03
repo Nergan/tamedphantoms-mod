@@ -4,6 +4,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlin.math.sin
 
@@ -16,6 +17,8 @@ import kotlin.math.sin
  * на подъёме. Не хватило скорости до точки невозврата — сваливание, нос вниз.
  * Бочка — быстрый оборот вокруг продольной оси с боковым рывком.
  * Пикирование без взмахов складывает крылья и разгоняет сильнее.
+ * Рывок вверх — выход из петли не в горизонт, а почти отвесно, со сложенными крыльями
+ * и толчком, который тратится на подъёме, как разгон пике.
  *
  * Знаки как у остальной позы фантома: тангаж плюс — нос вверх,
  * крен минус — то же направление, что стрейф влево.
@@ -42,6 +45,10 @@ class PhantomFlightModel {
         val loopRequest: Boolean = false,
         /** Двойное «влево» (+1) или «вправо» (−1). */
         val rollRequest: Int = 0,
+        /** Рывок вверх, пока открыто [zoomReady]. */
+        val zoomRequest: Boolean = false,
+        /** Сила рывка с сервера: 1 — обычная, 0 — рывка нет. */
+        val zoomBoost: Double = 1.0,
     )
 
     data class Output(
@@ -86,12 +93,29 @@ class PhantomFlightModel {
     val rolling: Boolean
         get() = rollLeft > 0f
 
+    /** Идёт рывок вверх: крылья сложены, нос тянется почти отвесно. */
+    var zooming: Boolean = false
+        private set
+
+    /** Тик, когда рывок только что начался. */
+    var zoomStarted: Boolean = false
+        private set
+
+    /** Можно рвануть вверх: в петле нос уже смотрит вниз, или петля только что замкнулась. */
+    val zoomReady: Boolean
+        get() = !zooming && ((looping && loopTurned >= ZOOM_WINDOW) || zoomGrace > 0)
+
     private var loopTurned = 0f
     private var loopDirection = 1f
     private var rollLeft = 0f
     private var rollDirection = 0f
     private var rollTicks = 0
     private var stalled = false
+    private var zoomTicks = 0
+    private var zoomThrust = 0
+    private var zoomTarget = 0f
+    private var zoomLoopLeft = 0f
+    private var zoomGrace = 0
 
     fun reset() {
         speed = 0.0
@@ -106,6 +130,7 @@ class PhantomFlightModel {
         rollLeft = 0f
         rollTicks = 0
         stalled = false
+        endZoom()
     }
 
     /** Удар о стену гасит скорость и прерывает фигуры. */
@@ -115,11 +140,13 @@ class PhantomFlightModel {
         loopTurned = 0f
         rollLeft = 0f
         rollTicks = 0
+        endZoom()
         pathPitch = wrap(pathPitch).coerceIn(-45f, 45f)
     }
 
     fun step(input: Input): Output {
         completedLoop = false
+        zoomStarted = false
         val vc = input.cruiseSpeed.coerceAtLeast(1.0E-4)
         return when (input.medium) {
             Medium.GROUND -> stepGround(input, vc)
@@ -134,10 +161,15 @@ class PhantomFlightModel {
         val flapping = forward > FORWARD_EPS
         val reversing = forward < -FORWARD_EPS
 
-        val tucking = climb < 0f && !flapping && !reversing && speed > vc * 0.4
-        tuck = approach(tuck, if (tucking) 1f else 0f, if (tucking) TUCK_IN else TUCK_OUT)
+        val tucking = zooming || (climb < 0f && !flapping && !reversing && speed > vc * 0.4)
+        val tuckRate = when {
+            zooming -> ZOOM_TUCK
+            tucking -> TUCK_IN
+            else -> TUCK_OUT
+        }
+        tuck = approach(tuck, if (tucking) 1f else 0f, tuckRate)
 
-        if (input.loopRequest && !looping && flapping && speed >= vc * LOOP_ENTRY && abs(wrap(pathPitch)) < 50f) {
+        if (input.loopRequest && !looping && !zooming && flapping && speed >= vc * LOOP_ENTRY && abs(wrap(pathPitch)) < 50f) {
             looping = true
             loopTurned = 0f
             loopDirection = 1f
@@ -145,13 +177,17 @@ class PhantomFlightModel {
             rollLeft = 0f
             rollTicks = 0
         }
-        if (input.rollRequest != 0 && rollTicks == 0 && !looping && speed >= vc * ROLL_ENTRY && !reversing) {
+        if (input.rollRequest != 0 && rollTicks == 0 && !looping && !zooming && speed >= vc * ROLL_ENTRY && !reversing) {
             rollDirection = if (input.rollRequest > 0) -1f else 1f
             rollLeft = FULL_TURN
             rollTicks = ROLL_TICKS
         }
+        if (input.zoomRequest && zoomReady && input.zoomBoost > 0.0 && !reversing) {
+            startZoom(vc, input.zoomBoost)
+        }
+        if (zoomGrace > 0) zoomGrace--
 
-        if (reversing || (!flapping && !looping && speed < vc * HOVER_SPEED && speed > -vc)) {
+        if (reversing || (!flapping && !looping && !zooming && speed < vc * HOVER_SPEED && speed > -vc)) {
             return stepHover(input, vc, forward, climb)
         }
         hover = approach(hover, 0f, 0.1f)
@@ -159,6 +195,10 @@ class PhantomFlightModel {
         stepPitch(input, vc, climb, flapping)
         stepSpeed(vc, flapping, forward, climb, input.yawDelta)
         stepRoll(input, vc)
+        if (zooming) {
+            zoomTicks--
+            if (zoomTicks <= 0 || (zoomThrust == 0 && speed < vc * ZOOM_END_SPEED)) endZoom()
+        }
 
         val pitchRad = Math.toRadians(pathPitch.toDouble())
         var vertical = speed * sin(pitchRad)
@@ -175,7 +215,46 @@ class PhantomFlightModel {
         return Output(along, lateral, vertical)
     }
 
+    /**
+     * Нос продолжает тянуться вверх в ту же сторону, что и в петле, до почти отвесного набора.
+     * Замкнуть круг можно и самим рывком: петля засчитывается, когда поворот проходит полный оборот.
+     */
+    private fun startZoom(vc: Double, boost: Double) {
+        val strength = boost.coerceIn(0.0, ZOOM_MAX_BOOST)
+        zoomLoopLeft = if (looping) (FULL_TURN - loopTurned).coerceAtLeast(0f) else 0f
+        looping = false
+        loopTurned = 0f
+        stalled = false
+        rollLeft = 0f
+        rollTicks = 0
+        zoomGrace = 0
+        zooming = true
+        zoomStarted = true
+        zoomThrust = (ZOOM_THRUST_TICKS * strength).roundToInt()
+        zoomTicks = ZOOM_TICKS + zoomThrust
+        val rise = ((ZOOM_ANGLE - pathPitch) % FULL_TURN + FULL_TURN) % FULL_TURN
+        zoomTarget = pathPitch + rise
+        speed = max(speed, vc * (1.0 + ZOOM_KICK * strength)).coerceAtMost(vc * MAX_SPEED)
+    }
+
+    private fun endZoom() {
+        zooming = false
+        zoomTicks = 0
+        zoomThrust = 0
+        zoomLoopLeft = 0f
+        zoomGrace = 0
+    }
+
     private fun stepPitch(input: Input, vc: Double, climb: Float, flapping: Boolean) {
+        if (zooming) {
+            val before = pathPitch
+            pathPitch = approach(pathPitch, zoomTarget, ZOOM_PULL)
+            if (zoomLoopLeft > 0f) {
+                zoomLoopLeft -= pathPitch - before
+                if (zoomLoopLeft <= 0f) completedLoop = true
+            }
+            return
+        }
         if (looping) {
             val pull = (LOOP_RATE * (speed / vc).toFloat().coerceIn(0.55f, 1.5f)) *
                 if (climb > 0f) 1.15f else 0.85f
@@ -193,6 +272,7 @@ class PhantomFlightModel {
                 completedLoop = true
                 loopTurned = 0f
                 pathPitch = wrap(pathPitch)
+                zoomGrace = ZOOM_GRACE_TICKS
             }
             return
         }
@@ -218,7 +298,13 @@ class PhantomFlightModel {
         speed -= GRAVITY * vc * sin(pitchRad)
         val wanted = vc * forward.coerceAtLeast(0f)
         var work = 0f
-        if (flapping && speed < wanted) {
+        if (zooming) {
+            // Крылья сложены: тянет толчок рывка, взмахов нет.
+            if (zoomThrust > 0) {
+                speed += ZOOM_THRUST * vc
+                zoomThrust--
+            }
+        } else if (flapping && speed < wanted) {
             val gain = if (pathPitch > 5f) CLIMB_THRUST else THRUST
             speed += gain * (wanted - speed)
             work = ((wanted - speed) / vc * 3.0).toFloat().coerceIn(0.25f, 1f)
@@ -229,8 +315,8 @@ class PhantomFlightModel {
             val excess = (speed - vc) / vc
             speed -= HIGH_DRAG * (1.0 - tuck * 0.55) * excess * (1.0 + excess) * vc
         }
-        // Раскрытые крылья без взмахов — воздушный тормоз. В пике его нет, там держит лобовое сопротивление.
-        if (!flapping && !looping && climb >= 0f) {
+        // Раскрытые крылья без взмахов — воздушный тормоз. В пике и в рывке его нет, там держит лобовое сопротивление.
+        if (!flapping && !looping && !zooming && climb >= 0f) {
             speed -= GLIDE_DRAG * speed
         }
         speed -= abs(yawDelta) / 90.0 * TURN_COST * speed
@@ -258,6 +344,7 @@ class PhantomFlightModel {
         stalled = false
         rollLeft = 0f
         rollTicks = 0
+        endZoom()
         hover = approach(hover, 1f, 0.1f)
         val wanted = if (forward < -FORWARD_EPS) vc * forward * PhantomHover.REVERSE_SPEED else 0.0
         speed += (wanted - speed) * HOVER_BRAKE
@@ -277,6 +364,7 @@ class PhantomFlightModel {
         rollLeft = 0f
         rollTicks = 0
         stalled = false
+        endZoom()
         tuck = approach(tuck, 0f, TUCK_OUT)
         val climb = sign(input.climb)
         val wanted = vc * input.forward.coerceIn(-1f, 1f) * if (input.forward < 0f) PhantomHover.REVERSE_SPEED else GROUND_SPEED
@@ -298,6 +386,7 @@ class PhantomFlightModel {
         rollLeft = 0f
         rollTicks = 0
         stalled = false
+        endZoom()
         tuck = approach(tuck, 0f, TUCK_OUT)
         val climb = sign(input.climb)
         val forward = input.forward.coerceIn(-1f, 1f)
@@ -350,6 +439,23 @@ class PhantomFlightModel {
         const val ROLL_ENTRY = 0.5
         const val ROLL_TICKS = 16
         const val ROLL_JUKE = 0.38
+
+        /** С этого угла петли (нос смотрит вниз) седоку предлагают рывок вверх. */
+        const val ZOOM_WINDOW = 270f
+        /** Столько тиков после замкнутой петли рывок ещё можно начать. */
+        const val ZOOM_GRACE_TICKS = 6
+        /** Почти отвесный набор: курс ещё виден. */
+        const val ZOOM_ANGLE = 80f
+        const val ZOOM_PULL = 9f
+        /** Скорость сразу после толчка: 1 + это × сила, в крейсерских. */
+        const val ZOOM_KICK = 0.6
+        const val ZOOM_THRUST = 0.07
+        /** Толчок тянет столько тиков при силе 1. Сильнее рывок — дольше тяга. */
+        const val ZOOM_THRUST_TICKS = 12
+        const val ZOOM_TICKS = 40
+        const val ZOOM_END_SPEED = 0.85
+        const val ZOOM_MAX_BOOST = 16.0
+        const val ZOOM_TUCK = 0.25f
 
         const val TURN_BANK = 1.6f
         const val MAX_TURN_BANK = 58f

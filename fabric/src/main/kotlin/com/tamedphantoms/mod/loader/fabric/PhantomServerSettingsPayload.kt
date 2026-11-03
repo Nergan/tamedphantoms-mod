@@ -1,6 +1,8 @@
 package com.tamedphantoms.mod.loader.fabric
 
 import com.tamedphantoms.mod.TamedPhantomsMod
+import com.tamedphantoms.mod.config.RideExtras
+import com.tamedphantoms.mod.config.ServerConfig
 import net.minecraft.network.RegistryFriendlyByteBuf
 import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
@@ -21,6 +23,7 @@ data class PhantomServerSettingsPayload(
     val phantomSize: Int,
     val immortalPhantoms: Boolean,
     val stackedScreams: Boolean,
+    val zoomBoost: Double = ServerConfig.DEFAULT_ZOOM_BOOST,
 ) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
@@ -44,6 +47,7 @@ data class PhantomServerSettingsPayload(
                 buf.writeVarInt(payload.phantomSize)
                 buf.writeBoolean(payload.immortalPhantoms)
                 buf.writeBoolean(payload.stackedScreams)
+                if (RideExtras.enabled) buf.writeDouble(payload.zoomBoost)
             },
             { buf ->
                 PhantomServerSettingsPayload(
@@ -60,6 +64,7 @@ data class PhantomServerSettingsPayload(
                     buf.readVarInt(),
                     buf.readBoolean(),
                     buf.readBoolean(),
+                    if (RideExtras.enabled) buf.readDouble() else ServerConfig.DEFAULT_ZOOM_BOOST,
                 )
             },
         )

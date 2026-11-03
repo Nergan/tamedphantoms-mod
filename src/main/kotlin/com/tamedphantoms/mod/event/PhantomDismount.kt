@@ -1,12 +1,15 @@
 package com.tamedphantoms.mod.event
 
+import com.tamedphantoms.mod.entity.PhantomOwnerRecall
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
 import com.tamedphantoms.mod.platform.ModNetwork
+import com.tamedphantoms.mod.platform.storedData
 import com.tamedphantoms.mod.util.PhantomDismountLogic
 import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
+import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
@@ -22,12 +25,16 @@ import java.util.UUID
  * считать удары по этому флагу или по каждому вызову снятия нельзя.
  * Пока сервер не подтвердил второе нажатие, пассажира из списка не
  * выкидывают — только возвращают ссылку на фантома, которую ваниль
- * обнуляет до [Entity.removePassenger].
+ * обнуляет до [Entity.removePassenger]. На клиенте это держится только
+ * сразу после своего Shift: чужой пакет пассажиров нельзя отменять,
+ * иначе седло на сервере и на клиенте расходится, и помогает только перезаход.
  */
 object PhantomDismount {
 
     private const val SAFE_DROP = 8
     private const val CLIENT_ALLOW_NANOS = 250_000_000L
+    private const val CLIENT_HOLD_NANOS = 1_000_000_000L
+    private const val TAG_RESUME = "tamedphantoms.resume_ride"
 
     private class Ride(val phantomId: Int, val startedAt: Long)
 
@@ -38,6 +45,9 @@ object PhantomDismount {
 
     @Volatile
     private var clientAllowUntilNanos: Long = 0L
+
+    @Volatile
+    private var clientHoldUntilNanos: Long = 0L
 
     /** Выставляет клиент. На сервере остаётся «никто», чтобы не тянуть клиентские классы. */
     var isLocalPlayer: (Player) -> Boolean = { false }
@@ -53,7 +63,14 @@ object PhantomDismount {
         clientAllowUntilNanos = System.nanoTime() + CLIENT_ALLOW_NANOS
     }
 
+    /** Клиент только что сам нажал Shift. Чужие снятия в эту секунду не держим. */
+    fun noteLocalDismountRequest() {
+        clientHoldUntilNanos = System.nanoTime() + CLIENT_HOLD_NANOS
+    }
+
     private fun clientDismountAllowed(): Boolean = System.nanoTime() < clientAllowUntilNanos
+
+    private fun clientHoldingDismount(): Boolean = System.nanoTime() < clientHoldUntilNanos
 
     /**
      * @return true, если это слезание нужно отменить и оставить игрока в седле.
@@ -132,6 +149,7 @@ object PhantomDismount {
     }
 
     fun onPlayerTick(player: Player) {
+        this.heal(player)
         val serverPlayer = player as? ServerPlayer ?: return
         val ride = windows[serverPlayer.uuid] ?: return
         val now = serverPlayer.level().gameTime
@@ -163,14 +181,144 @@ object PhantomDismount {
         val id = player.uuid
         windows.remove(id)
         armed.remove(id)
+        val serverPlayer = player as? ServerPlayer ?: return
+        val task = Runnable { this.parkMount(serverPlayer) }
+        val server = serverPlayer.server ?: return
+        if (server.isSameThread) task.run() else server.execute(task)
+    }
+
+    /**
+     * Выход из игры не должен оставлять игрока в седле: ваниль тогда вырезает
+     * фантома из мира и прячет копию в данные игрока. На следующем входе копия
+     * часто не садится, и этот фантом больше не слушается. Здесь седок слезает
+     * до сохранения, фантом остаётся в мире, а после входа садится на того же.
+     */
+    private fun parkMount(player: ServerPlayer) {
+        val phantom = player.vehicle as? TamedPhantomEntity ?: return
+        if (!phantom.isAlive) return
+        player.storedData.putUUID(TAG_RESUME, phantom.uuid)
+        PhantomOwnerRecall.remember(player, phantom)
+        this.forceDismount(player, phantom)
+    }
+
+    fun resumeAfterLogin(player: Player) {
+        val serverPlayer = player as? ServerPlayer ?: return
+        val data = serverPlayer.storedData
+        if (!data.hasUUID(TAG_RESUME)) return
+        val id = data.getUUID(TAG_RESUME)
+        data.remove(TAG_RESUME)
+        val phantom = this.findLoaded(serverPlayer, id) ?: return
+        if (!phantom.isAlive || !phantom.tamed || !phantom.isSaddled || phantom.isOrderedToSit() || !phantom.isOwnedBy(serverPlayer)) {
+            return
+        }
+        this.releaseStale(phantom)
+        if (serverPlayer.vehicle !== phantom) {
+            serverPlayer.startRiding(phantom, true)
+        }
+    }
+
+    /** Повторно шлёт список седоков. Клиент, который сидит «не до конца», садится заново. */
+    fun resync(player: ServerPlayer, phantom: TamedPhantomEntity) {
+        this.releaseStale(phantom)
+        player.connection.send(ClientboundSetPassengersPacket(phantom))
+    }
+
+    /** Убирает из седла снятых и мёртвых, чтобы место не оставалось занятым навсегда. */
+    fun releaseStale(phantom: TamedPhantomEntity) {
+        val keep = HashMap<UUID, Entity>()
+        val stale = ArrayList<Entity>()
+        for (entity in phantom.passengers) {
+            if (entity.isRemoved || !entity.isAlive || entity.vehicle !== phantom) {
+                stale.add(entity)
+                continue
+            }
+            val previous = keep.put(entity.uuid, entity)
+            if (previous != null) {
+                val dropPrevious = previous !is Player || !isLocalPlayer(previous)
+                if (dropPrevious) {
+                    stale.add(previous)
+                } else {
+                    keep[entity.uuid] = previous
+                    stale.add(entity)
+                }
+            }
+        }
+        if (stale.isEmpty()) return
+        this.bypass {
+            for (entity in stale) {
+                phantom.detachPassengerNow(entity)
+            }
+        }
+    }
+
+    /**
+     * Седок есть только с одной стороны ссылки: клиент не шлёт управление,
+     * а сервер считает место занятым. Собирает ссылку обратно.
+     */
+    fun heal(player: Player) {
+        if (!player.isAlive || player.isRemoved) return
+        val phantom = player.vehicle as? TamedPhantomEntity ?: return
+        if (!phantom.isAlive || phantom.isRemoved) {
+            this.forceDismount(player, phantom)
+            return
+        }
+        this.releaseStale(phantom)
+        if (phantom.passengers.contains(player)) {
+            val pilotOk = phantom.controllingPassenger === player || !phantom.isOwnedBy(player)
+            if (!player.level().isClientSide || pilotOk) return
+        }
+        if (player.level().isClientSide) {
+            this.bypass {
+                this.unlink(player)
+                player.startRiding(phantom, true)
+            }
+            return
+        }
+        this.forceRemount(player, phantom)
+    }
+
+    private fun findLoaded(player: ServerPlayer, id: UUID): TamedPhantomEntity? {
+        val server = player.server ?: return null
+        for (level in server.allLevels) {
+            val found = level.getEntity(id) as? TamedPhantomEntity
+            if (found != null) return found
+        }
+        return null
+    }
+
+    private fun forceDismount(player: Player, phantom: TamedPhantomEntity) {
+        this.bypass {
+            if (player.vehicle === phantom || phantom.passengers.contains(player)) {
+                player.stopRiding()
+            }
+        }
+    }
+
+    private fun forceRemount(player: Player, phantom: TamedPhantomEntity) {
+        this.bypass {
+            if (player.vehicle != null) player.stopRiding()
+            if (phantom.passengers.contains(player)) phantom.detachPassengerNow(player)
+            player.startRiding(phantom, true)
+        }
+    }
+
+    private inline fun bypass(block: () -> Unit) {
+        bypassDepth.set(bypassDepth.get() + 1)
+        try {
+            block()
+        } finally {
+            bypassDepth.set((bypassDepth.get() - 1).coerceAtLeast(0))
+        }
     }
 
     private fun compute(player: Player, phantom: TamedPhantomEntity): Boolean {
         if (!player.isAlive || !phantom.isAlive || player.isRemoved || phantom.isRemoved) return false
+        if (player is ServerPlayer && player.hasDisconnected()) return false
         if (phantom.isOrderedToSit()) return false
         if (player.level().isClientSide) {
             if (!isLocalPlayer(player)) return false
             if (this.clientDismountAllowed()) return false
+            if (!this.clientHoldingDismount()) return false
             return this.airBelow(phantom) > SAFE_DROP
         }
         if (this.airBelow(phantom) <= SAFE_DROP) {

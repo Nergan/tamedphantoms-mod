@@ -42,6 +42,7 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 override fun phantomGroupMultiplier() = cfg.phantomGroupMultiplier.get()
                 override fun phantomSize() = cfg.phantomSize.get()
                 override fun immortalPhantoms() = if (SPEC.isLoaded) cfg.immortalPhantoms.get() else false
+                override fun zoomBoost() = cfg.zoomBoost?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ZOOM_BOOST
             }
         }
     }
@@ -59,6 +60,7 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
     val phantomGroupMultiplier: ModConfigSpec.DoubleValue
     val phantomSize: ModConfigSpec.IntValue
     val immortalPhantoms: ModConfigSpec.BooleanValue
+    val zoomBoost: ModConfigSpec.DoubleValue?
 
     init {
         builder.push("taming")
@@ -134,6 +136,19 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             )
             .translation("$KEY_PREFIX.flight.flight_speed")
             .defineInRange("flight_speed", 1.25, 0.25, 4.0)
+
+        zoomBoost = if (RideExtras.enabled) {
+            builder
+                .comment(
+                    "Сила рывка вверх из мёртвой петли. Когда нос в петле смотрит вниз, седоку предлагают",
+                    "нажать клавишу крика, и фантом выходит из петли вверх со сложенными крыльями.",
+                    "1.0 — обычный рывок, 2.0 — примерно вдвое выше, 0 — рывка нет и подсказки тоже.",
+                )
+                .translation("$KEY_PREFIX.flight.zoom_boost")
+                .defineInRange("zoom_boost", ServerConfig.DEFAULT_ZOOM_BOOST, 0.0, ServerConfig.MAX_ZOOM_BOOST)
+        } else {
+            null
+        }
 
         builder.pop()
 

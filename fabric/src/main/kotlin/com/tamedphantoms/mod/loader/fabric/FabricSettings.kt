@@ -2,6 +2,7 @@ package com.tamedphantoms.mod.loader.fabric
 
 import com.tamedphantoms.mod.TamedPhantomsMod
 import com.tamedphantoms.mod.config.ClientConfig
+import com.tamedphantoms.mod.config.RideExtras
 import com.tamedphantoms.mod.config.ServerConfig
 import net.fabricmc.loader.api.FabricLoader
 import net.minecraft.server.MinecraftServer
@@ -95,6 +96,7 @@ object FabricSettings {
         server.size,
         server.immortal,
         server.stackedScreams,
+        server.zoomBoostValue,
     )
 
     fun apply(payload: PhantomServerSettingsPayload) {
@@ -111,6 +113,7 @@ object FabricSettings {
         server.size = payload.phantomSize
         server.immortal = payload.immortalPhantoms
         server.stackedScreams = payload.stackedScreams
+        server.zoomBoostValue = payload.zoomBoost
     }
 
     private fun clientFile(): Path = FabricLoader.getInstance().configDir.resolve("tamedphantoms-client.toml")
@@ -178,6 +181,7 @@ object FabricSettings {
         var size: Int = 3
         var immortal: Boolean = false
         var stackedScreams: Boolean = true
+        var zoomBoostValue: Double = ServerConfig.DEFAULT_ZOOM_BOOST
 
         override fun tameItemId() = tameItem
         override fun releaseItemId() = releaseItem
@@ -192,6 +196,7 @@ object FabricSettings {
         override fun phantomSize() = size
         override fun immortalPhantoms() = immortal
         override fun stackedScreams() = stackedScreams
+        override fun zoomBoost() = zoomBoostValue
 
         fun read(values: Map<String, String>) {
             tameItem = values["taming.tame_item"] ?: tameItem
@@ -202,6 +207,7 @@ object FabricSettings {
             size = values.int("taming.phantom_size", size)
             immortal = values.bool("taming.immortal_phantoms", immortal)
             flightSpeedValue = values.double("flight.flight_speed", flightSpeedValue)
+            if (RideExtras.enabled) zoomBoostValue = values.double("flight.zoom_boost", zoomBoostValue)
             screamRadiusValue = values.double("scream.scream_radius", screamRadiusValue)
             screamCooldown = values.int("scream.scream_cooldown_seconds", screamCooldown)
             stackedScreams = values.bool("scream.stacked_screams", stackedScreams)
@@ -211,51 +217,69 @@ object FabricSettings {
 
         fun writeMissing(): String = write()
 
-        fun write(): String = """
-            [taming]
-            tame_item = "$tameItem"
-            release_item = "$releaseItem"
-            tame_chance = $tameChanceValue
-            repel_radius = $repelRadiusValue
-            defend_time_ticks = $defendTicks
-            phantom_size = $size
-            immortal_phantoms = $immortal
+        fun write(): String {
+            val flight = "flight_speed = $flightSpeedValue\n" +
+                if (RideExtras.enabled) "zoom_boost = $zoomBoostValue\n" else ""
+            return """
+                [taming]
+                tame_item = "$tameItem"
+                release_item = "$releaseItem"
+                tame_chance = $tameChanceValue
+                repel_radius = $repelRadiusValue
+                defend_time_ticks = $defendTicks
+                phantom_size = $size
+                immortal_phantoms = $immortal
 
-            [flight]
-            flight_speed = $flightSpeedValue
+                [flight]
+            """.trimIndent() + "\n" + flight + "\n" + """
+                [scream]
+                scream_radius = $screamRadiusValue
+                scream_cooldown_seconds = $screamCooldown
+                stacked_screams = $stackedScreams
 
-            [scream]
-            scream_radius = $screamRadiusValue
-            scream_cooldown_seconds = $screamCooldown
-            stacked_screams = $stackedScreams
-
-            [spawning]
-            insomnia_days = $insomnia
-            phantom_group_multiplier = $groupMultiplier
-        """.trimIndent() + "\n"
+                [spawning]
+                insomnia_days = $insomnia
+                phantom_group_multiplier = $groupMultiplier
+            """.trimIndent() + "\n"
+        }
     }
 
     class ClientValues : ClientConfig.Settings {
         var soundVolume: Double = 0.5
         var ownedSpeed: Double = 1.25
+        var horizonHold: Int = ClientConfig.DEFAULT_HORIZON_HOLD
+        var smoothing: Int = ClientConfig.DEFAULT_CAMERA_SMOOTHING
 
         override fun tamedSoundVolume() = soundVolume
         override fun ownedFlightSpeed() = ownedSpeed
+        override fun cameraHorizonHold() = horizonHold
+        override fun cameraSmoothing() = smoothing
 
         fun read(values: Map<String, String>) {
             soundVolume = values.double("sound.tamed_sound_volume", soundVolume)
             ownedSpeed = values.double("flight.owned_flight_speed", ownedSpeed)
+            if (RideExtras.enabled) {
+                horizonHold = values.int("flight.camera_horizon_hold", horizonHold)
+                smoothing = values.int("flight.camera_smoothing", smoothing)
+            }
         }
 
         fun writeMissing(): String = write()
 
-        fun write(): String = """
-            [sound]
-            tamed_sound_volume = $soundVolume
+        fun write(): String {
+            val camera = if (RideExtras.enabled) {
+                "camera_horizon_hold = $horizonHold\ncamera_smoothing = $smoothing\n"
+            } else {
+                ""
+            }
+            return """
+                [sound]
+                tamed_sound_volume = $soundVolume
 
-            [flight]
-            owned_flight_speed = $ownedSpeed
-        """.trimIndent() + "\n"
+                [flight]
+                owned_flight_speed = $ownedSpeed
+            """.trimIndent() + "\n" + camera
+        }
     }
 }
 

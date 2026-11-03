@@ -44,7 +44,15 @@ object ClientModEvents {
             }
         }
         bus.addListener { event: ViewportEvent.ComputeCameraAngles ->
-            val angles = PhantomRideBank.adjust(event.camera.entity, event.partialTick.toFloat(), event.pitch, event.roll)
+            val partial = event.partialTick.toFloat()
+            val cockpit = PhantomCockpitCamera.update(event.camera.entity, partial)
+            if (cockpit != null && !event.camera.isDetached) {
+                event.yaw = cockpit.yaw
+                event.pitch = cockpit.pitch
+                event.roll = cockpit.roll
+                return@addListener
+            }
+            val angles = PhantomRideBank.adjust(event.camera.entity, partial, event.pitch, event.roll)
                 ?: return@addListener
             event.pitch = angles.pitch
             event.roll = angles.roll

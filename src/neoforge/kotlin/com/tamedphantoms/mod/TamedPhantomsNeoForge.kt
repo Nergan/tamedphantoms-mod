@@ -2,6 +2,7 @@ package com.tamedphantoms.mod
 
 import com.tamedphantoms.mod.config.NeoForgeClientConfig
 import com.tamedphantoms.mod.config.NeoForgeServerConfig
+import com.tamedphantoms.mod.config.RideExtras
 import com.tamedphantoms.mod.event.ModSetup
 import com.tamedphantoms.mod.loader.NeoForgeGameEvents
 import com.tamedphantoms.mod.loader.NeoForgeRegistries
@@ -28,6 +29,7 @@ class TamedPhantomsNeoForge(modEventBus: IEventBus, modContainer: ModContainer) 
         TamedPhantomsMod.LOGGER.info("Инициализация мода Tamed Phantoms ({})", TamedPhantomsMod.MOD_ID)
 
         NeoForgeRegistries.register(modEventBus)
+        RideExtras.enabled = true
         modContainer.registerConfig(ModConfig.Type.SERVER, NeoForgeServerConfig.SPEC)
         modContainer.registerConfig(ModConfig.Type.CLIENT, NeoForgeClientConfig.SPEC)
         NeoForgeServerConfig.bind()
