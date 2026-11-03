@@ -1,6 +1,5 @@
 package com.tamedphantoms.mod.event
 
-import com.tamedphantoms.mod.entity.PhantomOwnerRecall
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
 import com.tamedphantoms.mod.platform.ModNetwork
@@ -35,11 +34,14 @@ object PhantomDismount {
     private const val CLIENT_ALLOW_NANOS = 250_000_000L
     private const val CLIENT_HOLD_NANOS = 1_000_000_000L
     private const val TAG_RESUME = "tamedphantoms.resume_ride"
+    private const val RESUME_TICKS = 100
+    private const val RESUME_HORIZONTAL = 32.0
 
     private class Ride(val phantomId: Int, val startedAt: Long)
 
     private val windows = HashMap<UUID, Ride>()
     private val armed = HashSet<UUID>()
+    private val resumeUntil = HashMap<UUID, Int>()
     private val decision = ThreadLocal<Boolean?>()
     private val bypassDepth = ThreadLocal.withInitial { 0 }
 
@@ -151,6 +153,13 @@ object PhantomDismount {
     fun onPlayerTick(player: Player) {
         this.heal(player)
         val serverPlayer = player as? ServerPlayer ?: return
+        val until = resumeUntil[serverPlayer.uuid]
+        if (until != null) {
+            val done = this.resumeCarried(serverPlayer)
+            if (done || serverPlayer.tickCount > until) {
+                resumeUntil.remove(serverPlayer.uuid)
+            }
+        }
         val ride = windows[serverPlayer.uuid] ?: return
         val now = serverPlayer.level().gameTime
         if (now - ride.startedAt > PhantomDismountLogic.WINDOW_TICKS) {
@@ -179,43 +188,66 @@ object PhantomDismount {
 
     fun onLogout(player: Player) {
         val id = player.uuid
-        windows.remove(id)
-        armed.remove(id)
-        val serverPlayer = player as? ServerPlayer ?: return
-        val task = Runnable { this.parkMount(serverPlayer) }
-        val server = serverPlayer.serverLevel().getServer() ?: return
-        if (server.isSameThread) task.run() else server.execute(task)
+        val task = Runnable {
+            windows.remove(id)
+            armed.remove(id)
+            resumeUntil.remove(id)
+        }
+        val server = (player as? ServerPlayer)?.serverLevel()?.getServer()
+        if (server == null || server.isSameThread) task.run() else server.execute(task)
     }
 
     /**
-     * Выход из игры не должен оставлять игрока в седле: ваниль тогда вырезает
-     * фантома из мира и прячет копию в данные игрока. На следующем входе копия
-     * часто не садится, и этот фантом больше не слушается. Здесь седок слезает
-     * до сохранения, фантом остаётся в мире, а после входа садится на того же.
+     * Седока нельзя снимать до записи игрока. Пока он в седле, ваниль прячет
+     * фантома в данные игрока и убирает его из мира. На входе оба появляются
+     * снова, игрок сидит на том же фантоме. Снятие до записи оставляет фантома
+     * в небе, а игрока кладёт на землю под ним.
      */
-    private fun parkMount(player: ServerPlayer) {
-        val phantom = player.vehicle as? TamedPhantomEntity ?: return
-        if (!phantom.isAlive) return
-        player.storedData.putString(TAG_RESUME, phantom.uuid.toString())
-        PhantomOwnerRecall.remember(player, phantom)
-        this.forceDismount(player, phantom)
-    }
-
     fun resumeAfterLogin(player: Player) {
         val serverPlayer = player as? ServerPlayer ?: return
-        val data = serverPlayer.storedData
-        if (!data.contains(TAG_RESUME)) return
+        resumeUntil[serverPlayer.uuid] = serverPlayer.tickCount + RESUME_TICKS
+        this.resumeCarried(serverPlayer)
+        val phantom = serverPlayer.vehicle as? TamedPhantomEntity ?: return
+        this.resync(serverPlayer, phantom)
+    }
+
+    /**
+     * Старые выходы успели записать метку и оставить фантома в мире.
+     * Пока метка есть, сажаем на того же, если он рядом по горизонтали.
+     * Новые выходы метку не пишут: фантома забирает ваниль вместе с игроком.
+     */
+    private fun resumeCarried(player: ServerPlayer): Boolean {
+        val data = player.storedData
+        if (!data.contains(TAG_RESUME)) return true
         val rideId = data.getString(TAG_RESUME)
-        data.remove(TAG_RESUME)
-        val id = runCatching { UUID.fromString(rideId) }.getOrNull() ?: return
-        val phantom = this.findLoaded(serverPlayer, id) ?: return
-        if (!phantom.isAlive || !phantom.tamed || !phantom.isSaddled || phantom.isOrderedToSit() || !phantom.isOwnedBy(serverPlayer)) {
-            return
+        val id = runCatching { UUID.fromString(rideId) }.getOrNull()
+        if (id == null) {
+            data.remove(TAG_RESUME)
+            return true
         }
+        val riding = player.vehicle as? TamedPhantomEntity
+        if (riding != null && riding.uuid == id) {
+            data.remove(TAG_RESUME)
+            this.resync(player, riding)
+            return true
+        }
+        val phantom = this.findLoaded(player, id) ?: return false
+        if (!phantom.isAlive || !phantom.tamed || !phantom.isSaddled || phantom.isOrderedToSit() || !phantom.isOwnedBy(player)) {
+            return false
+        }
+        val dx = player.x - phantom.x
+        val dz = player.z - phantom.z
+        if (dx * dx + dz * dz > RESUME_HORIZONTAL * RESUME_HORIZONTAL) return false
         this.releaseStale(phantom)
-        if (serverPlayer.vehicle !== phantom) {
-            serverPlayer.startRiding(phantom, true)
+        if (player.vehicle !== phantom) {
+            player.startRiding(phantom, true)
         }
+        if (player.vehicle !== phantom) return false
+        data.remove(TAG_RESUME)
+        player.fallDistance = 0.0f
+        phantom.fallDistance = 0.0f
+        this.resync(player, phantom)
+        return true
     }
 
     /** Повторно шлёт список седоков. Клиент, который сидит «не до конца», садится заново. */
