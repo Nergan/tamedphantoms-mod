@@ -30,8 +30,8 @@ object ServerConfig {
         fun zoomBoost(): Double = DEFAULT_ZOOM_BOOST
     }
 
-    const val DEFAULT_ZOOM_BOOST = 2.0
-    const val MAX_ZOOM_BOOST = 16.0
+    const val DEFAULT_ZOOM_BOOST = 8.0
+    const val MAX_ZOOM_BOOST = 64.0
 
     var settings: Settings = Defaults
 

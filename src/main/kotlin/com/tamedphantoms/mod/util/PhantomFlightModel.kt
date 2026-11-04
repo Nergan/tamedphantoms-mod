@@ -47,7 +47,7 @@ class PhantomFlightModel {
         val rollRequest: Int = 0,
         /** Рывок вверх, пока открыто [zoomReady]. */
         val zoomRequest: Boolean = false,
-        /** Сила рывка с сервера: 1 — обычная, 0 — рывка нет. */
+        /** Сила рывка с сервера. 8 — обычная, 0 — рывка нет. */
         val zoomBoost: Double = 1.0,
     )
 
@@ -149,12 +149,19 @@ class PhantomFlightModel {
         completedLoop = false
         zoomStarted = false
         val vc = input.cruiseSpeed.coerceAtLeast(1.0E-4)
-        return when (input.medium) {
+        val medium = if (input.medium == Medium.WATER && this.figureAsked(input)) Medium.AIR else input.medium
+        return when (medium) {
             Medium.GROUND -> stepGround(input, vc)
             Medium.WATER -> stepWater(input, vc)
             Medium.AIR -> stepAir(input, vc)
         }
     }
+
+    /** В воде петля, бочка и рывок идут тем же кругом, что в воздухе. Обычное плавание остаётся своим. */
+    private fun figureAsked(input: Input): Boolean =
+        this.looping || this.zooming || this.rollLeft > 0f || this.rollTicks > 0 ||
+            input.loopRequest || input.rollRequest != 0 ||
+            (input.zoomRequest && this.zoomReady)
 
     private fun stepAir(input: Input, vc: Double): Output {
         val forward = input.forward.coerceIn(-1f, 1f)
@@ -459,7 +466,7 @@ class PhantomFlightModel {
         const val ZOOM_TICKS = 64
         /** К концу окна скорость сходится сюда, в крейсерских, и дальше полёт обычный. */
         const val ZOOM_END_SPEED = 0.85
-        const val ZOOM_MAX_BOOST = 16.0
+        const val ZOOM_MAX_BOOST = 64.0
         const val ZOOM_TUCK = 0.25f
 
         const val TURN_BANK = 1.6f

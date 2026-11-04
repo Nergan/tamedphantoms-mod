@@ -164,7 +164,7 @@ class PhantomFlightModelTest {
     }
 
     @Test
-    @DisplayName("Сила с сервера: выше толчок и тот же срок, 0 — рывка нет")
+    @DisplayName("Сила с сервера: выше толчок и тот же срок, 64 не срезается, 0 — рывка нет")
     fun zoomBoostScales() {
         data class Zoom(val ticks: Int, val climb: Double, val peak: Double, val end: Double)
 
@@ -186,16 +186,19 @@ class PhantomFlightModelTest {
         }
 
         val off = measure(0.0)
-        val usual = measure(2.0)
+        val usual = measure(8.0)
         val hard = measure(16.0)
+        val hardest = measure(64.0)
         assertEquals(0, off.ticks)
         assertEquals(0.0, off.climb)
-        assertEquals(PhantomFlightModel.ZOOM_TICKS, usual.ticks, "срок на 2: ${usual.ticks}")
-        assertEquals(usual.ticks, hard.ticks, "срок на 16: ${hard.ticks}, на 2: ${usual.ticks}")
-        assertTrue(usual.peak > vc * 2.1, "толчок на 2: ${usual.peak}")
-        assertTrue(hard.peak > usual.peak * 4.0, "толчок на 16: ${hard.peak}, на 2: ${usual.peak}")
-        assertTrue(hard.climb > usual.climb * 2.0, "подъём на 16: ${hard.climb}, на 2: ${usual.climb}")
-        assertTrue(usual.end < usual.peak * 0.6, "скорость на 2 не спадает: ${usual.end} из ${usual.peak}")
+        assertEquals(PhantomFlightModel.ZOOM_TICKS, usual.ticks, "срок на 8: ${usual.ticks}")
+        assertEquals(usual.ticks, hard.ticks, "срок на 16: ${hard.ticks}, на 8: ${usual.ticks}")
+        assertEquals(usual.ticks, hardest.ticks, "срок на 64: ${hardest.ticks}, на 8: ${usual.ticks}")
+        assertTrue(usual.peak > vc * 5.0, "толчок на 8: ${usual.peak}")
+        assertTrue(hard.peak > usual.peak, "толчок на 16: ${hard.peak}, на 8: ${usual.peak}")
+        assertTrue(hardest.peak > hard.peak * 2.0, "толчок на 64: ${hardest.peak}, на 16: ${hard.peak}")
+        assertTrue(hard.climb > usual.climb, "подъём на 16: ${hard.climb}, на 8: ${usual.climb}")
+        assertTrue(usual.end < usual.peak * 0.6, "скорость на 8 не спадает: ${usual.end} из ${usual.peak}")
         assertTrue(hard.end < hard.peak * 0.2, "скорость на 16 не спадает: ${hard.end} из ${hard.peak}")
     }
 
@@ -258,5 +261,30 @@ class PhantomFlightModelTest {
         assertTrue(settle.vertical < 0.0, "vertical ${settle.vertical}")
         val climb = PhantomFlightModel().step(Input(0f, 0f, 1f, vc, medium = PhantomFlightModel.Medium.GROUND))
         assertTrue(climb.vertical > 0.0, "vertical ${climb.vertical}")
+    }
+
+    @Test
+    @DisplayName("Под водой петля и бочка идут, обычное плавание их не включает само")
+    fun figuresSwim() {
+        val water = PhantomFlightModel.Medium.WATER
+        val swimming = PhantomFlightModel()
+        repeat(30) { swimming.step(Input(1f, 0f, 0f, vc, medium = water)) }
+        assertFalse(swimming.looping)
+        assertFalse(swimming.rolling)
+        assertTrue(swimming.speed >= vc * PhantomFlightModel.LOOP_ENTRY, "speed ${swimming.speed}")
+
+        val loop = PhantomFlightModel()
+        repeat(30) { loop.step(Input(1f, 0f, 0f, vc, medium = water)) }
+        loop.step(Input(1f, 0f, 0f, vc, medium = water, loopRequest = true))
+        assertTrue(loop.looping)
+        repeat(5) { loop.step(Input(1f, 0f, 0f, vc, medium = water)) }
+        assertTrue(loop.looping, "вода оборвала петлю")
+
+        val roll = PhantomFlightModel()
+        repeat(30) { roll.step(Input(1f, 0f, 0f, vc, medium = water)) }
+        roll.step(Input(1f, 0f, 0f, vc, medium = water, rollRequest = 1))
+        assertTrue(roll.rolling)
+        repeat(4) { roll.step(Input(1f, 0f, 0f, vc, medium = water)) }
+        assertTrue(roll.rolling, "вода оборвала бочку")
     }
 }

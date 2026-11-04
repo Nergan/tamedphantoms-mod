@@ -1303,8 +1303,12 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return ((this.airspeedRatio - 0.85f) / 1.1f).coerceIn(0f, 1f)
     }
 
-    /** В воздухе: не сидит, не в воде и не ползёт по земле. */
+    /** В воздухе: не сидит, не в воде и не ползёт по земле. Круиз смотрит сюда. */
     fun airborne(): Boolean = !this.isOrderedToSit() && !this.isInWater && !this.crawlLock
+
+    /** Петля и бочка: в воздухе, под водой и в лаве. Сидя и ползком по суше их нет. */
+    fun canFigure(): Boolean =
+        !this.isOrderedToSit() && (!this.crawlLock || this.isInWater || this.isUnderWater || this.isInLava)
 
     fun beginSurfaceTakeoff() {
         if (this.takeoffHoldTicks > 0) return
@@ -1585,10 +1589,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             (PhantomFlightAttitude.tailPitchDegrees(vertical) - pull).coerceIn(-30f, 30f),
             4.5f,
         )
-        this.swimBlend = if (this.isUnderWater) {
-            (this.swimBlend + 0.07f).coerceAtMost(1f)
-        } else {
-            (this.swimBlend - 0.05f).coerceAtLeast(0f)
+        val figure = this.flightModel.looping || this.flightModel.rolling || this.flightModel.zooming
+        this.swimBlend = when {
+            figure -> (this.swimBlend - 0.2f).coerceAtLeast(0f)
+            this.isUnderWater -> (this.swimBlend + 0.07f).coerceAtMost(1f)
+            else -> (this.swimBlend - 0.05f).coerceAtLeast(0f)
         }
         val fastSweep = ((this.airspeedRatio - 1.2f) / 0.8f).coerceIn(0f, 1f) * 0.35f
         this.wingSweep = PhantomFlightModel.approach(this.wingSweep, maxOf(this.flightTuck, fastSweep) * (1f - this.swimBlend), 0.12f)
@@ -1941,7 +1946,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             PhantomEffectSpeed.scale(pilot) *
             PhantomEffectSpeed.dolphin(this)
         this.cruiseSpeedUsed = cruiseSpeed
+        val inLiquid = this.isInWater || this.isUnderWater || this.isInLava
+        val figuring = this.clientLoopRequest || this.clientRollRequest != 0 || this.clientZoomRequest ||
+            this.flightModel.looping || this.flightModel.rolling || this.flightModel.zooming
         val medium = when {
+            figuring && inLiquid -> PhantomFlightModel.Medium.AIR
             this.isUnderWater -> PhantomFlightModel.Medium.WATER
             this.crawlLock -> PhantomFlightModel.Medium.GROUND
             else -> PhantomFlightModel.Medium.AIR

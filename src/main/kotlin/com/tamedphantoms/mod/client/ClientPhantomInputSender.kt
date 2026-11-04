@@ -98,7 +98,7 @@ object ClientPhantomInputSender {
         val result = if (suspended) {
             PhantomFlightKeys.Result(PhantomFlightKeys.CruiseChange.NONE, false, 0)
         } else {
-            flightKeys.tick(player.tickCount, keys, pilot && phantom.airborne())
+            flightKeys.tick(player.tickCount, keys, pilot && phantom.airborne(), pilot && phantom.canFigure())
         }
         phantom.clientCruise = flightKeys.cruising
         if (result.loop) phantom.clientLoopRequest = true

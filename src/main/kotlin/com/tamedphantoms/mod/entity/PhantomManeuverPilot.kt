@@ -7,7 +7,7 @@ import kotlin.math.sin
 
 /**
  * Ведёт фантома без всадника по траектории фигуры. Вызывают обе сборки управления полётом.
- * Фигура начинается только в свободном воздухе и гаснет при первом касании.
+ * Фигура начинается в воздухе, под водой и в лаве и гаснет от твёрдого блока.
  */
 object PhantomManeuverPilot {
 
@@ -16,7 +16,7 @@ object PhantomManeuverPilot {
         val kind = phantom.maneuverKind() ?: return false
         val elapsed = phantom.maneuverElapsed()
         if (!PhantomManeuvers.active(kind, elapsed) || phantom.isVehicle || phantom.isOrderedToSit() ||
-            phantom.horizontalCollision || phantom.verticalCollision || phantom.isInWater
+            phantom.horizontalCollision || phantom.verticalCollision
         ) {
             phantom.endManeuver()
             return false
@@ -48,12 +48,12 @@ object PhantomManeuverPilot {
             .expandTowards(0.0, -(down + 1.5), 0.0)
             .expandTowards(-sin(yaw) * reach, 0.0, cos(yaw) * reach)
         val level = phantom.level()
-        return level.noCollision(phantom, box) && !level.containsAnyLiquid(box)
+        return level.noCollision(phantom, box)
     }
 
     /** Начать фигуру, если вокруг свободно. Скорость входа не ниже половины блока за тик. */
     fun tryStart(phantom: TamedPhantomEntity, kind: PhantomManeuvers.Kind): Boolean {
-        if (phantom.level().isClientSide || phantom.isVehicle || phantom.isOrderedToSit() || phantom.isInWater) return false
+        if (phantom.level().isClientSide || phantom.isVehicle || phantom.isOrderedToSit()) return false
         if (phantom.maneuverKind() != null) return false
         val motion = phantom.deltaMovement
         val speed = Math.sqrt(motion.x * motion.x + motion.z * motion.z).coerceIn(0.32, 0.7)

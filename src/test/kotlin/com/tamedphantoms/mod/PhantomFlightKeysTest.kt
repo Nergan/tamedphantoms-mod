@@ -109,4 +109,22 @@ class PhantomFlightKeysTest {
         assertEquals(CruiseChange.STOPPED, keys.tick(30, Keys(loop = true), true).cruise)
         assertFalse(keys.cruising)
     }
+
+    @Test
+    @DisplayName("Под водой петля и бочка читаются, круиз — нет")
+    fun figuresWhileSwimming() {
+        val keys = PhantomFlightKeys()
+        keys.tick(0, Keys(loop = true), flying = false, figures = true)
+        keys.tick(1, Keys(), false, true)
+        assertTrue(keys.tick(2, Keys(loop = true), false, true).loop)
+
+        keys.tick(10, Keys(rollLeft = true), false, true)
+        keys.tick(11, Keys(), false, true)
+        assertEquals(1, keys.tick(12, Keys(rollLeft = true), false, true).roll)
+
+        keys.tick(20, Keys(forward = true), false, true)
+        keys.tick(21, Keys(), false, true)
+        assertEquals(CruiseChange.NONE, keys.tick(23, Keys(forward = true), false, true).cruise)
+        assertFalse(keys.cruising)
+    }
 }

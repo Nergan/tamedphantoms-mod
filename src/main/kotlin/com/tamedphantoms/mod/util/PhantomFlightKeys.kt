@@ -45,7 +45,7 @@ class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
         return was
     }
 
-    fun tick(now: Int, keys: Keys, flying: Boolean): Result {
+    fun tick(now: Int, keys: Keys, flying: Boolean, figures: Boolean = flying): Result {
         val loopDown = keys.loop ?: keys.up
         val rollLeftDown = keys.rollLeft ?: keys.left
         val rollRightDown = keys.rollRight ?: keys.right
@@ -79,9 +79,9 @@ class PhantomFlightKeys(private val window: Int = DOUBLE_TAP_TICKS) {
             cruiseArmed = false
             change = CruiseChange.STARTED
         }
-        val loop = tap(UP, pressedLoop, now) && flying
-        val left = tap(LEFT, pressedRollLeft, now) && flying
-        val right = tap(RIGHT, pressedRollRight, now) && flying
+        val loop = tap(UP, pressedLoop, now) && figures
+        val left = tap(LEFT, pressedRollLeft, now) && figures
+        val right = tap(RIGHT, pressedRollRight, now) && figures
         val roll = when {
             left && !right -> 1
             right && !left -> -1
