@@ -153,6 +153,7 @@ java.toolchain.languageVersion.set(JavaLanguageVersion.of(25))
 
 val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/entity/TamedPhantomEntity.kt",
+    "com/tamedphantoms/mod/entity/PhantomIdTag.kt",
     "com/tamedphantoms/mod/entity/ai/TamedPhantomMoveControl.kt",
     "com/tamedphantoms/mod/client/render/**",
     "com/tamedphantoms/mod/client/ClientPhantomInputSender.kt",

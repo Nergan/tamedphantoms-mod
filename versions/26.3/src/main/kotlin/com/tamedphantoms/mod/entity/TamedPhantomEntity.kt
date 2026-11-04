@@ -537,6 +537,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     fun isOrderedToSit(): Boolean = this.entityData.get(DATA_SITTING)
 
+    /** Верхом ваниль рисует сердца маунта вместо сытости. Фантом это место не занимает. */
+    override fun showVehicleHealth(): Boolean = false
+
     fun setOrderedToSit(value: Boolean, playEffects: Boolean = true) {
         val changed = value != this.isOrderedToSit()
         this.entityData.set(DATA_SITTING, value)
@@ -1351,9 +1354,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     private fun tickOwnerRecall() {
         val owner = this.findOwnerPlayer() ?: return
-        if (this.tickCount % 20 == 0) {
-            PhantomOwnerRecall.remember(owner, this)
-        }
+        PhantomOwnerRecall.remember(owner, this)
         PhantomOwnerRecall.tryTeleportToOwner(this, owner)
     }
 

@@ -9,6 +9,9 @@ import com.tamedphantoms.mod.loader.NeoForgeRegistries
 import com.tamedphantoms.mod.network.ModNetworking
 import com.tamedphantoms.mod.platform.ModAccess
 import com.tamedphantoms.mod.platform.ModNetwork
+import net.minecraft.core.BlockPos
+import net.minecraft.server.level.TicketType
+import net.minecraft.world.level.ChunkPos
 import net.neoforged.bus.api.IEventBus
 import net.neoforged.fml.ModContainer
 import net.neoforged.fml.ModList
@@ -36,6 +39,7 @@ class TamedPhantomsNeoForge(modEventBus: IEventBus, modContainer: ModContainer) 
         NeoForgeClientConfig.bind()
 
         ModAccess.persistentData = { it.persistentData }
+        ModAccess.keepChunkLoaded = { level, pos, radius -> keepPhantomChunks(level, pos, radius) }
         ModAccess.addGoal = { mob, priority, goal -> mob.goalSelector.addGoal(priority, goal) }
         ModNetwork.isModLoaded = { ModList.get().isLoaded(it) }
         ModNetwork.sendToServer = { PacketDistributor.sendToServer(it) }
@@ -47,5 +51,21 @@ class TamedPhantomsNeoForge(modEventBus: IEventBus, modContainer: ModContainer) 
         ModSetup.init(modEventBus, modContainer)
         ModNetworking.init(modEventBus)
         NeoForgeGameEvents.register()
+    }
+}
+
+private fun keepPhantomChunks(level: net.minecraft.server.level.ServerLevel, pos: BlockPos, radius: Int) {
+    val cx = pos.x shr 4
+    val cz = pos.z shr 4
+    for (dx in -radius..radius) {
+        for (dz in -radius..radius) {
+            val chunk = ChunkPos(cx + dx, cz + dz)
+            level.chunkSource.addRegionTicket(
+                TicketType.PORTAL,
+                chunk,
+                2,
+                BlockPos(chunk.minBlockX + 8, pos.y, chunk.minBlockZ + 8),
+            )
+        }
     }
 }

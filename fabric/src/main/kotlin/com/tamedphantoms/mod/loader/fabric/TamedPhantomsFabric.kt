@@ -32,9 +32,12 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
 import net.fabricmc.fabric.api.`object`.builder.v1.entity.FabricDefaultAttributeRegistry
 import net.fabricmc.loader.api.FabricLoader
+import net.minecraft.core.BlockPos
 import net.minecraft.core.Registry
 import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.network.chat.Component
+import net.minecraft.server.level.TicketType
+import net.minecraft.world.level.ChunkPos
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
@@ -56,6 +59,7 @@ class TamedPhantomsFabric : ModInitializer {
         RideExtras.enabled = true
         FabricSettings.bind()
         ModAccess.persistentData = { (it as PersistentDataCarrier).tamedphantomsPersistentData() }
+        ModAccess.keepChunkLoaded = { level, pos, radius -> keepPhantomChunks(level, pos, radius) }
         ModAccess.addGoal = { mob, priority, goal ->
             (mob as MobGoalAccessor).tamedphantomsGoals().addGoal(priority, goal)
         }
@@ -166,6 +170,22 @@ class TamedPhantomsFabric : ModInitializer {
         }
         ServerLifecycleEvents.SERVER_STARTING.register { server ->
             FabricSettings.loadWorld(server)
+        }
+    }
+}
+
+private fun keepPhantomChunks(level: net.minecraft.server.level.ServerLevel, pos: BlockPos, radius: Int) {
+    val cx = pos.x shr 4
+    val cz = pos.z shr 4
+    for (dx in -radius..radius) {
+        for (dz in -radius..radius) {
+            val chunk = ChunkPos(cx + dx, cz + dz)
+            level.chunkSource.addRegionTicket(
+                TicketType.PORTAL,
+                chunk,
+                2,
+                BlockPos(chunk.minBlockX + 8, pos.y, chunk.minBlockZ + 8),
+            )
         }
     }
 }

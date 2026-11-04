@@ -29,6 +29,7 @@ val rewriteFor26 = rootProject.extra["rewriteFor26"] as (String) -> String
 
 val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/entity/TamedPhantomEntity.kt",
+    "com/tamedphantoms/mod/entity/PhantomIdTag.kt",
     "com/tamedphantoms/mod/entity/ai/TamedPhantomMoveControl.kt",
     "com/tamedphantoms/mod/client/render/**",
     "com/tamedphantoms/mod/client/ClientPhantomInputSender.kt",

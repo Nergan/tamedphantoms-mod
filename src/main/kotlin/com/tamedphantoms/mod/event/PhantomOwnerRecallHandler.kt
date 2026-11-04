@@ -24,7 +24,8 @@ object PhantomOwnerRecallHandler {
     }
 
     fun onPlayerTick(player: Player) {
-        if (player.level().isClientSide || player.tickCount % 20 != 0) return
+        if (player.level().isClientSide) return
+        if (player.tickCount % 20 != 0 && !PhantomOwnerRecall.hasPendingLoads()) return
         PhantomOwnerRecall.recallUnloaded(player)
     }
 
