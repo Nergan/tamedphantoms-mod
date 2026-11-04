@@ -4,6 +4,8 @@ import com.tamedphantoms.mod.config.RideExtras
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomRoster
+import com.tamedphantoms.mod.client.PhantomRosterClient
+import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
@@ -20,7 +22,7 @@ object ModNetworking {
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
         // У сборки с рывком из петли свой канал: версия отличает её от старых клиентов и серверов.
-        val registrar = event.registrar(if (RideExtras.enabled) "7" else "6")
+        val registrar = event.registrar(if (RideExtras.enabled) "8" else "7")
 
         if (RideExtras.enabled) {
             registrar.playToServer(
@@ -103,6 +105,13 @@ object ModNetworking {
             PhantomDismountAllowPayload.STREAM_CODEC,
         ) { _, _ ->
             PhantomDismount.grantClientDismount()
+        }
+
+        registrar.playToClient(
+            PhantomRosterListPayload.TYPE,
+            PhantomRosterListPayload.STREAM_CODEC,
+        ) { payload, context ->
+            context.enqueueWork { PhantomRosterClient.accept(payload.rows) }
         }
     }
 }

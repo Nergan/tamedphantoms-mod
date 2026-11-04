@@ -34,6 +34,7 @@ object FabricConfigScreen {
         addScream(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.scream")), entries, server, remote)
         addSpawning(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.spawning")), entries, server, remote)
         addSound(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.sound")), entries, client)
+        addRoster(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.roster")), entries)
         return builder.build()
     }
 
@@ -120,7 +121,12 @@ object FabricConfigScreen {
         category.addEntry(decimal(entries, "tamedphantoms.configuration.sound.tamed_sound_volume", client.soundVolume, 0.5, 0.0, 1.0, false) {
             client.soundVolume = it
         })
-        RosterEntry.add(category)
+    }
+
+    private fun addRoster(category: ConfigCategory, entries: ConfigEntryBuilder) {
+        category.addEntry(
+            entries.startTextDescription(Component.translatable("tamedphantoms.configuration.roster.hint")).build(),
+        )
     }
 
     private fun text(

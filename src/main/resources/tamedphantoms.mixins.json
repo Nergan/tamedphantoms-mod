@@ -9,7 +9,8 @@
     "PhantomMoveControlMixin",
     "MoveControlMobAccessor",
     "PhantomSpawnerMixin",
-    "PhantomInteractMixin"
+    "PhantomInteractMixin",
+    "PhantomRideTeleportMixin"
   ],
   "client": [
     "PhantomModelLookMixin",
@@ -21,7 +22,8 @@
     "SharedPhysicalKeyMixin",
     "PhantomCockpitEyeMixin",
     "PhantomCockpitAimMixin",
-    "CloudTickAccessor"
+    "CloudTickAccessor",
+    "RideHungerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

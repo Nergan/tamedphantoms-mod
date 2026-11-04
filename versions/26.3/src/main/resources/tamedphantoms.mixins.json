@@ -8,7 +8,8 @@
     "PhantomFlapMixin",
     "PhantomMoveControlMixin",
     "MoveControlMobAccessor",
-    "PhantomSpawnerMixin"
+    "PhantomSpawnerMixin",
+    "PhantomRideTeleportMixin"
   ],
   "client": [
     "PhantomRenderCaptureMixin",
@@ -19,7 +20,8 @@
     "KeyMappingFields",
     "SharedPhysicalKeyMixin",
     "PhantomCockpitSeatMixin",
-    "PhantomCockpitAimMixin"
+    "PhantomCockpitAimMixin",
+    "RideHungerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

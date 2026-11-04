@@ -60,6 +60,11 @@ object PhantomOwnerRecall {
         entry.putDouble("Y", phantom.y)
         entry.putDouble("Z", phantom.z)
         entry.putBoolean("S", phantom.isOrderedToSit())
+        val custom = phantom.customName
+        entry.putString("N", if (phantom.hasCustomName() && custom != null) custom.string.take(64) else "")
+        entry.putInt("B", phantom.bodyDye)
+        entry.putInt("A", phantom.saddleDye)
+        entry.putBoolean("G", phantom.luminous)
         next.add(entry)
         player.storedData.put(TAG_OWNED, next)
     }
@@ -190,15 +195,31 @@ object PhantomOwnerRecall {
                 if (!live.isAlive || !live.tamed || !live.isOwnedBy(owner)) continue
                 rows.add(
                     PhantomRosterRow(
+                        liveName(live),
                         live.isOrderedToSit(),
                         live.blockPosition().x,
                         live.blockPosition().y,
                         live.blockPosition().z,
                         dimName,
+                        live.bodyDye,
+                        live.saddleDye,
+                        live.luminous,
                     ),
                 )
             } else {
-                rows.add(PhantomRosterRow(tag.getBoolean("S"), pos.x, pos.y, pos.z, dimName))
+                rows.add(
+                    PhantomRosterRow(
+                        storedName(tag),
+                        tag.getBoolean("S"),
+                        pos.x,
+                        pos.y,
+                        pos.z,
+                        dimName,
+                        storedInt(tag, "B"),
+                        storedInt(tag, "A"),
+                        storedGlow(tag),
+                    ),
+                )
             }
         }
         return rows
@@ -309,6 +330,20 @@ object PhantomOwnerRecall {
         return false
     }
 
+    private fun liveName(phantom: TamedPhantomEntity): String {
+        val custom = phantom.customName
+        return if (phantom.hasCustomName() && custom != null) custom.string.take(64) else ""
+    }
+
+    private fun storedName(tag: CompoundTag): String =
+        if (tag.contains("N")) tag.getString("N") else ""
+
+    private fun storedInt(tag: CompoundTag, key: String): Int =
+        if (tag.contains(key)) tag.getInt(key) else -1
+
+    private fun storedGlow(tag: CompoundTag): Boolean =
+        if (tag.contains("G")) tag.getBoolean("G") else false
+
     private fun hurts(state: BlockState): Boolean {
         val block = state.block
         if (block == Blocks.FIRE || block == Blocks.SOUL_FIRE || block == Blocks.CACTUS ||
@@ -325,9 +360,13 @@ object PhantomOwnerRecall {
 }
 
 data class PhantomRosterRow(
+    val name: String,
     val sitting: Boolean,
     val x: Int,
     val y: Int,
     val z: Int,
     val dimension: String,
+    val bodyDye: Int,
+    val saddleDye: Int,
+    val luminous: Boolean,
 )

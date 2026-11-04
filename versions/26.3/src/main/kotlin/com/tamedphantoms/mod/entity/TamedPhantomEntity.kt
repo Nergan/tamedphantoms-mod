@@ -537,9 +537,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     fun isOrderedToSit(): Boolean = this.entityData.get(DATA_SITTING)
 
-    /** Верхом ваниль рисует сердца маунта вместо сытости. Фантом это место не занимает. */
-    override fun showVehicleHealth(): Boolean = false
-
     fun setOrderedToSit(value: Boolean, playEffects: Boolean = true) {
         val changed = value != this.isOrderedToSit()
         this.entityData.set(DATA_SITTING, value)

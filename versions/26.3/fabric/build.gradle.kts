@@ -47,6 +47,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/loader/fabric/TamedPhantomsFabricClient.kt",
     "com/tamedphantoms/mod/loader/fabric/FabricNetworking.kt",
     "com/tamedphantoms/mod/loader/fabric/RosterEntry.kt",
+    "com/tamedphantoms/mod/client/PhantomRosterScreen.kt",
     "com/tamedphantoms/mod/util/PhantomTreatApply.kt",
 )
 
@@ -55,7 +56,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(rootProject.file("../../fabric/src/main/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "resume-ride-1")
+    inputs.property("rewriteStamp", "roster-tp-1")
     filter { line -> rewriteFor26(line) }
 }
 
@@ -63,8 +64,10 @@ val sharedJava by tasks.registering(Sync::class) {
     from(rootProject.file("../../src/main/java"))
     from(rootProject.file("../../fabric/src/main/java"))
     into(layout.buildDirectory.dir("shared-java"))
-    inputs.property("sharedJavaStamp", "util-fog-1")
+    inputs.property("sharedJavaStamp", "hunger-tp-1")
     exclude(
+        "com/tamedphantoms/mod/mixin/RideHungerMixin.java",
+        "com/tamedphantoms/mod/mixin/PhantomRideTeleportMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",

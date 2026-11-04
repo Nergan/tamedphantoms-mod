@@ -1,7 +1,7 @@
 package com.tamedphantoms.mod.client
 
-import com.tamedphantoms.mod.network.PhantomRosterPayload
-import com.tamedphantoms.mod.platform.ModNetwork
+import com.tamedphantoms.mod.client.PhantomRosterScreen
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
@@ -25,7 +25,7 @@ fun onConfigScreenInit(event: ScreenEvent.Init.Post) {
     if (screen !in rosterScreens) return
     event.addListener(
         Button.builder(Component.translatable("tamedphantoms.configuration.roster")) { _ ->
-            ModNetwork.sendToServer(PhantomRosterPayload)
+            Minecraft.getInstance().gui.setScreen(PhantomRosterScreen(screen))
         }.bounds(screen.width / 2 - 100, screen.height - 52, 200, 20).build(),
     )
 }

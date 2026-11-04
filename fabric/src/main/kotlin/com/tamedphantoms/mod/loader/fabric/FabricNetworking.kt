@@ -9,6 +9,7 @@ import com.tamedphantoms.mod.network.PhantomFlightSpeedPayload
 import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
+import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
 import com.tamedphantoms.mod.network.PhantomZoomPayload
@@ -30,6 +31,7 @@ object FabricNetworking {
         PayloadTypeRegistry.playC2S().register(PhantomDismountTapPayload.TYPE, PhantomDismountTapPayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomMoonPulsePayload.TYPE, PhantomMoonPulsePayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomDismountAllowPayload.TYPE, PhantomDismountAllowPayload.STREAM_CODEC)
+        PayloadTypeRegistry.playS2C().register(PhantomRosterListPayload.TYPE, PhantomRosterListPayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomServerSettingsPayload.TYPE, PhantomServerSettingsPayload.STREAM_CODEC)
 
         ServerPlayNetworking.registerGlobalReceiver(PhantomInputPayload.TYPE) { payload, context ->

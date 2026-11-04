@@ -120,6 +120,9 @@ fun rewriteFor26(line: String): String {
         "MobEffects.DAMAGE_RESISTANCE" to "MobEffects.RESISTANCE",
         "net.minecraft.sounds.SoundEvents.GENERIC_DRINK" to "net.minecraft.sounds.SoundEvents.GENERIC_DRINK.value()",
         "phantom.fallDistance = 0.0f" to "phantom.fallDistance = 0.0",
+        "if (tag.contains(\"N\")) tag.getString(\"N\") else \"\"" to "tag.getStringOr(\"N\", \"\")",
+        "if (tag.contains(key)) tag.getInt(key) else -1" to "tag.getIntOr(key, -1)",
+        "if (tag.contains(\"G\")) tag.getBoolean(\"G\") else false" to "tag.getBooleanOr(\"G\", false)",
     )
     for ((from, to) in pairs) {
         s = s.replace(from, to)
@@ -166,6 +169,7 @@ val kotlinExcludes = listOf(
     "com/tamedphantoms/mod/mixin/PhantomFlapMixin.kt",
     "com/tamedphantoms/mod/mixin/PlayerRideBankMixin.kt",
     "com/tamedphantoms/mod/client/FlightAwareSectionScreen.kt",
+    "com/tamedphantoms/mod/client/PhantomRosterScreen.kt",
     "com/tamedphantoms/mod/util/PhantomTreatApply.kt",
     "com/tamedphantoms/mod/client/ClientModEvents.kt",
     "com/tamedphantoms/mod/client/PhantomCloudWisp.kt",
@@ -178,7 +182,7 @@ val sharedKotlin by tasks.registering(Sync::class) {
     from(file("../../src/neoforge/kotlin"))
     into(layout.buildDirectory.dir("shared-kotlin"))
     exclude(kotlinExcludes)
-    inputs.property("rewriteStamp", "resume-ride-1")
+    inputs.property("rewriteStamp", "roster-tp-1")
     filter { line -> rewriteIdentifiers(line) }
 }
 
@@ -186,8 +190,10 @@ val sharedJava by tasks.registering(Sync::class) {
     from(file("../../src/main/java"))
     from(file("../../src/neoforge/java"))
     into(layout.buildDirectory.dir("shared-java"))
-    inputs.property("sharedJavaStamp", "util-fog-1")
+    inputs.property("sharedJavaStamp", "hunger-tp-1")
     exclude(
+        "com/tamedphantoms/mod/mixin/RideHungerMixin.java",
+        "com/tamedphantoms/mod/mixin/PhantomRideTeleportMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",

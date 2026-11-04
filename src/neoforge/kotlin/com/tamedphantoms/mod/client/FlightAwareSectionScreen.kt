@@ -2,8 +2,7 @@ package com.tamedphantoms.mod.client
 
 import com.electronwill.nightconfig.core.UnmodifiableConfig
 import com.tamedphantoms.mod.config.NeoForgeServerConfig
-import com.tamedphantoms.mod.network.PhantomRosterPayload
-import com.tamedphantoms.mod.platform.ModNetwork
+import net.minecraft.client.Minecraft
 import com.tamedphantoms.mod.util.PhantomFlightPace
 import net.minecraft.client.gui.components.AbstractSliderButton
 import net.minecraft.client.gui.components.Button
@@ -57,7 +56,7 @@ class FlightAwareSectionScreen : ConfigurationScreen.ConfigurationSectionScreen 
         if (!showRoster) return
         addRenderableWidget(
             Button.builder(Component.translatable("tamedphantoms.configuration.roster")) {
-                ModNetwork.sendToServer(PhantomRosterPayload)
+                Minecraft.getInstance().setScreen(PhantomRosterScreen(this))
             }.bounds(this.width / 2 - 100, this.height - 52, 200, 20).build(),
         )
     }

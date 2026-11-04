@@ -6,7 +6,7 @@ import net.minecraft.network.codec.StreamCodec
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload
 import net.minecraft.resources.ResourceLocation
 
-/** Клиент просит список своих фантомов. Сервер отвечает сообщением в чат. */
+/** Клиент просит список своих фантомов. Сервер отвечает [PhantomRosterListPayload]. */
 object PhantomRosterPayload : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<PhantomRosterPayload> = TYPE

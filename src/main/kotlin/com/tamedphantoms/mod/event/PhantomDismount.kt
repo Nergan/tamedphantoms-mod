@@ -9,10 +9,13 @@ import net.minecraft.ChatFormatting
 import net.minecraft.core.BlockPos
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.RelativeMovement
 import net.minecraft.world.entity.player.Player
+import net.minecraft.world.phys.Vec3
 import java.util.UUID
 
 /**
@@ -42,6 +45,7 @@ object PhantomDismount {
     private val windows = HashMap<UUID, Ride>()
     private val armed = HashSet<UUID>()
     private val resumeUntil = HashMap<UUID, Int>()
+    private val carried = HashMap<UUID, TamedPhantomEntity>()
     private val decision = ThreadLocal<Boolean?>()
     private val bypassDepth = ThreadLocal.withInitial { 0 }
 
@@ -125,6 +129,41 @@ object PhantomDismount {
         }
     }
 
+    /**
+     * /tp и портал сначала снимают седока. Высоко в воздухе это снятие
+     * отменялось, игрок уезжал один, а клиент оставался пассажиром пропавшего
+     * фантома и падал сквозь блоки. Здесь снятие настоящее, а после телепорта
+     * фантом оказывается в той же точке и седло возвращается.
+     */
+    @JvmStatic
+    fun dismountForTeleport(player: ServerPlayer) {
+        val phantom = player.vehicle as? TamedPhantomEntity
+        if (phantom != null && phantom.isAlive && !phantom.isRemoved) {
+            carried[player.uuid] = phantom
+            this.allowClient(player)
+        }
+        this.bypass {
+            player.stopRiding()
+        }
+    }
+
+    @JvmStatic
+    fun finishTeleport(player: ServerPlayer) {
+        val phantom = carried.remove(player.uuid) ?: return
+        if (!player.isAlive || player.isRemoved || !phantom.isAlive || phantom.isRemoved) return
+        val dest = player.level() as? ServerLevel ?: return
+        val moved = phantom.teleportTo(dest, player.x, player.y, player.z, emptySet<RelativeMovement>(), phantom.yRot, phantom.xRot)
+        if (!moved) return
+        phantom.fallDistance = 0.0f
+        player.fallDistance = 0.0f
+        phantom.deltaMovement = Vec3.ZERO
+        this.bypass {
+            if (player.vehicle != null && player.vehicle !== phantom) player.stopRiding()
+            if (player.vehicle !== phantom) player.startRiding(phantom, true)
+        }
+        this.resync(player, phantom)
+    }
+
     /** Перед настоящим снятием: клиент не должен тут же посадить игрока обратно. */
     fun allowClient(player: ServerPlayer) {
         this.grantClientDismount()
@@ -192,6 +231,7 @@ object PhantomDismount {
             windows.remove(id)
             armed.remove(id)
             resumeUntil.remove(id)
+            carried.remove(id)
         }
         val server = (player as? ServerPlayer)?.serverLevel()?.getServer()
         if (server == null || server.isSameThread) task.run() else server.execute(task)

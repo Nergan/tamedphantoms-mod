@@ -13,9 +13,13 @@ import com.tamedphantoms.mod.compat.VanillaTypes
 import com.tamedphantoms.mod.entity.ModEntities
 import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
+import com.tamedphantoms.mod.client.PhantomRosterClient
+import com.tamedphantoms.mod.client.PhantomRosterScreen
 import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
+import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.platform.ModNetwork
 import com.tamedphantoms.mod.util.MoonSickness
+import me.shedaniel.clothconfig2.gui.ClothConfigScreen
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper
@@ -25,6 +29,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegist
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener
 import net.minecraft.client.Minecraft
+import net.minecraft.network.chat.Component
 import net.minecraft.client.renderer.entity.PhantomRenderer
 import net.minecraft.resources.Identifier
 import net.minecraft.server.packs.PackType
@@ -70,6 +75,7 @@ class TamedPhantomsFabricClient : ClientModInitializer {
             ClientPhantomInputSender.onClientTick()
             ClientFlightSpeedSender.onClientTick()
             PhantomMoonLight.onTick()
+            PhantomRosterOpener.onTick()
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             com.tamedphantoms.mod.client.PhantomDiveWind.update(phantom)
@@ -85,5 +91,32 @@ class TamedPhantomsFabricClient : ClientModInitializer {
         ClientPlayNetworking.registerGlobalReceiver(PhantomServerSettingsPayload.TYPE) { payload, context ->
             context.client().execute { FabricSettings.apply(payload) }
         }
+        ClientPlayNetworking.registerGlobalReceiver(PhantomRosterListPayload.TYPE) { payload, context ->
+            context.client().execute { PhantomRosterClient.accept(payload.rows) }
+        }
+    }
+}
+
+/** Вкладка «Где мои фантомы» сразу открывает список, а не кнопку в строке настроек. */
+private object PhantomRosterOpener {
+    private var armed = true
+
+    fun onTick() {
+        val minecraft = Minecraft.getInstance()
+        val screen = minecraft.gui.screen()
+        if (screen is PhantomRosterScreen) return
+        if (System.nanoTime() < PhantomRosterClient.quietUntil) return
+        if (screen !is ClothConfigScreen) {
+            armed = true
+            return
+        }
+        val want = Component.translatable("tamedphantoms.configuration.roster").string
+        if (screen.selectedCategory.string != want) {
+            armed = true
+            return
+        }
+        if (!armed || minecraft.player == null) return
+        armed = false
+        minecraft.gui.setScreen(PhantomRosterScreen(screen))
     }
 }

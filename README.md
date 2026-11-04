@@ -16,7 +16,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                               | Required | What it is                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `tamedphantoms-neoforge-1.21.1-1.0.21.jar` | Yes | this mod, NeoForge 1.21.1 |
+| `tamedphantoms-neoforge-1.21.1-1.0.22.jar` | Yes | this mod, NeoForge 1.21.1 |
 | `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
@@ -24,7 +24,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                                      | Required | What it is                                                                                         |
 | ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
-| `tamedphantoms-fabric-1.21.1-1.0.21.jar` | Yes | this mod, Fabric 1.21.1 |
+| `tamedphantoms-fabric-1.21.1-1.0.22.jar` | Yes | this mod, Fabric 1.21.1 |
 | `fabric-api-0.116.17+1.21.1.jar`          | Yes      | [Fabric API](https://modrinth.com/mod/fabric-api)                                                  |
 | `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                    |
 | `cloth-config-15.0.140-fabric.jar`        | Yes      | [Cloth Config](https://modrinth.com/mod/cloth-config), the config screen                           |
@@ -38,9 +38,9 @@ The release workflow builds both jars and fetches the companion jars from Modrin
 
 - **Taming.** Right-click a wild phantom with the tame item (cookie by default). The phantom grows larger and darker, and its eyes glow green. While you hold the tame item, wild phantoms approach you and will not attack.
 - **Eyes.** Wild phantoms have blood-red eyes. Tamed phantoms have bright green eyes. Released phantoms have bright yellow eyes. During self-defense the eyes turn red again.
-- **Following.** A tamed phantom stays near its owner like a normal pet. If you teleport far enough that its chunk unloads, it follows to a clear spot beside you: not inside a wall, lava, fire, or a cactus. A phantom you told to sit stays where you left it. The client config button *Where are my phantoms* writes each of yours into chat, sitting or moving, with its last coordinates.
+- **Following.** A tamed phantom stays near its owner like a normal pet. If you teleport far enough that its chunk unloads, it follows to a clear spot beside you: not inside a wall, lava, fire, or a cactus. A phantom you told to sit stays where you left it. The client settings section *Where are my phantoms* lists each of yours: its name if you named it, sitting or moving, coordinates you can copy, dye from the color addon, and whether glow ink made it shine.
 - **Sit.** Right-click (crouch first if it has a saddle). The phantom flips, falls, and stays put. It takes no fall damage. You cannot sit it while riding, and you cannot mount a sitting phantom.
-- **Saddle and flight.** The owner equips a saddle and mounts. Movement uses the usual walk keys; jump climbs; Left Control descends. Keys can be remapped. Night vision is granted while flying. A second player can sit behind; the owner always takes the front seat, even if the other player climbed on first. More than eight blocks above the surface, the first Shift only warns both riders; a second press within a second dismounts. Remove the saddle with shears.
+- **Saddle and flight.** The owner equips a saddle and mounts. Movement uses the usual walk keys; jump climbs; Left Control descends. Keys can be remapped. Night vision is granted while flying. A second player can sit behind; the owner always takes the front seat, even if the other player climbed on first. While you ride, the phantom's hearts stay in the mount slot and your hunger is the row above them, one row higher again while you are short of air. A teleport while riding, such as /tp, takes that phantom with you. More than eight blocks above the surface, the first Shift only warns both riders; a second press within a second dismounts. Remove the saddle with shears.
 - **Healing.** Anyone can feed a tamed phantom ordinary food. If it is hurt and the owner or another player holds that food nearby — anything except a poisonous potato or the release item — the phantom stops, turns its head toward them, and nods. At full health it does not nod. A poisonous potato or the release item still makes it stop, turn its head toward them, and shake; only the owner can give those, and someone else's click also puffs angry villager particles. The motion stops as soon as the item leaves their hands. Food held by a rider of that phantom does not count, and a phantom that already has a rider does not stop. The food's own effects apply too: poison food poisons, a golden apple regenerates, and a chorus fruit teleports the phantom. Glow berries add eight seconds of glowing. A stew leaves the bowl in the hand, and a honey bottle leaves the bottle. Milk clears every effect and leaves the bucket; the phantom nods at milk even at full health. Hunger inverts the controls while it lasts. Speed, slowness, jump boost, levitation, slow falling, and dolphin's grace change the flight. Flying out of lava makes it shake off lava sparks.
 - **Self-defense.** If the phantom is hit, it attacks the attacker for about ten seconds — including the owner. Duration is configurable. Each hit heals the phantom for the damage it dealt. While it is defending, it can scream once the scream is ready.
 - **Pack.** Phantoms stand together against a player. Anger a released phantom for any reason, and every released phantom within 32 blocks joins in. Anger someone's tamed phantom, even your own, and all of that owner's phantoms turn on you.
@@ -83,19 +83,19 @@ NeoForge:
 
 1. Install NeoForge 1.21.1.
 2. Download the NeoForge jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
-3. Put `tamedphantoms-neoforge-1.21.1-1.0.21.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
+3. Put `tamedphantoms-neoforge-1.21.1-1.0.22.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
 4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
 Fabric:
 
 1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1. Loader 0.19.x is fine. Do not look for loader version 0.100.3: that number is not a loader.
 2. Download the Fabric jars from the same release. The release replaces its file list on each push, so old names such as `tamedphantoms-1.0.0.jar` and `tamedphantoms-fabric-1.0.0.jar` are not part of the current set.
-3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.21.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
+3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.22.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
 4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
 
 If the game says Patchouli requires **fabric** 0.100.3 or that Tamed Phantoms requires **fabric-api**, the `fabric-api-0.116.17+1.21.1.jar` file is missing. Fabric API’s id is `fabric-api`, and it also provides the id `fabric`. That is the jar from this release, not a newer Fabric Loader.
 
-The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.21-fabric`.
+The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.22-fabric`.
 
 ## Flight controls
 
@@ -154,7 +154,7 @@ Client config: `config/tamedphantoms-client.toml` (or Mods → Config in single-
 | `camera_horizon_hold` | `30`   | first person: up to this tilt of the phantom, in degrees, your view keeps the horizon level; `0` fixes the view to the phantom (1.21.1) |
 | `camera_smoothing`   | `25`    | first person: how softly the view follows the phantom and levels out, 0 to 100 (1.21.1) |
 
-The client config also has the button *Where are my phantoms*. It asks the server to print your phantoms in chat.
+The client config also has the section *Where are my phantoms*. In a world it lists your phantoms, with coordinates you can copy.
 
 An invalid item id falls back to the default and a warning is written to the log.
 
