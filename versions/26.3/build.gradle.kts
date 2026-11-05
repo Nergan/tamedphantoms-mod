@@ -88,6 +88,8 @@ fun rewriteFor26(line: String): String {
         "oldPlayer.storedData.getBoolean(TAG_RECEIVED)" to "oldPlayer.storedData.getBooleanOr(TAG_RECEIVED, false)",
         "emptySet<Relative>(), phantom.yRot, phantom.xRot)" to
             "emptySet<Relative>(), phantom.yRot, phantom.xRot, true)",
+        "emptySet<Relative>(), yaw, pitch)" to
+            "emptySet<Relative>(), yaw, pitch, false)",
         "fallDistance = 0.0f" to "fallDistance = 0.0",
         "val server = owner.server ?: return" to
             "val server = (owner as? net.minecraft.server.level.ServerPlayer)?.level()?.getServer() ?: return",

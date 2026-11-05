@@ -54,12 +54,12 @@ object FabricConfigScreen {
         category.addEntry(whole(entries, "tamedphantoms.configuration.taming.defend_time_ticks", server.defendTicks, 200, 20, 20 * 60 * 30, remote) {
             server.defendTicks = it
         })
-        category.addEntry(whole(entries, "tamedphantoms.configuration.taming.phantom_size", server.size, 3, 0, 64, remote) {
+        category.addEntry(whole(entries, "tamedphantoms.configuration.taming.phantom_size", server.size, 4, 0, 64, remote) {
             server.size = it
         })
         category.addEntry(
             entries.startBooleanToggle(Component.translatable("tamedphantoms.configuration.taming.immortal_phantoms"), server.immortal)
-                .setDefaultValue(false)
+                .setDefaultValue(true)
                 .setTooltip(Component.translatable("tamedphantoms.configuration.taming.immortal_phantoms.tooltip"))
                 .setSaveConsumer { if (!remote) server.immortal = it }
                 .build(),
@@ -119,6 +119,13 @@ object FabricConfigScreen {
                 .setDefaultValue(true)
                 .setTooltip(Component.translatable("tamedphantoms.configuration.scream.stacked_screams.tooltip"))
                 .setSaveConsumer { if (!remote) server.stackedScreams = it }
+                .build(),
+        )
+        category.addEntry(
+            entries.startBooleanToggle(Component.translatable("tamedphantoms.configuration.scream.rider_scream"), server.riderScream)
+                .setDefaultValue(false)
+                .setTooltip(Component.translatable("tamedphantoms.configuration.scream.rider_scream.tooltip"))
+                .setSaveConsumer { if (!remote) server.riderScream = it }
                 .build(),
         )
     }

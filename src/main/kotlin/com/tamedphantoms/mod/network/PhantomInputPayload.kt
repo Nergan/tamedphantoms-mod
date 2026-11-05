@@ -21,7 +21,7 @@ data class PhantomInputPayload(
     val tuck: Float = 0f,
     val effort: Float = 0f,
     val acrobatic: Boolean = false,
-    /** Бонус скорости за бочку, блоки за тик. Сервер рисует по нему шлейф. */
+    /** Бонус скорости за бочку, блоки за тик. */
     val boost: Float = 0f,
     /** Пилот врезался в поверхность на полном бонусе. Вектор — скорость удара. */
     val impactGust: Boolean = false,

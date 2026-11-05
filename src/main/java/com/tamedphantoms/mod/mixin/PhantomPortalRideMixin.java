@@ -11,28 +11,27 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Портал игрока идёт через {@code ServerPlayer.changeDimension}, а не через
- * {@code teleportTo}. Снятие там не вызывается, и фантом остаётся в старом измерении.
- * Если измерение меняет сам фантом, пассажир к этому моменту уже снят, и ваниль сажает его обратно.
+ * Портал седока проходит через фантома. Ваниль везёт пассажиров вместе с ездовым,
+ * как свинью, и сажает их на копию в новом измерении.
  */
 @Mixin(ServerPlayer.class)
 public abstract class PhantomPortalRideMixin {
     @Inject(
             method = "changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity;",
-            at = @At("HEAD")
+            at = @At("HEAD"),
+            cancellable = true
     )
-    private void tamedphantomsCapturePortal(DimensionTransition transition, CallbackInfoReturnable<Entity> cir) {
+    private void tamedphantomsCarryPortal(DimensionTransition transition, CallbackInfoReturnable<Entity> cir) {
+        if (PhantomDismount.traveling()) return;
         ServerPlayer player = (ServerPlayer) (Object) this;
-        if (player.getVehicle() instanceof TamedPhantomEntity) {
-            PhantomDismount.dismountForTeleport(player);
+        if (!(player.getVehicle() instanceof TamedPhantomEntity phantom)) return;
+        if (!phantom.isAlive() || phantom.isRemoved()) return;
+        PhantomDismount.beginTravel();
+        try {
+            phantom.changeDimension(transition);
+            cir.setReturnValue(player);
+        } finally {
+            PhantomDismount.endTravel();
         }
-    }
-
-    @Inject(
-            method = "changeDimension(Lnet/minecraft/world/level/portal/DimensionTransition;)Lnet/minecraft/world/entity/Entity;",
-            at = @At("RETURN")
-    )
-    private void tamedphantomsFinishPortal(DimensionTransition transition, CallbackInfoReturnable<Entity> cir) {
-        PhantomDismount.finishTeleport((ServerPlayer) (Object) this);
     }
 }

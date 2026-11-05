@@ -188,9 +188,10 @@ object FabricSettings {
         var screamCooldown: Int = 4
         var insomnia: Int = 1
         var groupMultiplier: Double = 2.0
-        var size: Int = 3
-        var immortal: Boolean = false
+        var size: Int = 4
+        var immortal: Boolean = true
         var stackedScreams: Boolean = true
+        var riderScream: Boolean = false
         var zoomBoostValue: Double = ServerConfig.DEFAULT_ZOOM_BOOST
         var rollBoostLimitValue: Double = ServerConfig.DEFAULT_ROLL_BOOST_LIMIT
         var rollBoostStepValue: Double = ServerConfig.DEFAULT_ROLL_BOOST_STEP
@@ -211,6 +212,7 @@ object FabricSettings {
         override fun phantomSize() = size
         override fun immortalPhantoms() = immortal
         override fun stackedScreams() = stackedScreams
+        override fun riderScream() = riderScream
         override fun zoomBoost() = zoomBoostValue
         override fun rollBoostLimit() = rollBoostLimitValue
         override fun rollBoostStep() = rollBoostStepValue
@@ -238,6 +240,7 @@ object FabricSettings {
             screamRadiusValue = values.double("scream.scream_radius", screamRadiusValue)
             screamCooldown = values.int("scream.scream_cooldown_seconds", screamCooldown)
             stackedScreams = values.bool("scream.stacked_screams", stackedScreams)
+            riderScream = values.bool("scream.rider_scream", riderScream)
             insomnia = values.int("spawning.insomnia_days", insomnia)
             groupMultiplier = values.double("spawning.phantom_group_multiplier", groupMultiplier)
         }
@@ -272,6 +275,7 @@ object FabricSettings {
                 scream_radius = $screamRadiusValue
                 scream_cooldown_seconds = $screamCooldown
                 stacked_screams = $stackedScreams
+                rider_scream = $riderScream
 
                 [spawning]
                 insomnia_days = $insomnia

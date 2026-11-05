@@ -12,6 +12,7 @@ import net.minecraft.core.particles.ParticleOptions
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.EntityAttachment
+import net.minecraft.world.level.portal.TeleportTransition
 import net.minecraft.world.entity.EntityDimensions
 import net.minecraft.world.item.DyeColor
 import com.tamedphantoms.mod.entity.ai.TamedPhantomBodyControl
@@ -365,6 +366,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         set(value) = this.entityData.set(DATA_SCREAM_EYES, value)
 
     private var screamCooldown: Int = 0
+    private var riderScreamLock: Int = 0
     private var screamTicks: Int = 0
     private var screamFears: Boolean = false
     var trackingLook: Boolean
@@ -1412,9 +1414,23 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.setDefending(this.angerState.isActive)
     }
 
+    /** После набора скорости бочкой крик с той же клавиши молчит пять секунд. */
+    fun lockRiderScream(ticks: Int) {
+        if (ticks > this.riderScreamLock) this.riderScreamLock = ticks
+    }
+
     fun tryOwnerScream(player: Player) {
+        if (!ServerConfig.riderScream()) return
         if (player.vehicle !== this || !this.isOwnedBy(player)) return
         val serverPlayer = player as? ServerPlayer ?: return
+        if (this.riderScreamLock > 0) {
+            val seconds = (this.riderScreamLock + 19) / 20
+            serverPlayer.sendSystemMessage(
+                Component.translatable("tamedphantoms.scream.cooldown", seconds).withStyle(ChatFormatting.RED),
+                true,
+            )
+            return
+        }
         if (this.screamCooldown > 0) {
             val seconds = (this.screamCooldown + 19) / 20
             serverPlayer.sendSystemMessage(
@@ -1431,6 +1447,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     }
 
     private fun tickScream(level: ServerLevel) {
+        if (this.riderScreamLock > 0) this.riderScreamLock--
         if (this.screamCooldown > 0) {
             this.screamCooldown--
         }
@@ -1803,6 +1820,18 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         PhantomDismount.bypassNow { super.ejectPassengers() }
     }
 
+    /** Портал и /tp везут седоков вместе с фантомом. Если ваниль не посадила их на копию, сажаем сами. */
+    override fun teleport(transition: TeleportTransition): Entity? {
+        val riders = this.passengers.toList()
+        for (rider in riders) {
+            if (rider is Player) PhantomDismount.lockSeat(rider)
+        }
+        val arrived = super.teleport(transition)
+        val live = (arrived as? TamedPhantomEntity) ?: if (this.isAlive && !this.isRemoved) this else null
+        if (live != null) PhantomDismount.reseat(riders, live)
+        return arrived
+    }
+
     override fun removePassenger(passenger: Entity) {
         if (PhantomDismount.bypassing()) {
             super.removePassenger(passenger)
@@ -2057,9 +2086,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val freshFloor = this.verticalCollision && !this.impactWasVertical
         this.impactWasHorizontal = this.horizontalCollision
         this.impactWasVertical = this.verticalCollision
-        val sharp = this.flightModel.rollBoost > 0.05 && before > 0.75 && after < before * 0.5
+        val brake = this.flightModel.brakeSpeed
+        val sharp = brake > 0.2 || (this.flightModel.rollBoost > 0.05 && before > 0.75 && after < before * 0.5)
         if (sharp) {
-            this.clientSharpStop = before
+            this.clientSharpStop = if (brake > 0.2) brake else before
         } else if (atCap && (freshWall || freshFloor) && before > 0.55) {
             this.clientImpactGust = impact
         }

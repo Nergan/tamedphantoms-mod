@@ -49,8 +49,23 @@ object PhantomDismount {
     private val armed = HashSet<UUID>()
     private val resumeUntil = HashMap<UUID, Int>()
     private val carried = HashMap<UUID, TamedPhantomEntity>()
+    private val seatLockUntil = HashMap<UUID, Long>()
     private val decision = ThreadLocal<Boolean?>()
     private val bypassDepth = ThreadLocal.withInitial { 0 }
+    private val travelDepth = ThreadLocal.withInitial { 0 }
+
+    private val forceRide = run {
+        val type = Entity::class.java
+        val three = type.methods.firstOrNull { it.name == "startRiding" && it.parameterTypes.size == 3 }
+        val two = type.methods.firstOrNull { it.name == "startRiding" && it.parameterTypes.size == 2 }
+        three?.isAccessible = true
+        two?.isAccessible = true
+        when {
+            three != null -> { rider: Entity, mount: Entity -> three.invoke(rider, mount, true, false) as Boolean }
+            two != null -> { rider: Entity, mount: Entity -> two.invoke(rider, mount, true) as Boolean }
+            else -> { rider: Entity, mount: Entity -> rider.startRiding(mount) }
+        }
+    }
 
     @Volatile
     private var clientAllowUntilNanos: Long = 0L
@@ -67,6 +82,86 @@ object PhantomDismount {
     }
 
     fun bypassing(): Boolean = bypassDepth.get() > 0
+
+    @JvmStatic
+    fun traveling(): Boolean = travelDepth.get() > 0
+
+    @JvmStatic
+    fun beginTravel() {
+        travelDepth.set(travelDepth.get() + 1)
+    }
+
+    @JvmStatic
+    fun endTravel() {
+        travelDepth.set((travelDepth.get() - 1).coerceAtLeast(0))
+    }
+
+    /** Короткий замок после переноса: чужой пакет снятия не высаживает седока у выхода из портала. */
+    @JvmStatic
+    fun lockSeat(player: Player, ticks: Int = 30) {
+        val until = player.tickCount.toLong() + ticks
+        val previous = seatLockUntil[player.uuid] ?: Long.MIN_VALUE
+        if (until > previous) seatLockUntil[player.uuid] = until
+    }
+
+    private fun seatLocked(player: Player): Boolean {
+        val until = seatLockUntil[player.uuid] ?: return false
+        if (player.tickCount.toLong() > until) {
+            seatLockUntil.remove(player.uuid)
+            return false
+        }
+        return true
+    }
+
+    /**
+     * /tp седока переносит фантома. Координата с относительным флагом — смещение от фантома,
+     * без флага — абсолютная. Седок из седла не выходит.
+     */
+    @JvmStatic
+    fun carryCommand(
+        player: ServerPlayer,
+        phantom: TamedPhantomEntity,
+        dest: ServerLevel,
+        x: Double,
+        y: Double,
+        z: Double,
+        relatives: Set<RelativeMovement>,
+        yRot: Float,
+        xRot: Float,
+    ): Boolean {
+        val riders = phantom.passengers.toList()
+        for (rider in riders) {
+            if (rider is Player) this.lockSeat(rider)
+        }
+        val xAbs = if (RelativeMovement.X in relatives) phantom.x + x else x
+        val yAbs = if (RelativeMovement.Y in relatives) phantom.y + y else y
+        val zAbs = if (RelativeMovement.Z in relatives) phantom.z + z else z
+        val yaw = if (RelativeMovement.Y_ROT in relatives) phantom.yRot + yRot else yRot
+        val pitch = if (RelativeMovement.X_ROT in relatives) phantom.xRot + xRot else xRot
+        val moved = phantom.teleportTo(dest, xAbs, yAbs, zAbs, emptySet<RelativeMovement>(), yaw, pitch)
+        val live = this.resolveCarried(player, phantom)
+        if (live != null) this.reseat(riders, live)
+        return moved || (live != null && live.isAlive)
+    }
+
+    /** После смены измерения ваниль иногда не успевает посадить седока обратно. */
+    @JvmStatic
+    fun reseat(riders: List<Entity>, phantom: TamedPhantomEntity) {
+        if (!phantom.isAlive || phantom.isRemoved) return
+        for (rider in riders) {
+            if (!rider.isAlive || rider.isRemoved) continue
+            if (rider.vehicle === phantom && phantom.passengers.contains(rider)) {
+                if (rider is ServerPlayer) this.resync(rider, phantom)
+                continue
+            }
+            this.bypass {
+                if (rider.vehicle != null) rider.stopRiding()
+                this.forceRide(rider, phantom)
+            }
+            if (rider is Player) this.lockSeat(rider)
+            if (rider is ServerPlayer && rider.vehicle === phantom) this.resync(rider, phantom)
+        }
+    }
 
     fun grantClientDismount() {
         clientAllowUntilNanos = System.nanoTime() + CLIENT_ALLOW_NANOS
@@ -265,6 +360,7 @@ object PhantomDismount {
             armed.remove(id)
             resumeUntil.remove(id)
             carried.remove(id)
+            seatLockUntil.remove(id)
         }
         val server = (player as? ServerPlayer)?.serverLevel()?.getServer()
         if (server == null || server.isSameThread) task.run() else server.execute(task)
@@ -433,6 +529,7 @@ object PhantomDismount {
     private fun compute(player: Player, phantom: TamedPhantomEntity): Boolean {
         if (!player.isAlive || !phantom.isAlive || player.isRemoved || phantom.isRemoved) return false
         if (player is ServerPlayer && player.hasDisconnected()) return false
+        if (this.seatLocked(player)) return true
         if (phantom.isOrderedToSit()) return false
         if (player.level().isClientSide) {
             if (!isLocalPlayer(player)) return false

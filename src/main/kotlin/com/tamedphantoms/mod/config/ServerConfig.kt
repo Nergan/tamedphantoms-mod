@@ -23,6 +23,7 @@ object ServerConfig {
         fun screamRadius(): Double
         fun screamCooldownSeconds(): Int
         fun stackedScreams(): Boolean
+        fun riderScream(): Boolean = false
         fun insomniaDays(): Int
         fun phantomGroupMultiplier(): Double
         fun phantomSize(): Int
@@ -61,6 +62,9 @@ object ServerConfig {
     fun screamRadius(): Double = settings.screamRadius()
     fun screamCooldownSeconds(): Int = settings.screamCooldownSeconds()
     fun stackedScreams(): Boolean = settings.stackedScreams()
+
+    /** Крик хозяина с клавиши. Выключено — клавиша верхом не кричит. Самозащита и полнолуние остаются. */
+    fun riderScream(): Boolean = settings.riderScream()
 
     @JvmStatic
     fun insomniaDays(): Int = settings.insomniaDays()
@@ -156,7 +160,8 @@ object ServerConfig {
         override fun stackedScreams() = true
         override fun insomniaDays() = 1
         override fun phantomGroupMultiplier() = 2.0
-        override fun phantomSize() = 3
-        override fun immortalPhantoms() = false
+        override fun phantomSize() = 4
+        override fun immortalPhantoms() = true
+        override fun riderScream() = false
     }
 }

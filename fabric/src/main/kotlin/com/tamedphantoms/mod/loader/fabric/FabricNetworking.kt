@@ -16,7 +16,6 @@ import com.tamedphantoms.mod.network.PhantomScreamPayload
 import com.tamedphantoms.mod.network.PhantomZoomPayload
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import com.tamedphantoms.mod.util.PhantomImpactGust
-import com.tamedphantoms.mod.util.PhantomRollTrail
 import com.tamedphantoms.mod.util.PhantomZoomBurst
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
@@ -46,7 +45,6 @@ object FabricNetworking {
                     vehicle.setPilotInput(payload.ascending, payload.descending, payload.forward, payload.strafe)
                     vehicle.setPilotAttitude(payload.pitch, payload.roll, payload.tuck, payload.effort, payload.acrobatic)
                     vehicle.setRollBoost(payload.boost)
-                    PhantomRollTrail.spawn(vehicle, payload.boost, payload.tuck)
                     if (payload.impactGust) {
                         PhantomImpactGust.tryBlast(
                             vehicle,
@@ -58,7 +56,8 @@ object FabricNetworking {
                         PhantomImpactGust.trySharpStop(vehicle, payload.sharpSpeed, payload.boost)
                     }
                     if (payload.rollBurst) {
-                        com.tamedphantoms.mod.util.PhantomZoomBurst.onRoll(vehicle)
+                        vehicle.lockRiderScream(5 * 20)
+                        PhantomZoomBurst.onRoll(vehicle)
                     }
                 }
             }

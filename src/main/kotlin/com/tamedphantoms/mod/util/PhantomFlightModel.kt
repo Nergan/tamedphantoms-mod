@@ -135,6 +135,9 @@ class PhantomFlightModel {
 
     /** Этот тик заряженный оборот добавил скорость. */
     var rollBurst: Boolean = false
+
+    /** Скорость до того, как задний ход срезал бонус. 0 — резкого торможения не было. */
+    var brakeSpeed: Double = 0.0
         private set
 
     /** Можно рвануть вверх: в петле нос уже смотрит вниз, или петля только что замкнулась. */
@@ -208,6 +211,7 @@ class PhantomFlightModel {
         completedLoop = false
         zoomStarted = false
         rollBurst = false
+        brakeSpeed = 0.0
         boostLimit = input.rollBoostLimit.coerceIn(0.0, 64.0)
         boostStep = input.rollBoostStep.coerceIn(0.0, 8.0)
         climbDrain = input.rollClimbDrain.coerceAtLeast(0.0)
@@ -279,6 +283,7 @@ class PhantomFlightModel {
 
         if (strafeOnly && rollLeft <= 0f && !looping && !zooming) clearRollBoost()
 
+        if (reversing) this.noteSharpBrake()
         if (reversing || (!flapping && !looping && !zooming && speed < vc * HOVER_SPEED && speed > -vc)) {
             return stepHover(input, vc, forward, climb)
         }
@@ -499,6 +504,11 @@ class PhantomFlightModel {
         rollTicks = 0
     }
 
+    /** Задний ход с любым бонусом — резкая остановка. Скорость запоминается до того, как бонус обнулится. */
+    private fun noteSharpBrake() {
+        if (rollBoost > 0.05 && speed > 0.2 && brakeSpeed < speed) brakeSpeed = speed
+    }
+
     private fun clearRollBoost() {
         rollBoost = 0.0
         boostCeiling = 0.0
@@ -559,6 +569,7 @@ class PhantomFlightModel {
         val reversing = forward < -FORWARD_EPS
         val strafeOnly = abs(forward) <= FORWARD_EPS && abs(input.strafe) > FORWARD_EPS
         val halted = abs(forward) <= FORWARD_EPS && speed < vc * HOVER_SPEED && speed > -vc
+        if (reversing) this.noteSharpBrake()
         if (reversing || strafeOnly || (halted && climb <= 0f)) clearRollBoost()
         val flapping = forward > FORWARD_EPS
         val diveTuck = climb < 0f && !flapping && !reversing

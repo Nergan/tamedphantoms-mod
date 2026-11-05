@@ -11,7 +11,6 @@ import com.tamedphantoms.mod.network.PhantomRosterSummonPayload
 import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import com.tamedphantoms.mod.util.PhantomImpactGust
-import com.tamedphantoms.mod.util.PhantomRollTrail
 import com.tamedphantoms.mod.util.PhantomZoomBurst
 import net.minecraft.server.level.ServerPlayer
 import net.neoforged.bus.api.IEventBus
@@ -46,7 +45,6 @@ object ModNetworking {
                     vehicle.setPilotInput(payload.ascending, payload.descending, payload.forward, payload.strafe)
                     vehicle.setPilotAttitude(payload.pitch, payload.roll, payload.tuck, payload.effort, payload.acrobatic)
                     vehicle.setRollBoost(payload.boost)
-                    PhantomRollTrail.spawn(vehicle, payload.boost, payload.tuck)
                     if (payload.impactGust) {
                         PhantomImpactGust.tryBlast(
                             vehicle,
@@ -58,6 +56,7 @@ object ModNetworking {
                         PhantomImpactGust.trySharpStop(vehicle, payload.sharpSpeed, payload.boost)
                     }
                     if (payload.rollBurst) {
+                        vehicle.lockRiderScream(5 * 20)
                         PhantomZoomBurst.onRoll(vehicle)
                     }
                 }

@@ -39,7 +39,7 @@ object PhantomGameTests {
     @GameTest(template = TEMPLATE)
     @JvmStatic
     fun immortalityWearsOffWhileDisabled(helper: GameTestHelper) {
-        helper.assertTrue(!ServerConfig.immortalPhantoms(), "immortal_phantoms should be off by default")
+        helper.assertTrue(ServerConfig.immortalPhantoms(), "immortal_phantoms should be on by default")
         val pet = tamedBy(helper, helper.makeMockPlayer(GameType.SURVIVAL), BlockPos(2, 2, 2))
         pet.isNoAi = false
         pet.immortal = true

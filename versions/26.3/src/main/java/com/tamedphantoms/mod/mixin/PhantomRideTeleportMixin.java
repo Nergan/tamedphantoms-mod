@@ -1,81 +1,99 @@
 package com.tamedphantoms.mod.mixin;
 
+import com.tamedphantoms.mod.entity.TamedPhantomEntity;
 import com.tamedphantoms.mod.event.PhantomDismount;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Relative;
 import net.minecraft.world.level.portal.TeleportTransition;
-import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Телепорт седока забирает фантома с собой, а не бросает игрока сквозь блоки. */
+import java.util.Set;
+
+/**
+ * Телепорт седока переносит фантома. Игрок из седла не выходит:
+ * /tp двигает пару вместе, портал выпускает её так же, как свинью.
+ */
 @Mixin(ServerPlayer.class)
 public abstract class PhantomRideTeleportMixin {
-    @Unique
-    private boolean tamedphantoms$carry;
-    @Unique
-    private double tamedphantoms$x;
-    @Unique
-    private double tamedphantoms$y;
-    @Unique
-    private double tamedphantoms$z;
-
-    @Redirect(
+    @Inject(
             method = "teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer;",
-            at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerPlayer;removeVehicle()V")
+            at = @At("HEAD"),
+            cancellable = true
     )
-    private void tamedphantomsReleaseForTeleport(ServerPlayer player) {
-        PhantomDismount.dismountForTeleport(player);
+    private void tamedphantomsCarryTransition(TeleportTransition transition, CallbackInfoReturnable<ServerPlayer> ci) {
+        if (PhantomDismount.traveling() || transition.asPassenger()) return;
+        ServerPlayer player = (ServerPlayer) (Object) this;
+        if (!(player.getVehicle() instanceof TamedPhantomEntity phantom)) return;
+        if (!phantom.isAlive() || phantom.isRemoved()) return;
+        PhantomDismount.beginTravel();
+        try {
+            phantom.teleport(transition);
+            ci.setReturnValue(player);
+        } finally {
+            PhantomDismount.endTravel();
+        }
     }
 
     @Inject(
-            method = "teleport(Lnet/minecraft/world/level/portal/TeleportTransition;)Lnet/minecraft/server/level/ServerPlayer;",
-            at = @At("RETURN")
+            method = "teleportTo(Lnet/minecraft/server/level/ServerLevel;DDDLjava/util/Set;FFZ)Z",
+            at = @At("HEAD"),
+            cancellable = true
     )
-    private void tamedphantomsCarryMount(TeleportTransition transition, CallbackInfoReturnable<ServerPlayer> ci) {
-        ServerPlayer arrived = ci.getReturnValue();
-        if (arrived == null) return;
-        Vec3 pos = transition.position();
-        PhantomDismount.finishTeleportAt(arrived, transition.newLevel(), pos.x, pos.y, pos.z);
-    }
-
-    @Inject(method = "teleportTo(DDD)V", at = @At("HEAD"))
-    private void tamedphantomsBeforeAbsolute(double x, double y, double z, CallbackInfo ci) {
-        this.tamedphantoms$x = x;
-        this.tamedphantoms$y = y;
-        this.tamedphantoms$z = z;
-        this.tamedphantoms$carry = true;
-        PhantomDismount.dismountForTeleport((ServerPlayer) (Object) this);
-    }
-
-    @Inject(method = "teleportTo(DDD)V", at = @At("RETURN"))
-    private void tamedphantomsAfterAbsolute(double x, double y, double z, CallbackInfo ci) {
-        if (!this.tamedphantoms$carry) return;
-        this.tamedphantoms$carry = false;
+    private void tamedphantomsCarryCommand(
+            ServerLevel level,
+            double x,
+            double y,
+            double z,
+            Set<Relative> relatives,
+            float yRot,
+            float xRot,
+            boolean setCamera,
+            CallbackInfoReturnable<Boolean> ci
+    ) {
+        if (PhantomDismount.traveling()) return;
         ServerPlayer player = (ServerPlayer) (Object) this;
-        PhantomDismount.finishTeleportAt(player, (ServerLevel) player.level(), this.tamedphantoms$x, this.tamedphantoms$y, this.tamedphantoms$z);
+        if (!(player.getVehicle() instanceof TamedPhantomEntity phantom)) return;
+        if (!phantom.isAlive() || phantom.isRemoved()) return;
+        PhantomDismount.beginTravel();
+        try {
+            ci.setReturnValue(PhantomDismount.carryCommand(player, phantom, level, x, y, z, relatives, yRot, xRot));
+        } finally {
+            PhantomDismount.endTravel();
+        }
     }
 
-    @Inject(method = "teleportRelative(DDD)V", at = @At("HEAD"))
-    private void tamedphantomsBeforeRelative(double x, double y, double z, CallbackInfo ci) {
+    @Inject(method = "teleportTo(DDD)V", at = @At("HEAD"), cancellable = true)
+    private void tamedphantomsCarryAbsolute(double x, double y, double z, CallbackInfo ci) {
+        if (PhantomDismount.traveling()) return;
         ServerPlayer player = (ServerPlayer) (Object) this;
-        this.tamedphantoms$x = player.getX() + x;
-        this.tamedphantoms$y = player.getY() + y;
-        this.tamedphantoms$z = player.getZ() + z;
-        this.tamedphantoms$carry = true;
-        PhantomDismount.dismountForTeleport(player);
+        if (!(player.getVehicle() instanceof TamedPhantomEntity phantom)) return;
+        if (!phantom.isAlive() || phantom.isRemoved()) return;
+        PhantomDismount.beginTravel();
+        try {
+            phantom.teleportTo(x, y, z);
+            ci.cancel();
+        } finally {
+            PhantomDismount.endTravel();
+        }
     }
 
-    @Inject(method = "teleportRelative(DDD)V", at = @At("RETURN"))
-    private void tamedphantomsAfterRelative(double x, double y, double z, CallbackInfo ci) {
-        if (!this.tamedphantoms$carry) return;
-        this.tamedphantoms$carry = false;
+    @Inject(method = "teleportRelative(DDD)V", at = @At("HEAD"), cancellable = true)
+    private void tamedphantomsCarryRelative(double x, double y, double z, CallbackInfo ci) {
+        if (PhantomDismount.traveling()) return;
         ServerPlayer player = (ServerPlayer) (Object) this;
-        PhantomDismount.finishTeleportAt(player, (ServerLevel) player.level(), this.tamedphantoms$x, this.tamedphantoms$y, this.tamedphantoms$z);
+        if (!(player.getVehicle() instanceof TamedPhantomEntity phantom)) return;
+        if (!phantom.isAlive() || phantom.isRemoved()) return;
+        PhantomDismount.beginTravel();
+        try {
+            phantom.teleportTo(phantom.getX() + x, phantom.getY() + y, phantom.getZ() + z);
+            ci.cancel();
+        } finally {
+            PhantomDismount.endTravel();
+        }
     }
 }

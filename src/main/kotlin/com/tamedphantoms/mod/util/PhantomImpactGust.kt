@@ -157,46 +157,43 @@ object PhantomImpactGust {
     }
 
     /**
-     * Резкая остановка с любым бонусом. Ветер под крыльями и снос вчетверо сильнее,
-     * чем удар о поверхность на полной скорости. Чем выше скорость до остановки, тем сильнее.
+     * Резкая остановка с любым бонусом. Взрыв вспыхивает перед фантомом, чуть ниже корпуса,
+     * и сносит тех, кто впереди и под ним, ещё и подкидывая. Чем выше скорость, тем сильнее.
      */
     fun trySharpStop(phantom: TamedPhantomEntity, preSpeed: Float, boost: Float) {
         if (phantom.impactGustCooldown > 0) return
         val level = phantom.level() as? ServerLevel ?: return
-        if (boost < 0.05f) return
         val speed = preSpeed.toDouble()
-        if (speed < 0.55 || speed > 24.0) return
+        if (speed < 0.2 || speed > 24.0) return
         val limit = ServerConfig.rollBoostLimit().coerceAtLeast(0.0)
         val full = (0.9 + limit * 1.35).coerceAtLeast(1.2)
-        val share = (speed / full).coerceIn(0.35, 1.0)
-        val distance = blowDistance(full) * 4.0 * share
+        val share = (speed / full).coerceIn(0.2, 1.5)
+        val distance = blowDistance(full) * (1.6 + share * 2.4)
         phantom.impactGustCooldown = 16
         val yaw = Math.toRadians(phantom.yRot.toDouble())
         val fx = -kotlin.math.sin(yaw)
         val fz = kotlin.math.cos(yaw)
-        val dir = Vec3(fx, -0.08, fz).normalize()
-        val origin = Vec3(phantom.x, phantom.y + phantom.bbHeight * 0.28, phantom.z)
-        val wing = phantom.bbWidth * 0.7
-        val rx = fz
-        val rz = -fx
-        val gusts = (4 + speed * 1.6).toInt().coerceIn(4, 18)
+        val ahead = 1.05 + phantom.bbWidth * 0.35
+        val origin = Vec3(phantom.x + fx * ahead, phantom.y + phantom.bbHeight * 0.18, phantom.z + fz * ahead)
+        val lift = (0.55 + share * 0.95).coerceIn(0.45, 1.8)
+        val dir = Vec3(fx, lift, fz).normalize()
+        val gusts = (5 + speed * 1.8).toInt().coerceIn(5, 16)
         repeat(gusts) { index ->
-            val side = if (index % 2 == 0) 1.0 else -1.0
-            val along = (index / 2) * 0.22
+            val along = index * 0.28
+            val side = (index - gusts / 2.0) * 0.12
             level.sendParticles(
                 ParticleTypes.GUST,
-                origin.x + fx * along + rx * wing * side,
-                origin.y,
-                origin.z + fz * along + rz * wing * side,
+                origin.x + fx * along + fz * side,
+                origin.y - 0.05 + along * 0.04,
+                origin.z + fz * along - fx * side,
                 1,
-                0.06,
-                0.02,
-                0.06,
+                0.05,
+                0.04,
+                0.05,
                 0.0,
             )
         }
-        level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL, origin.x + rx * wing, origin.y, origin.z + rz * wing, 1, 0.12, 0.04, 0.12, 0.0)
-        level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL, origin.x - rx * wing, origin.y, origin.z - rz * wing, 1, 0.12, 0.04, 0.12, 0.0)
+        level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL, origin.x, origin.y, origin.z, 1, 0.15, 0.08, 0.15, 0.0)
         val volume = (0.8 + (speed / full).coerceAtMost(1.0) * 0.5).toFloat()
         level.playSound(
             null,
@@ -221,12 +218,11 @@ object PhantomImpactGust {
             val distanceTo = offset.length()
             if (distanceTo < 0.2 || distanceTo > radius) continue
             val ahead = offset.x * fx + offset.z * fz
-            val below = origin.y + 0.4 - body.y
-            if (ahead < -0.55 && below < 0.2) continue
+            val below = origin.y + 0.6 - body.y
+            if (ahead < -0.35 && below < 0.15) continue
             if (!clearAir(level, origin, body, phantom)) continue
-            val wind = windDirection(dir, offset, verticalHit = false)
             val closeness = (1.0 - distanceTo / radius).coerceIn(0.35, 1.0)
-            startCarry(living, level, wind, distance * closeness, strong = true)
+            startCarry(living, level, dir, distance * closeness, strong = true)
             level.sendParticles(ParticleTypes.GUST, living.x, living.y + living.bbHeight * 0.5, living.z, 4, 0.3, 0.15, 0.3, 0.0)
             level.playSound(
                 null,

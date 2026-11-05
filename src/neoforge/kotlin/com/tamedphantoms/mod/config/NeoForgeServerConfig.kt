@@ -38,10 +38,11 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 override fun screamRadius() = cfg.screamRadius.get()
                 override fun screamCooldownSeconds() = cfg.screamCooldownSeconds.get()
                 override fun stackedScreams() = if (SPEC.isLoaded) cfg.stackedScreams.get() else true
+                override fun riderScream() = if (SPEC.isLoaded) cfg.riderScream.get() else false
                 override fun insomniaDays() = cfg.insomniaDays.get()
                 override fun phantomGroupMultiplier() = cfg.phantomGroupMultiplier.get()
                 override fun phantomSize() = cfg.phantomSize.get()
-                override fun immortalPhantoms() = if (SPEC.isLoaded) cfg.immortalPhantoms.get() else false
+                override fun immortalPhantoms() = if (SPEC.isLoaded) cfg.immortalPhantoms.get() else true
                 override fun zoomBoost() = cfg.zoomBoost?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ZOOM_BOOST
                 override fun rollBoostLimit() = cfg.rollBoostLimit?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_BOOST_LIMIT
                 override fun rollBoostStep() = cfg.rollBoostStep?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_BOOST_STEP
@@ -61,6 +62,7 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
     val screamRadius: ModConfigSpec.DoubleValue
     val screamCooldownSeconds: ModConfigSpec.IntValue
     val stackedScreams: ModConfigSpec.BooleanValue
+    val riderScream: ModConfigSpec.BooleanValue
     val insomniaDays: ModConfigSpec.IntValue
     val phantomGroupMultiplier: ModConfigSpec.DoubleValue
     val phantomSize: ModConfigSpec.IntValue
@@ -115,21 +117,21 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
         phantomSize = builder
             .comment(
                 "Ванильный размер прирученных и освобождённых фантомов.",
-                "Модель и хитбокс считаются как 1.0 + 0.15 × размер. 3 — текущий вид, примерно в 1.45 раза крупнее дикого.",
+                "Модель и хитбокс считаются как 1.0 + 0.15 × размер. 4 — размер по умолчанию.",
                 "0 — как дикий фантом.",
             )
             .translation("$KEY_PREFIX.taming.phantom_size")
-            .defineInRange("phantom_size", 3, 0, 64)
+            .defineInRange("phantom_size", 4, 0, 64)
 
         immortalPhantoms = builder
             .comment(
                 "Существуют ли бессмертные фантомы. Включено — достижение «Властитель западных ветров»",
                 "делает этого фантома бессмертным. Выключено — достижение бессмертия не даёт,",
                 "а уже бессмертные фантомы в мире при следующем тике становятся обычными.",
-                "Применяется без перезапуска: сохраните файл или поменяйте значение в экране настроек.",
+                "По умолчанию включено. Применяется без перезапуска: сохраните файл или поменяйте значение в экране настроек.",
             )
             .translation("$KEY_PREFIX.taming.immortal_phantoms")
-            .define("immortal_phantoms", false)
+            .define("immortal_phantoms", true)
 
         builder.pop()
 
@@ -228,6 +230,15 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             )
             .translation("$KEY_PREFIX.scream.stacked_screams")
             .define("stacked_screams", true)
+
+        riderScream = builder
+            .comment(
+                "Крик хозяина с клавиши, пока он сидит на фантоме.",
+                "Выключено — эта клавиша не кричит. Самозащита, игра и полнолуние кричат по-прежнему.",
+                "Включено — после набора скорости бочкой та же клавиша молчит пять секунд.",
+            )
+            .translation("$KEY_PREFIX.scream.rider_scream")
+            .define("rider_scream", false)
 
         builder.pop()
 
