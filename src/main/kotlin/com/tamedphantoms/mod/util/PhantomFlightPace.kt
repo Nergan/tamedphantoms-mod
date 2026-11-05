@@ -18,7 +18,7 @@ object PhantomFlightPace {
 
     const val BASELINE = 2.0
     const val MIN = 0.25
-    const val MAX = 4.0
+    const val MAX = 16.0
     const val WATER_SPEED = 0.5
 
     /**

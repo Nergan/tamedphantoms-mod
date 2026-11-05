@@ -604,7 +604,15 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     /** Бонус скорости за бочку. Его слышат и видят все клиенты, не только пилот. */
     fun setRollBoost(boost: Float) {
-        this.entityData.set(DATA_ROLL_BOOST, boost.coerceAtLeast(0f))
+        val value = boost.coerceAtLeast(0f)
+        this.entityData.set(DATA_ROLL_BOOST, value)
+        if (this.level().isClientSide || !this.tamed) return
+        val limit = ServerConfig.rollBoostLimit()
+        if (value + 0.04f < limit.toFloat() + 1f) return
+        val rider = this.controllingPassenger as? ServerPlayer ?: return
+        if (!this.isOwnedBy(rider)) return
+        ModAdvancements.grantWestWind(rider)
+        if (ServerConfig.immortalPhantoms()) this.immortal = true
     }
 
     private var reportedPitch: Float = 0f
@@ -616,11 +624,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var clientZoomRequest: Boolean = false
     var clientRollBoostRequest: Boolean = false
 
-    /** Во время бочки можно нажать R и начать копить скорость. На потолке подсказки нет. */
+    /** На этом обороте ещё не набрано нужное число нажатий R. */
     val rollBoostReady: Boolean
         get() = this.flightModel.rollBoostReady
 
-    /** Набор уже идёт: повторное R доделывает оборот. */
+    /** Набор уже идёт. */
     val rollBoostCharging: Boolean
         get() = this.flightModel.rollBoostCharging
 
@@ -628,6 +636,12 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     /** Скорость удара о поверхность, пока бонус на потолке. Забирает пакет пилота. */
     var clientImpactGust: Vec3? = null
+
+    /** Скорость до резкой остановки с бонусом. 0 — остановки не было. */
+    var clientSharpStop: Double = 0.0
+
+    /** Заряженный оборот только что добавил скорость. Забирает пакет пилота. */
+    var clientRollBurst: Boolean = false
 
     private var impactWasHorizontal = false
 
@@ -1523,16 +1537,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (player.vehicle !== this || !this.isOwnedBy(player)) return
         if (kotlin.math.abs(this.loopProgress) < 270f) return
         this.loopProgress = 0f
-        this.becomeImmortal()
-    }
-
-    private fun becomeImmortal() {
-        if (!ServerConfig.immortalPhantoms()) return
-        val first = !this.immortal
-        this.immortal = true
-        if (!first) return
-        val rider = this.controllingPassenger as? ServerPlayer ?: return
-        ModAdvancements.grantDeadLoop(rider)
     }
 
     private fun tickFlightVisuals() {
@@ -1787,7 +1791,16 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     /** Снять пассажира, не проходя проверку «два Shift». Только для восстановления ссылки. */
     internal fun detachPassengerNow(passenger: Entity) {
-        super.removePassenger(passenger)
+        if (passenger.vehicle === this) {
+            passenger.stopRiding()
+        } else if (this.passengers.contains(passenger)) {
+            super.removePassenger(passenger)
+        }
+    }
+
+    /** Смена измерения высаживает седоков. Здесь это настоящее снятие, ваниль сажает их обратно. */
+    override fun ejectPassengers() {
+        PhantomDismount.bypassNow { super.ejectPassengers() }
     }
 
     override fun removePassenger(passenger: Entity) {
@@ -1993,6 +2006,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (this.flightModel.zoomStarted && this.isOwnedBy(pilot)) {
             this.zoomReadyToReport = true
         }
+        if (this.flightModel.rollBurst && this.isOwnedBy(pilot)) {
+            this.clientRollBurst = true
+        }
 
         // Корпус идёт по траектории. Выше предела наклона угол уходит в фигуру, его рисует рендерер.
         this.hoverBlend = this.flightModel.hover
@@ -2032,14 +2048,19 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val grip = if (this.airspeedRatio > 1.4f) 0.3 else 0.55
         this.deltaMovement = this.deltaMovement.lerp(target, grip)
         val impact = this.deltaMovement
+        val before = impact.length()
         val limit = ServerConfig.rollBoostLimit()
         val atCap = limit > 0.05 && this.flightModel.rollBoost >= limit - 0.08
         this.move(MoverType.SELF, this.deltaMovement)
+        val after = this.deltaMovement.length()
         val freshWall = this.horizontalCollision && !this.impactWasHorizontal
         val freshFloor = this.verticalCollision && !this.impactWasVertical
         this.impactWasHorizontal = this.horizontalCollision
         this.impactWasVertical = this.verticalCollision
-        if (atCap && (freshWall || freshFloor) && impact.length() > 0.55) {
+        val sharp = this.flightModel.rollBoost > 0.05 && before > 0.75 && after < before * 0.5
+        if (sharp) {
+            this.clientSharpStop = before
+        } else if (atCap && (freshWall || freshFloor) && before > 0.55) {
             this.clientImpactGust = impact
         }
         if (this.horizontalCollision && medium == PhantomFlightModel.Medium.AIR && this.airspeedRatio > 0.6f) {

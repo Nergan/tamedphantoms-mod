@@ -13,6 +13,7 @@ import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.platform.ModNetwork
 import com.tamedphantoms.mod.util.PhantomFlightKeys
 import com.tamedphantoms.mod.util.PhantomFlightModel
+import net.minecraft.ChatFormatting
 import net.minecraft.client.KeyMapping
 import net.minecraft.client.Minecraft
 import net.minecraft.network.chat.Component
@@ -64,14 +65,16 @@ object ClientPhantomInputSender {
                 rollOpen || rollCharging -> phantom.clientRollBoostRequest = true
                 else -> ModNetwork.sendToServer(PhantomScreamPayload)
             }
+            if (zoomOpen || rollOpen || rollCharging) promptFlash = 5
         }
-        val prompt = when {
+        var prompt = when {
             zoomOpen && phantom?.clientZoomRequest != true -> "zoom"
-            rollCharging -> "finish"
             rollOpen -> "roll"
             else -> ""
         }
-        showManeuverPrompt(player, prompt)
+        if (prompt.isEmpty() && promptFlash > 0 && (promptKey == "roll" || promptKey == "zoom")) prompt = promptKey
+        showManeuverPrompt(player, prompt, promptFlash > 0)
+        if (promptFlash > 0) promptFlash--
         if (phantom != null && phantom.loopReadyToReport && phantom.isOwnedBy(player)) {
             phantom.loopReadyToReport = false
             ModNetwork.sendToServer(PhantomLoopPayload)
@@ -135,24 +138,32 @@ object ClientPhantomInputSender {
                 impactX = phantom.clientImpactGust?.x?.toFloat() ?: 0f,
                 impactY = phantom.clientImpactGust?.y?.toFloat() ?: 0f,
                 impactZ = phantom.clientImpactGust?.z?.toFloat() ?: 0f,
+                sharpStop = phantom.clientSharpStop > 0.0,
+                sharpSpeed = phantom.clientSharpStop.toFloat(),
+                rollBurst = phantom.clientRollBurst,
             ),
         )
         phantom.clientImpactGust = null
+        phantom.clientSharpStop = 0.0
+        phantom.clientRollBurst = false
     }
 
     private val flightKeys = PhantomFlightKeys()
 
     private var promptKey = ""
+    private var promptFlash = 0
+    private var promptShownFlash = false
 
-    /** Одна подсказка над хотбаром: рывок из петли, набор бочки или конец набора. */
-    private fun showManeuverPrompt(player: Player, key: String) {
-        if (key == promptKey) return
+    /** Одна подсказка над хотбаром. Нажатие R на мгновение красит букву клавиши. */
+    private fun showManeuverPrompt(player: Player, key: String, flash: Boolean) {
+        if (key == promptKey && flash == promptShownFlash) return
         promptKey = key
+        promptShownFlash = flash
         val keyName = ModKeyMappings.SCREAM.translatedKeyMessage
+        val shown = if (flash) keyName.copy().withStyle(ChatFormatting.RED) else keyName
         val text = when (key) {
-            "zoom" -> Component.translatable("tamedphantoms.zoom.prompt", keyName)
-            "roll" -> Component.translatable("tamedphantoms.roll.prompt", keyName)
-            "finish" -> Component.translatable("tamedphantoms.roll.finish", keyName)
+            "zoom" -> Component.translatable("tamedphantoms.zoom.prompt", shown)
+            "roll" -> Component.translatable("tamedphantoms.roll.prompt", shown)
             else -> Component.empty()
         }
         player.displayClientMessage(text, true)

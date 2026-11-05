@@ -54,7 +54,7 @@ class NeoForgeClientConfig(builder: ModConfigSpec.Builder) {
                 "1.0 — как дикий, 2.0 — прежняя скорость питомцев, 1.25 — значение по умолчанию.",
             )
             .translation("$KEY_PREFIX.flight.owned_flight_speed")
-            .defineInRange("owned_flight_speed", 1.25, 0.25, 4.0)
+            .defineInRange("owned_flight_speed", 1.25, 0.25, 16.0)
         if (RideExtras.enabled) {
             cameraHorizonHold = builder
                 .comment(

@@ -54,6 +54,12 @@ object FabricNetworking {
                             payload.boost,
                         )
                     }
+                    if (payload.sharpStop) {
+                        PhantomImpactGust.trySharpStop(vehicle, payload.sharpSpeed, payload.boost)
+                    }
+                    if (payload.rollBurst) {
+                        com.tamedphantoms.mod.util.PhantomZoomBurst.onRoll(vehicle)
+                    }
                 }
             }
         }

@@ -12,7 +12,10 @@ import net.minecraft.network.protocol.game.ClientboundSetPassengersPacket
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.util.Mth
+import net.minecraft.world.effect.MobEffectInstance
+import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.RelativeMovement
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.phys.Vec3
@@ -149,12 +152,25 @@ object PhantomDismount {
 
     @JvmStatic
     fun finishTeleport(player: ServerPlayer) {
+        val level = player.level() as? ServerLevel ?: return
+        this.finishTeleportAt(player, level, player.x, player.y, player.z)
+    }
+
+    /**
+     * После телепорта седока фантом оказывается в той же точке.
+     * Смена измерения подменяет сущность, поэтому седло возвращается на живую копию с тем же UUID.
+     */
+    @JvmStatic
+    fun finishTeleportAt(player: ServerPlayer, dest: ServerLevel, x: Double, y: Double, z: Double) {
         val captured = carried.remove(player.uuid) ?: return
-        val phantom = this.resolveCarried(player, captured) ?: return
+        var phantom = this.resolveCarried(player, captured) ?: return
         if (!player.isAlive || player.isRemoved) return
-        val dest = player.level() as? ServerLevel ?: return
-        val moved = phantom.teleportTo(dest, player.x, player.y, player.z, emptySet<RelativeMovement>(), phantom.yRot, phantom.xRot)
-        if (!moved) return
+        val original = phantom
+        val moved = phantom.teleportTo(dest, x, y, z, emptySet<RelativeMovement>(), phantom.yRot, phantom.xRot)
+        if (!phantom.isAlive || phantom.isRemoved) {
+            phantom = this.resolveCarried(player, captured) ?: return
+        }
+        if (!moved && phantom === original) return
         phantom.fallDistance = 0.0f
         player.fallDistance = 0.0f
         phantom.deltaMovement = Vec3.ZERO
@@ -241,6 +257,8 @@ object PhantomDismount {
     }
 
     fun onLogout(player: Player) {
+        val ridden = player.vehicle as? TamedPhantomEntity
+        if (ridden != null) this.protectRiders(ridden)
         val id = player.uuid
         val task = Runnable {
             windows.remove(id)
@@ -389,6 +407,19 @@ object PhantomDismount {
             player.startRiding(phantom, true)
         }
     }
+
+    /** Пять минут медленного падения и огнестойкости тем, кто был в седле в момент выхода. */
+    private fun protectRiders(phantom: TamedPhantomEntity) {
+        val ticks = 5 * 60 * 20
+        for (passenger in phantom.passengers.toList()) {
+            val living = passenger as? LivingEntity ?: continue
+            if (!living.isAlive || living.isRemoved) continue
+            living.addEffect(MobEffectInstance(MobEffects.SLOW_FALLING, ticks, 0, false, true, true))
+            living.addEffect(MobEffectInstance(MobEffects.FIRE_RESISTANCE, ticks, 0, false, true, true))
+        }
+    }
+
+    internal fun bypassNow(block: () -> Unit) = bypass(block)
 
     private inline fun bypass(block: () -> Unit) {
         bypassDepth.set(bypassDepth.get() + 1)

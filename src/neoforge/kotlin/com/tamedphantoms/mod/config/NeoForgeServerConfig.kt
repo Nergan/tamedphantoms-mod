@@ -123,8 +123,8 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
 
         immortalPhantoms = builder
             .comment(
-                "Существуют ли бессмертные фантомы. Включено — полная мёртвая петля верхом делает фантома бессмертным",
-                "и даёт тайное достижение. Выключено — петля бессмертия не даёт, достижение не выдаётся,",
+                "Существуют ли бессмертные фантомы. Включено — достижение «Властитель западных ветров»",
+                "делает этого фантома бессмертным. Выключено — достижение бессмертия не даёт,",
                 "а уже бессмертные фантомы в мире при следующем тике становятся обычными.",
                 "Применяется без перезапуска: сохраните файл или поменяйте значение в экране настроек.",
             )
@@ -145,7 +145,7 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 "выше этого значения поднять её нельзя. Освобождённые всегда летают на серверной скорости.",
             )
             .translation("$KEY_PREFIX.flight.flight_speed")
-            .defineInRange("flight_speed", 1.25, 0.25, 4.0)
+            .defineInRange("flight_speed", 1.25, 0.25, 16.0)
 
         if (RideExtras.enabled) {
             zoomBoost = builder
@@ -168,7 +168,7 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             rollBoostStep = builder
                 .comment(
                     "Сколько блоков за тик добавляет один полный оборот заряженной бочки.",
-                    "0.2 — обычная прибавка. 0 — обороты ничего не добавляют.",
+                    "0.25 — обычная прибавка. 0 — обороты ничего не добавляют.",
                 )
                 .translation("$KEY_PREFIX.flight.roll_boost_step")
                 .defineInRange("roll_boost_step", ServerConfig.DEFAULT_ROLL_BOOST_STEP, 0.0, ServerConfig.MAX_ROLL_BOOST_STEP)

@@ -39,7 +39,7 @@ object ServerConfig {
     const val MAX_ZOOM_BOOST = 64.0
     const val DEFAULT_ROLL_BOOST_LIMIT = 2.0
     const val MAX_ROLL_BOOST_LIMIT = 8.0
-    const val DEFAULT_ROLL_BOOST_STEP = 0.2
+    const val DEFAULT_ROLL_BOOST_STEP = 0.25
     const val MAX_ROLL_BOOST_STEP = 2.0
     /** Сколько бонуса скорости пропадает за две секунды набора высоты. */
     const val DEFAULT_ROLL_CLIMB_DRAIN = 0.2
@@ -68,7 +68,7 @@ object ServerConfig {
     fun phantomGroupMultiplier(): Double = settings.phantomGroupMultiplier()
     fun phantomSize(): Int = settings.phantomSize()
 
-    /** Выключено — мёртвая петля бессмертия не даёт, а уже бессмертные становятся обычными. */
+    /** Выключено — «Властитель западных ветров» бессмертия не даёт, а уже бессмертные становятся обычными. */
     fun immortalPhantoms(): Boolean = settings.immortalPhantoms()
 
     /** Сила рывка вверх из мёртвой петли. 0 — рывка нет. Клиент пилота берёт её у сервера. */

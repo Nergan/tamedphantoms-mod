@@ -49,12 +49,12 @@ class PhantomFlightModel {
         val zoomRequest: Boolean = false,
         /** Сила рывка с сервера. 8 — обычная, 0 — рывка нет. */
         val zoomBoost: Double = 1.0,
-        /** R во время бочки: начать набор или закончить его на текущем обороте. */
+        /** R во время бочки: одно нажатие в счёт текущего оборота. */
         val rollBoostRequest: Boolean = false,
         /** Потолок бонуса скорости за бочку, блоки за тик. 0 — набора нет. */
         val rollBoostLimit: Double = 2.0,
         /** Сколько блоков за тик даёт один полный оборот. 0 — приёма нет. */
-        val rollBoostStep: Double = 0.2,
+        val rollBoostStep: Double = 0.25,
         /** Сколько бонуса съедает один тик набора высоты. */
         val rollClimbDrain: Double = 0.2 / 40.0,
         /** Длительность каждого следующего оборота — эта доля от предыдущего. 1 — без ускорения. */
@@ -114,11 +114,14 @@ class PhantomFlightModel {
     var rollBoost: Double = 0.0
         private set
 
-    /** Во время бочки можно нажать R и начать копить скорость. На потолке приёма уже нет. */
+    /**
+     * На этом обороте ещё нужно нажать R.
+     * Первый оборот ждёт одно нажатие, второй — два, и дальше по счёту.
+     */
     val rollBoostReady: Boolean
-        get() = rollLeft > 0f && !rollCharging && chargeOpen()
+        get() = rollLeft > 0f && chargeOpen() && presses < revolution
 
-    /** Бочка уже копится: повторное R доделывает текущий оборот и отпускает фантома. */
+    /** Набор уже идёт: оборот заряжен и следующий ещё может добавиться. */
     val rollBoostCharging: Boolean
         get() = rollCharging
 
@@ -128,6 +131,10 @@ class PhantomFlightModel {
 
     /** Тик, когда рывок только что начался. */
     var zoomStarted: Boolean = false
+        private set
+
+    /** Этот тик заряженный оборот добавил скорость. */
+    var rollBurst: Boolean = false
         private set
 
     /** Можно рвануть вверх: в петле нос уже смотрит вниз, или петля только что замкнулась. */
@@ -140,10 +147,19 @@ class PhantomFlightModel {
     private var rollDirection = 0f
     private var rollTicks = 0
     private var rollCharging = false
-    private var rollFinish = false
+    /** Номер текущего оборота набора. Первый — 1, и столько же раз нужно нажать R. */
+    private var revolution = 1
+    private var presses = 0
+    /** Набор начат на рывке из петли: потолок на единицу выше обычного. */
+    private var zoomCharge = false
+    /**
+     * Потолок, под которым бонус уже набран. Конец цепочки сбрасывает флаг рывка
+     * раньше, чем тик успевает удержать скорость, и без этой памяти лишняя единица срезается сразу.
+     */
+    private var boostCeiling = 0.0
     private var rollSpan = ROLL_TICKS
     private var boostLimit = 2.0
-    private var boostStep = 0.2
+    private var boostStep = 0.25
     private var climbDrain = 0.2 / 40.0
     private var rollSpin = 0.85
     private var rollMinTicks = 6
@@ -168,7 +184,10 @@ class PhantomFlightModel {
         rollLeft = 0f
         rollTicks = 0
         rollCharging = false
-        rollFinish = false
+        revolution = 1
+        presses = 0
+        zoomCharge = false
+        boostCeiling = 0.0
         rollSpan = ROLL_TICKS
         rollBoost = 0.0
         stalled = false
@@ -188,6 +207,7 @@ class PhantomFlightModel {
     fun step(input: Input): Output {
         completedLoop = false
         zoomStarted = false
+        rollBurst = false
         boostLimit = input.rollBoostLimit.coerceIn(0.0, 64.0)
         boostStep = input.rollBoostStep.coerceIn(0.0, 8.0)
         climbDrain = input.rollClimbDrain.coerceAtLeast(0.0)
@@ -222,21 +242,23 @@ class PhantomFlightModel {
             stalled = false
             abortRoll()
         }
-        if (input.rollRequest != 0 && rollTicks == 0 && !looping && !zooming && speed >= vc * ROLL_ENTRY && !reversing) {
+        if (input.rollRequest != 0 && rollTicks == 0 && !looping && speed >= vc * ROLL_ENTRY && !reversing) {
             rollDirection = if (input.rollRequest > 0) -1f else 1f
             rollLeft = FULL_TURN
             rollSpan = ROLL_TICKS
             rollTicks = rollSpan
+            revolution = 1
+            presses = 0
+            if (!rollCharging) zoomCharge = false
         }
-        if (input.rollBoostRequest && rollLeft > 0f) {
-            if (!rollCharging && chargeOpen()) {
-                rollCharging = true
-            } else if (rollCharging) {
-                rollFinish = true
-            }
+        if (input.rollBoostRequest && rollLeft > 0f && chargeOpen() && presses < revolution) {
+            presses++
+            rollCharging = true
+            if (zooming) zoomCharge = true
         }
 
-        val boostTuck = if (boostLimit > 1.0E-6) (rollBoost / boostLimit).toFloat().coerceIn(0f, 1f) else 0f
+        val tuckLimit = cap()
+        val boostTuck = if (tuckLimit > 1.0E-6) (rollBoost / tuckLimit).toFloat().coerceIn(0f, 1f) else 0f
         val diveTuck = climb < 0f && !flapping && !reversing && speed > vc * 0.4
         val tuckTarget = when {
             zooming -> 1f
@@ -282,8 +304,17 @@ class PhantomFlightModel {
         }
         val lateral = input.strafe.coerceIn(-1f, 1f) * vc * STRAFE_SHARE + juke
         if (rollTicks > 0) rollTicks--
-        if (!input.inLiquid && !looping && !zooming && climb > 0f && vertical > 0.0 && rollBoost > 0.0) {
-            rollBoost = (rollBoost - climbDrain).coerceAtLeast(0.0)
+        if (!input.inLiquid && !looping && !zooming && rollBoost > 0.0) {
+            var bonus = rollBoost - ROLL_SELF_DECAY
+            if (climb > 0f && vertical > 0.0) bonus -= climbDrain
+            else if (climb < 0f && vertical < 0.0) bonus += climbDrain
+            val released = abs(forward) <= FORWARD_EPS && abs(input.strafe) <= FORWARD_EPS
+            if (released) {
+                val excess = (speed - vc).coerceAtLeast(0.0)
+                if (bonus > excess) bonus = excess
+            }
+            rollBoost = bonus.coerceIn(0.0, max(cap(), boostCeiling))
+            if (rollBoost <= 1.0E-4) boostCeiling = 0.0
         }
         return Output(along, lateral, vertical)
     }
@@ -410,22 +441,25 @@ class PhantomFlightModel {
             rollLeft -= step
             if (rollLeft <= 0f) {
                 roll = wrap(roll)
-                if (rollCharging && chargeOpen()) {
-                    rollBoost = (rollBoost + boostStep).coerceAtMost(boostLimit)
-                    val keep = !rollFinish && chargeOpen()
-                    if (keep) {
-                        rollSpan = fasterSpan()
+                val earned = rollCharging && presses >= revolution && chargeOpen()
+                if (earned) {
+                    val before = rollBoost
+                    rollBoost = (rollBoost + boostStep).coerceAtMost(cap())
+                    if (rollBoost > before + 1.0E-4) {
+                        rollBurst = true
+                        boostCeiling = max(boostCeiling, cap())
+                    }
+                    if (chargeOpen()) {
+                        revolution++
+                        presses = 0
+                        rollSpan = fasterSpan().coerceAtLeast(revolution)
                         rollLeft = FULL_TURN
                         rollTicks = rollSpan
                     } else {
-                        rollCharging = false
-                        rollFinish = false
-                        rollTicks = 0
+                        endCharge()
                     }
                 } else if (rollCharging) {
-                    rollCharging = false
-                    rollFinish = false
-                    rollTicks = 0
+                    endCharge()
                 }
             }
             return
@@ -435,9 +469,12 @@ class PhantomFlightModel {
         roll = approach(wrap(roll), (strafeBank + turnBank).coerceIn(-MAX_TURN_BANK, MAX_TURN_BANK), 5f)
     }
 
+    /** Обычный потолок, а на рывке из петли — на единицу выше. */
+    private fun cap(): Double = if (zoomCharge) boostLimit + 1.0 else boostLimit
+
     /** Потолок или нулевой шаг закрывают приём. Обычная бочка при этом остаётся. */
     private fun chargeOpen(): Boolean =
-        boostLimit > 1.0E-6 && boostStep > 1.0E-6 && rollBoost < boostLimit - 1.0E-4
+        boostLimit > 1.0E-6 && boostStep > 1.0E-6 && rollBoost < cap() - 1.0E-4
 
     /** Каждый следующий оборот короче предыдущего, но не короче серверного предела. */
     private fun fasterSpan(): Int {
@@ -451,14 +488,21 @@ class PhantomFlightModel {
         rollLeft = 0f
         rollTicks = 0
         rollSpan = ROLL_TICKS
+        endCharge()
+    }
+
+    private fun endCharge() {
         rollCharging = false
-        rollFinish = false
+        presses = 0
+        revolution = 1
+        zoomCharge = false
+        rollTicks = 0
     }
 
     private fun clearRollBoost() {
         rollBoost = 0.0
-        rollCharging = false
-        rollFinish = false
+        boostCeiling = 0.0
+        endCharge()
     }
 
     private fun stepHover(input: Input, vc: Double, forward: Float, climb: Float): Output {
@@ -516,8 +560,17 @@ class PhantomFlightModel {
         val strafeOnly = abs(forward) <= FORWARD_EPS && abs(input.strafe) > FORWARD_EPS
         val halted = abs(forward) <= FORWARD_EPS && speed < vc * HOVER_SPEED && speed > -vc
         if (reversing || strafeOnly || (halted && climb <= 0f)) clearRollBoost()
-        val boostTuck = if (boostLimit > 1.0E-6) (rollBoost / boostLimit).toFloat().coerceIn(0f, 1f) else 0f
-        tuck = approach(tuck, boostTuck, if (boostTuck > 0f) BOOST_TUCK else TUCK_OUT)
+        val flapping = forward > FORWARD_EPS
+        val diveTuck = climb < 0f && !flapping && !reversing
+        val tuckLimit = cap()
+        val boostTuck = if (tuckLimit > 1.0E-6) (rollBoost / tuckLimit).toFloat().coerceIn(0f, 1f) else 0f
+        val tuckTarget = if (diveTuck) 1f else boostTuck
+        val tuckRate = when {
+            diveTuck -> TUCK_IN
+            boostTuck > 0f -> BOOST_TUCK
+            else -> TUCK_OUT
+        }
+        tuck = approach(tuck, tuckTarget, tuckRate)
         val wanted = (vc + rollBoost) * forward * if (forward < 0f) PhantomHover.REVERSE_SPEED else 1.0
         val grip = if (abs(forward) > FORWARD_EPS) WATER_GRIP else WATER_GLIDE
         speed += (wanted - speed) * grip
@@ -568,9 +621,11 @@ class PhantomFlightModel {
         const val ROLL_TICKS = 16
         const val ROLL_JUKE = 0.38
         /** Сколько блоков за тик добавляет один полный оборот заряженной бочки. */
-        const val ROLL_BOOST_STEP = 0.2
+        const val ROLL_BOOST_STEP = 0.25
         /** Набор высоты съедает бонус примерно на 0.2 за две секунды. */
         const val CLIMB_DRAIN = 0.2 / 40.0
+        /** В воздухе бонус тает сам, примерно на 0.1 за пять секунд. */
+        const val ROLL_SELF_DECAY = 0.1 / 100.0
         /** Крылья догоняют долю бонуса медленнее, чем складываются в пике. */
         const val BOOST_TUCK = 0.025f
 

@@ -34,6 +34,7 @@ object PhantomImpactGust {
         val peak: Double,
         var ticks: Int,
         val span: Int,
+        val stepCap: Double,
     )
 
     private val carried = HashMap<UUID, Carry>()
@@ -135,7 +136,7 @@ object PhantomImpactGust {
                 continue
             }
             val scale = carry.peak * carry.ticks / carry.span.toDouble()
-            val step = scale.coerceAtMost(0.7)
+            val step = scale.coerceAtMost(carry.stepCap)
             val dx = carry.x * step
             val dy = carry.y * step
             val dz = carry.z * step
@@ -155,10 +156,96 @@ object PhantomImpactGust {
         }
     }
 
-    private fun startCarry(entity: Entity, level: ServerLevel, wind: Vec3, distance: Double) {
-        val span = (4.0 + distance * 1.5).toInt().coerceIn(4, 16)
-        val peak = (distance * 2.0 / (span + 1.0)).coerceIn(0.15, 0.9)
-        carried[entity.uuid] = Carry(level.dimension(), wind.x, wind.y, wind.z, peak, span, span)
+    /**
+     * Резкая остановка с любым бонусом. Ветер под крыльями и снос вчетверо сильнее,
+     * чем удар о поверхность на полной скорости. Чем выше скорость до остановки, тем сильнее.
+     */
+    fun trySharpStop(phantom: TamedPhantomEntity, preSpeed: Float, boost: Float) {
+        if (phantom.impactGustCooldown > 0) return
+        val level = phantom.level() as? ServerLevel ?: return
+        if (boost < 0.05f) return
+        val speed = preSpeed.toDouble()
+        if (speed < 0.55 || speed > 24.0) return
+        val limit = ServerConfig.rollBoostLimit().coerceAtLeast(0.0)
+        val full = (0.9 + limit * 1.35).coerceAtLeast(1.2)
+        val share = (speed / full).coerceIn(0.35, 1.0)
+        val distance = blowDistance(full) * 4.0 * share
+        phantom.impactGustCooldown = 16
+        val yaw = Math.toRadians(phantom.yRot.toDouble())
+        val fx = -kotlin.math.sin(yaw)
+        val fz = kotlin.math.cos(yaw)
+        val dir = Vec3(fx, -0.08, fz).normalize()
+        val origin = Vec3(phantom.x, phantom.y + phantom.bbHeight * 0.28, phantom.z)
+        val wing = phantom.bbWidth * 0.7
+        val rx = fz
+        val rz = -fx
+        val gusts = (4 + speed * 1.6).toInt().coerceIn(4, 18)
+        repeat(gusts) { index ->
+            val side = if (index % 2 == 0) 1.0 else -1.0
+            val along = (index / 2) * 0.22
+            level.sendParticles(
+                ParticleTypes.GUST,
+                origin.x + fx * along + rx * wing * side,
+                origin.y,
+                origin.z + fz * along + rz * wing * side,
+                1,
+                0.06,
+                0.02,
+                0.06,
+                0.0,
+            )
+        }
+        level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL, origin.x + rx * wing, origin.y, origin.z + rz * wing, 1, 0.12, 0.04, 0.12, 0.0)
+        level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL, origin.x - rx * wing, origin.y, origin.z - rz * wing, 1, 0.12, 0.04, 0.12, 0.0)
+        val volume = (0.8 + (speed / full).coerceAtMost(1.0) * 0.5).toFloat()
+        level.playSound(
+            null,
+            phantom.x,
+            phantom.y,
+            phantom.z,
+            SoundEvents.BREEZE_WIND_CHARGE_BURST.value(),
+            SoundSource.NEUTRAL,
+            volume,
+            0.85f + phantom.random.nextFloat() * 0.1f,
+        )
+        val radius = (3.4 + speed * 0.55).coerceIn(3.4, 9.0)
+        val box = phantom.boundingBox.inflate(radius, 3.2, radius)
+        val victims = level.getEntitiesOfClass(LivingEntity::class.java, box) { living ->
+            living.isAlive && !living.isRemoved && living !== phantom &&
+                !phantom.hasPassenger(living) && living.vehicle == null &&
+                (living !is Player || !living.isSpectator)
+        }
+        for (living in victims) {
+            val body = Vec3(living.x, living.y + living.bbHeight * 0.5, living.z)
+            val offset = body.subtract(origin)
+            val distanceTo = offset.length()
+            if (distanceTo < 0.2 || distanceTo > radius) continue
+            val ahead = offset.x * fx + offset.z * fz
+            val below = origin.y + 0.4 - body.y
+            if (ahead < -0.55 && below < 0.2) continue
+            if (!clearAir(level, origin, body, phantom)) continue
+            val wind = windDirection(dir, offset, verticalHit = false)
+            val closeness = (1.0 - distanceTo / radius).coerceIn(0.35, 1.0)
+            startCarry(living, level, wind, distance * closeness, strong = true)
+            level.sendParticles(ParticleTypes.GUST, living.x, living.y + living.bbHeight * 0.5, living.z, 4, 0.3, 0.15, 0.3, 0.0)
+            level.playSound(
+                null,
+                living.x,
+                living.y,
+                living.z,
+                SoundEvents.BREEZE_WIND_CHARGE_BURST.value(),
+                SoundSource.PLAYERS,
+                0.85f,
+                0.85f + living.random.nextFloat() * 0.12f,
+            )
+        }
+    }
+
+    private fun startCarry(entity: Entity, level: ServerLevel, wind: Vec3, distance: Double, strong: Boolean = false) {
+        val span = (4.0 + distance * 1.5).toInt().coerceIn(4, if (strong) 28 else 16)
+        val peak = (distance * 2.0 / (span + 1.0)).coerceIn(0.15, if (strong) 2.2 else 0.9)
+        val stepCap = if (strong) 1.6 else 0.7
+        carried[entity.uuid] = Carry(level.dimension(), wind.x, wind.y, wind.z, peak, span, span, stepCap)
     }
 
     private fun windDirection(impact: Vec3, offset: Vec3, verticalHit: Boolean): Vec3 {

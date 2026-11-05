@@ -289,47 +289,39 @@ class PhantomFlightModelTest {
     }
 
     @Test
-    @DisplayName("Заряженная бочка копится по 0.2 за оборот, крылья прижимаются по доле бонуса")
+    @DisplayName("Один оборот с одним R даёт 0.25, крылья прижимаются по доле бонуса")
     fun rollBoostBuildsAndTucks() {
         val model = PhantomFlightModel()
         cruise(model, 40)
-        model.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
+        model.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0, rollBoostStep = 0.25))
         repeat(PhantomFlightModel.ROLL_TICKS + 8) {
-            model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+            model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25))
         }
-        assertEquals(0.2, model.rollBoost, 0.05)
+        assertEquals(0.25, model.rollBoost, 0.05)
         assertTrue(model.tuck > 0.04f, "tuck ${model.tuck}")
-        assertTrue(model.tuck < 0.35f, "tuck ${model.tuck}")
+        assertTrue(model.tuck < 0.4f, "tuck ${model.tuck}")
     }
 
     @Test
-    @DisplayName("Повторное R доделывает оборот, потолок останавливает бочку, крылья доходят до сложенных")
+    @DisplayName("Набор нажатий доходит до потолка, а одного нажатия на втором обороте мало")
     fun rollBoostStopsAtLimitAndSecondPress() {
         val capped = PhantomFlightModel()
         cruise(capped, 40)
-        capped.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
-        var guard = 0
-        while (capped.rolling && guard++ < 500) {
-            capped.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
-        }
+        mash(capped, 2.0)
         assertFalse(capped.rolling)
         assertEquals(2.0, capped.rollBoost, 0.01)
-        repeat(50) { capped.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0)) }
+        repeat(50) { capped.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25)) }
         assertTrue(capped.tuck > 0.85f, "tuck ${capped.tuck}")
         assertTrue(capped.speed > vc + 1.4, "speed ${capped.speed}")
 
         val early = PhantomFlightModel()
         cruise(early, 40)
-        early.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
-        repeat(20) { early.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0)) }
-        assertTrue(early.rolling)
-        early.step(Input(1f, 0f, 0f, vc, rollBoostRequest = true, rollBoostLimit = 2.0))
-        guard = 0
-        while (early.rolling && guard++ < 40) {
-            early.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        early.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0, rollBoostStep = 0.25))
+        repeat(PhantomFlightModel.ROLL_TICKS + 40) {
+            early.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25))
         }
         assertFalse(early.rolling)
-        assertTrue(early.rollBoost > 0.3 && early.rollBoost < 0.7, "boost ${early.rollBoost}")
+        assertEquals(0.25, early.rollBoost, 0.05)
     }
 
     @Test
@@ -388,7 +380,16 @@ class PhantomFlightModelTest {
             )
             var ticks = 1
             while (model.rollBoost < 0.59 && ticks < 500) {
-                model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 8.0, rollSpin = spin, rollMinTicks = 4))
+                model.step(
+                Input(
+                    1f, 0f, 0f, vc,
+                    rollBoostRequest = model.rollBoostReady,
+                    rollBoostLimit = 8.0,
+                    rollBoostStep = 0.25,
+                    rollSpin = spin,
+                    rollMinTicks = 4,
+                ),
+            )
                 ticks++
             }
             return ticks
@@ -405,19 +406,67 @@ class PhantomFlightModelTest {
         assertEquals(kept, swimming.rollBoost, 0.02)
     }
 
+    @Test
+    @DisplayName("Отпущенное управление срезает бонус до обычной скорости, снижение его копит")
+    fun brakeFollowsSpeedAndDiveBuilds() {
+        val braking = charged(1.0)
+        repeat(250) { braking.step(Input(0f, 0f, 0f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25)) }
+        assertEquals(0.0, braking.rollBoost, 0.05)
+
+        val diving = charged(0.5)
+        val before = diving.rollBoost
+        repeat(80) { diving.step(Input(1f, 0f, -1f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25)) }
+        assertTrue(diving.rollBoost > before + 0.08, "boost ${diving.rollBoost}")
+    }
+
+    @Test
+    @DisplayName("Бочка на рывке из петли поднимает потолок на единицу")
+    fun barrelDuringZoomRaisesCap() {
+        val model = PhantomFlightModel()
+        loopUntilZoomWindow(model)
+        model.step(Input(1f, 0f, 0f, vc, zoomRequest = true, zoomBoost = 2.0, rollBoostLimit = 2.0, rollBoostStep = 0.25))
+        assertTrue(model.zooming)
+        mash(model, 3.0)
+        assertEquals(3.0, model.rollBoost, 0.05)
+    }
+
+    @Test
+    @DisplayName("Под водой снижение на ctrl складывает крылья")
+    fun waterDiveTucks() {
+        val model = PhantomFlightModel()
+        repeat(40) {
+            model.step(Input(0f, 0f, -1f, vc, medium = PhantomFlightModel.Medium.WATER, rollBoostLimit = 2.0))
+        }
+        assertTrue(model.tuck > 0.8f, "tuck ${model.tuck}")
+    }
+
+    private fun mash(model: PhantomFlightModel, until: Double) {
+        var started = model.rolling
+        var guard = 0
+        while (model.rollBoost < until - 0.01 && guard++ < 900) {
+            val start = !started
+            model.step(
+                Input(
+                    1f, 0f, 0f, vc,
+                    rollRequest = if (start) 1 else 0,
+                    rollBoostRequest = start || model.rollBoostReady,
+                    rollBoostLimit = 2.0,
+                    rollBoostStep = 0.25,
+                ),
+            )
+            started = true
+            if (!model.rolling && model.rollBoost < until - 0.01) break
+        }
+        guard = 0
+        while (model.rolling && guard++ < 80) {
+            model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25))
+        }
+    }
+
     private fun charged(atLeast: Double): PhantomFlightModel {
         val model = PhantomFlightModel()
         cruise(model, 40)
-        model.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
-        var guard = 0
-        while (model.rollBoost < atLeast - 0.01 && model.rolling && guard++ < 400) {
-            model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
-        }
-        if (model.rolling) {
-            model.step(Input(1f, 0f, 0f, vc, rollBoostRequest = true, rollBoostLimit = 2.0))
-            guard = 0
-            while (model.rolling && guard++ < 40) model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
-        }
+        mash(model, atLeast)
         assertTrue(model.rollBoost >= atLeast - 0.05, "boost ${model.rollBoost}")
         assertFalse(model.rolling)
         return model

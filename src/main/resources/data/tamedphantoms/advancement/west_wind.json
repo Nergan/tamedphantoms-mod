@@ -2,13 +2,13 @@
   "parent": "tamedphantoms:tame_phantom",
   "display": {
     "icon": {
-      "id": "minecraft:elytra"
+      "id": "minecraft:wind_charge"
     },
     "title": {
-      "translate": "advancements.tamedphantoms.dead_loop.title"
+      "translate": "advancements.tamedphantoms.west_wind.title"
     },
     "description": {
-      "translate": "advancements.tamedphantoms.dead_loop.description"
+      "translate": "advancements.tamedphantoms.west_wind.description"
     },
     "frame": "challenge",
     "show_toast": true,
@@ -16,7 +16,7 @@
     "hidden": true
   },
   "criteria": {
-    "looped": {
+    "charged": {
       "trigger": "minecraft:impossible"
     }
   }

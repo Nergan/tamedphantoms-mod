@@ -24,7 +24,7 @@ object PhantomCrawl {
      */
     fun advance(horizontal: Double, speedMultiple: Double): Float {
         if (horizontal < STILL) return 0f
-        val config = (speedMultiple / 1.25).coerceIn(0.25, 4.0)
+        val config = (speedMultiple / 1.25).coerceIn(0.25, 16.0)
         val move = (horizontal / 0.08).coerceAtMost(1.25)
         return (0.62f * config * move).toFloat()
     }

@@ -28,6 +28,11 @@ data class PhantomInputPayload(
     val impactX: Float = 0f,
     val impactY: Float = 0f,
     val impactZ: Float = 0f,
+    /** Резкая остановка с бонусом. Число — скорость до остановки. */
+    val sharpStop: Boolean = false,
+    val sharpSpeed: Float = 0f,
+    /** Заряженный оборот только что добавил скорость. */
+    val rollBurst: Boolean = false,
 ) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
@@ -52,6 +57,9 @@ data class PhantomInputPayload(
                 buf.writeFloat(payload.impactX)
                 buf.writeFloat(payload.impactY)
                 buf.writeFloat(payload.impactZ)
+                buf.writeBoolean(payload.sharpStop)
+                buf.writeFloat(payload.sharpSpeed)
+                buf.writeBoolean(payload.rollBurst)
             },
             { buf ->
                 PhantomInputPayload(
@@ -69,6 +77,9 @@ data class PhantomInputPayload(
                     buf.readFloat(),
                     buf.readFloat(),
                     buf.readFloat(),
+                    buf.readBoolean(),
+                    buf.readFloat(),
+                    buf.readBoolean(),
                 )
             },
         )

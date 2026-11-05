@@ -25,7 +25,7 @@ object ModNetworking {
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
         // У сборки с рывком из петли свой канал: версия отличает её от старых клиентов и серверов.
-        val registrar = event.registrar(if (RideExtras.enabled) "9" else "7")
+        val registrar = event.registrar(if (RideExtras.enabled) "10" else "7")
 
         if (RideExtras.enabled) {
             registrar.playToServer(
@@ -53,6 +53,12 @@ object ModNetworking {
                             net.minecraft.world.phys.Vec3(payload.impactX.toDouble(), payload.impactY.toDouble(), payload.impactZ.toDouble()),
                             payload.boost,
                         )
+                    }
+                    if (payload.sharpStop) {
+                        PhantomImpactGust.trySharpStop(vehicle, payload.sharpSpeed, payload.boost)
+                    }
+                    if (payload.rollBurst) {
+                        PhantomZoomBurst.onRoll(vehicle)
                     }
                 }
             }
