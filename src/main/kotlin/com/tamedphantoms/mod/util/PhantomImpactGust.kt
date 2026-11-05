@@ -162,8 +162,9 @@ object PhantomImpactGust {
     /**
      * Резкая остановка с любым бонусом. Порыв вспыхивает чуть впереди фантома, ниже корпуса.
      * Область втрое шире удара о поверхность и растёт со скоростью. К краю толчок сходит на нет.
-     * От фантома толкает сильнее, чем вверх. Клубы — `poof`, не взрыв. Огонь и костры в этой зоне гаснут.
-     * Седока и пассажиров не сносит. Удар о поверхность остаётся взрывом порыва.
+     * От фантома толкает сильнее, чем вверх. Клубы — `poof`, не взрыв. Огонь и костры в этой зоне гаснут,
+     * и горящая сущность, которую порыв достал, тоже гаснет. Седока и пассажиров не сносит.
+     * Удар о поверхность остаётся взрывом порыва.
      */
     fun trySharpStop(phantom: TamedPhantomEntity, preSpeed: Float, boost: Float) {
         if (phantom.impactGustCooldown > 0) return
@@ -224,14 +225,14 @@ object PhantomImpactGust {
         )
         extinguish(level, origin, fx, fz, radius)
         val box = phantom.boundingBox.inflate(radius, radius * 0.45, radius)
-        val victims = level.getEntitiesOfClass(LivingEntity::class.java, box) { living ->
-            living.isAlive && !living.isRemoved && living !== phantom &&
-                !phantom.hasPassenger(living) && living.vehicle == null &&
-                (living !is Player || !living.isSpectator)
+        val victims = level.getEntitiesOfClass(Entity::class.java, box) { entity ->
+            entity.isAlive && !entity.isRemoved && entity !== phantom &&
+                !phantom.hasPassenger(entity) && entity.vehicle == null &&
+                (entity !is Player || !entity.isSpectator)
         }
         val reach = blowDistance(full) * (1.0 + share * 1.15)
-        for (living in victims) {
-            val body = Vec3(living.x, living.y + living.bbHeight * 0.5, living.z)
+        for (entity in victims) {
+            val body = Vec3(entity.x, entity.y + entity.bbHeight * 0.5, entity.z)
             val offset = body.subtract(origin)
             val distanceTo = offset.length()
             if (distanceTo < 0.2 || distanceTo > radius) continue
@@ -239,6 +240,8 @@ object PhantomImpactGust {
             val below = origin.y + 0.6 - body.y
             if (forward < -0.35 && below < 0.15) continue
             if (!clearAir(level, origin, body, phantom)) continue
+            if (entity.remainingFireTicks > 0) entity.clearFire()
+            val living = entity as? LivingEntity ?: continue
             val closeness = (1.0 - distanceTo / radius).coerceIn(0.0, 1.0)
             val falloff = closeness * closeness
             if (falloff < 0.04) continue
