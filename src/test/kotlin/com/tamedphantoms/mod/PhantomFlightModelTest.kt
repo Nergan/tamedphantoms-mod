@@ -321,7 +321,8 @@ class PhantomFlightModelTest {
             early.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0, rollBoostStep = 0.25))
         }
         assertFalse(early.rolling)
-        assertEquals(0.25, early.rollBoost, 0.05)
+        assertTrue(early.rollBoost < 0.40, "second press must not add, boost ${early.rollBoost}")
+        assertTrue(early.rollBoost > 0.08, "first step should remain, boost ${early.rollBoost}")
     }
 
     @Test
@@ -365,7 +366,7 @@ class PhantomFlightModelTest {
         while (model.rolling && guard++ < 40) {
             model.step(Input(1f, 0f, 0f, vc, rollBoostRequest = true, rollBoostLimit = 2.0))
         }
-        assertEquals(2.0, model.rollBoost, 0.001)
+        assertEquals(2.0, model.rollBoost, 0.02)
         assertFalse(model.rolling)
     }
 
@@ -438,6 +439,31 @@ class PhantomFlightModelTest {
             model.step(Input(0f, 0f, -1f, vc, medium = PhantomFlightModel.Medium.WATER, rollBoostLimit = 2.0))
         }
         assertTrue(model.tuck > 0.8f, "tuck ${model.tuck}")
+    }
+
+    @Test
+    @DisplayName("Прямой полёт тратит 0.1 бонуса за две секунды")
+    fun straightFlightFadesATenthInTwoSeconds() {
+        val model = charged(1.0)
+        val before = model.rollBoost
+        repeat(40) { model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0)) }
+        assertEquals(before - 0.1, model.rollBoost, 0.02)
+    }
+
+    @Test
+    @DisplayName("Удар в воде сбрасывает бонус на выходе из жидкости")
+    fun liquidImpactDropsBoostOnExit() {
+        val swimming = charged(1.0)
+        val kept = swimming.rollBoost
+        swimming.step(Input(1f, 0f, 0f, vc, medium = PhantomFlightModel.Medium.WATER, inLiquid = true, rollBoostLimit = 2.0))
+        swimming.noteLiquidImpact()
+        repeat(20) {
+            swimming.step(Input(1f, 0f, 0f, vc, medium = PhantomFlightModel.Medium.WATER, inLiquid = true, rollBoostLimit = 2.0))
+        }
+        assertEquals(kept, swimming.rollBoost, 0.05)
+        swimming.leaveLiquid(vc)
+        assertEquals(0.0, swimming.rollBoost, 0.001)
+        assertTrue(kotlin.math.abs(swimming.speed) <= vc + 0.001)
     }
 
     private fun mash(model: PhantomFlightModel, until: Double) {

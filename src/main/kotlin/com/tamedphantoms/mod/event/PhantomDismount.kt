@@ -533,12 +533,13 @@ object PhantomDismount {
         }
     }
 
-    /** Пять минут медленного падения и огнестойкости тем, кто был в седле в момент выхода. */
+    /** Пять минут медленного падения и огнестойкости пассажиру, если он есть. Хозяин эффекты не получает. */
     fun protectRiders(phantom: TamedPhantomEntity) {
         val ticks = 5 * 60 * 20
         for (passenger in phantom.passengers.toList()) {
             val living = passenger as? LivingEntity ?: continue
             if (!living.isAlive || living.isRemoved) continue
+            if (phantom.isOwnedBy(living)) continue
             living.addEffect(MobEffectInstance(MobEffects.SLOW_FALLING, ticks, 0, false, true, true))
             living.addEffect(MobEffectInstance(MobEffects.FIRE_RESISTANCE, ticks, 0, false, true, true))
         }

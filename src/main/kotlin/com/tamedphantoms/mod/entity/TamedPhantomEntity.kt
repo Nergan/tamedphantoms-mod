@@ -653,6 +653,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     /** Скорость до резкой остановки с бонусом. 0 — остановки не было. */
     var clientSharpStop: Double = 0.0
 
+    /** Прошлый тик седок был в воде или лаве. Выход после удара сбрасывает бонус. */
+    private var wasRidingLiquid = false
+
     /** Заряженный оборот только что добавил скорость. Забирает пакет пилота. */
     var clientRollBurst: Boolean = false
 
@@ -1101,7 +1104,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             this.tickFlightVisuals()
             this.advanceWingPhase()
             this.spawnShakeDroplets()
-            this.spawnSwimTrail()
+            this.spawnLiquidTrail()
             this.spawnCrawlFootprints()
             this.tickCameraFollow()
             this.tickRefuseVisual()
@@ -1219,26 +1222,28 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
     }
 
-    private fun spawnSwimTrail() {
-        if (!this.isInWater) return
+    private fun spawnLiquidTrail() {
+        val lava = this.isInLava
+        val water = !lava && (this.isInWater || this.isUnderWater)
+        if (!water && !lava) return
         val moved = hypot(this.x - this.xo, hypot(this.y - this.yo, this.z - this.zo))
         val turned = kotlin.math.abs(Mth.wrapDegrees(this.yRot - this.yRotO)) +
             kotlin.math.abs(this.xRot - this.xRotO)
         if (moved < 0.006 && turned < 0.4f) return
         val level = this.level()
         val motion = this.deltaMovement
-        for (side in doubleArrayOf(-1.0, 1.0)) {
-            val tip = this.wingTip(side, onGround = false)
+        val particle = if (lava) ParticleTypes.FLAME else ParticleTypes.BUBBLE
+        for (tip in this.trailAnchors()) {
             level.addParticle(
-                ParticleTypes.BUBBLE,
+                particle,
                 tip.x,
                 tip.y,
                 tip.z,
                 -motion.x * 0.2,
-                0.03,
+                if (lava) 0.04 else 0.03,
                 -motion.z * 0.2,
             )
-            if (this.random.nextFloat() < 0.35f) {
+            if (water && this.random.nextFloat() < 0.35f) {
                 level.addParticle(ParticleTypes.BUBBLE_POP, tip.x, tip.y + 0.08, tip.z, 0.0, 0.02, 0.0)
             }
         }
@@ -1763,27 +1768,45 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 false,
             )
         }
+        val liquid = this.isInWater || this.isUnderWater || this.isInLava
+        if (liquid && this.bodyDye < 0) return
+        val particle = this.wingParticle()
+        for (at in this.trailAnchors(now, amplitude)) {
+            level.addParticle(particle, at.x, at.y, at.z, 0.0, 0.0, 0.0)
+        }
+    }
+
+    /**
+     * Кончики крыльев. Сложенные крылья сдвигают след к кончику хвоста —
+     * в воздухе, под водой и в лаве одним и тем же сдвигом.
+     */
+    private fun trailAnchors(flap: Float = Float.NaN, amplitude: Float = this.wingFlapAmp): List<Vec3> {
+        val now = if (flap.isNaN()) {
+            val step = PhantomWingbeat.DEGREES_PER_TICK * Mth.DEG_TO_RAD
+            val offset = this.uniqueFlapTickOffset.toFloat()
+            Mth.cos((offset + this.wingPhase) * step + Mth.PI)
+        } else {
+            flap
+        }
         val size = this.phantomSize
         val yaw = this.yRot * Mth.DEG_TO_RAD
         val reachX = Mth.cos(yaw) * (1.3f + 0.21f * size)
         val reachZ = Mth.sin(yaw) * (1.3f + 0.21f * size)
         val height = (0.3f + now * 0.45f * amplitude.coerceIn(0f, 1.3f)) * (size * 0.2f + 1f)
-        val particle = this.wingParticle()
         val leftX = this.x + reachX
         val rightX = this.x - reachX
         val leftZ = this.z + reachZ
         val rightZ = this.z - reachZ
         val py = this.y + height
-        // Быстрый полёт только чуть отводит крылья (wingSweep до 0.35). Сложенные — пике и рывок.
         val folded = ((this.wingSweep - 0.5f) / 0.35f).coerceIn(0f, 1f)
         if (folded <= 0f) {
-            level.addParticle(particle, leftX, py, leftZ, 0.0, 0.0, 0.0)
-            level.addParticle(particle, rightX, py, rightZ, 0.0, 0.0, 0.0)
-            return
+            return listOf(Vec3(leftX, py, leftZ), Vec3(rightX, py, rightZ))
         }
         val tail = this.tailTip()
-        level.addParticle(particle, leftX + (tail.x - leftX) * folded, py + (tail.y - py) * folded, leftZ + (tail.z - leftZ) * folded, 0.0, 0.0, 0.0)
-        level.addParticle(particle, rightX + (tail.x - rightX) * folded, py + (tail.y - py) * folded, rightZ + (tail.z - rightZ) * folded, 0.0, 0.0, 0.0)
+        return listOf(
+            Vec3(leftX + (tail.x - leftX) * folded, py + (tail.y - py) * folded, leftZ + (tail.z - leftZ) * folded),
+            Vec3(rightX + (tail.x - rightX) * folded, py + (tail.y - py) * folded, rightZ + (tail.z - rightZ) * folded),
+        )
     }
 
     /**
@@ -2047,6 +2070,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             PhantomEffectSpeed.waterBreathing(this)
         this.cruiseSpeedUsed = cruiseSpeed
         val inLiquid = this.isInWater || this.isUnderWater || this.isInLava
+        if (this.wasRidingLiquid && !inLiquid) {
+            this.flightModel.leaveLiquid(cruiseSpeed)
+        }
         val figuring = this.clientLoopRequest || this.clientRollRequest != 0 || this.clientZoomRequest ||
             this.flightModel.looping || this.flightModel.rolling || this.flightModel.zooming
         val medium = when {
@@ -2146,6 +2172,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         } else if (atCap && (freshWall || freshFloor) && before > 0.55) {
             this.clientImpactGust = impact
         }
+        if (inLiquid && (sharp || ((freshWall || freshFloor) && before > 0.55))) {
+            this.flightModel.noteLiquidImpact()
+        }
+        this.wasRidingLiquid = inLiquid
         if (this.horizontalCollision && medium == PhantomFlightModel.Medium.AIR && this.airspeedRatio > 0.6f) {
             this.flightModel.onCollision()
         }

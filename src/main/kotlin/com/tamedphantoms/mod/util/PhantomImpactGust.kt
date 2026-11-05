@@ -160,9 +160,10 @@ object PhantomImpactGust {
     }
 
     /**
-     * Резкая остановка с любым бонусом. Взрыв вспыхивает чуть впереди фантома, ниже корпуса.
-     * Область растёт со скоростью, к краю толчок сходит на нет. От фантома толкает сильнее, чем вверх.
-     * Огонь и костры в этой зоне гаснут. Седока и пассажиров не сносит.
+     * Резкая остановка с любым бонусом. Порыв вспыхивает чуть впереди фантома, ниже корпуса.
+     * Область втрое шире удара о поверхность и растёт со скоростью. К краю толчок сходит на нет.
+     * От фантома толкает сильнее, чем вверх. Клубы — `poof`, не взрыв. Огонь и костры в этой зоне гаснут.
+     * Седока и пассажиров не сносит. Удар о поверхность остаётся взрывом порыва.
      */
     fun trySharpStop(phantom: TamedPhantomEntity, preSpeed: Float, boost: Float) {
         if (phantom.impactGustCooldown > 0) return
@@ -181,23 +182,35 @@ object PhantomImpactGust {
         val horizontal = 0.95 + share * 0.12
         val lift = 0.18 + share * 0.06
         val dir = Vec3(fx * horizontal, lift, fz * horizontal)
-        val gusts = (5 + speed * 1.8).toInt().coerceIn(5, 16)
+        val radius = (9.6 + speed * 3.45).coerceIn(9.6, 42.0)
+        val gusts = (14 + radius * 0.55).toInt().coerceIn(14, 40)
         repeat(gusts) { index ->
-            val along = 0.35 + index * 0.28
-            val side = (index - gusts / 2.0) * 0.12
+            val along = radius * (0.08 + index.toDouble() / gusts * 0.85)
+            val side = (index - gusts / 2.0) * (radius * 0.045)
+            val rise = (index % 5 - 2) * radius * 0.03
             level.sendParticles(
-                ParticleTypes.GUST,
+                ParticleTypes.POOF,
                 origin.x + fx * along + fz * side,
-                origin.y - 0.05 + along * 0.04,
+                origin.y + rise,
                 origin.z + fz * along - fx * side,
-                1,
-                0.05,
-                0.04,
-                0.05,
-                0.0,
+                3,
+                radius * 0.06,
+                radius * 0.035,
+                radius * 0.06,
+                0.01,
             )
         }
-        level.sendParticles(ParticleTypes.GUST_EMITTER_SMALL, origin.x, origin.y, origin.z, 1, 0.15, 0.08, 0.15, 0.0)
+        level.sendParticles(
+            ParticleTypes.POOF,
+            origin.x,
+            origin.y,
+            origin.z,
+            8,
+            radius * 0.12,
+            radius * 0.05,
+            radius * 0.12,
+            0.02,
+        )
         val volume = (0.8 + (speed / full).coerceAtMost(1.0) * 0.5).toFloat()
         level.playSound(
             null,
@@ -209,7 +222,6 @@ object PhantomImpactGust {
             volume,
             0.85f + phantom.random.nextFloat() * 0.1f,
         )
-        val radius = (3.2 + speed * 1.15).coerceIn(3.2, 14.0)
         extinguish(level, origin, fx, fz, radius)
         val box = phantom.boundingBox.inflate(radius, radius * 0.45, radius)
         val victims = level.getEntitiesOfClass(LivingEntity::class.java, box) { living ->
@@ -231,7 +243,17 @@ object PhantomImpactGust {
             val falloff = closeness * closeness
             if (falloff < 0.04) continue
             startCarry(living, level, dir, reach * falloff, strong = true)
-            level.sendParticles(ParticleTypes.GUST, living.x, living.y + living.bbHeight * 0.5, living.z, 4, 0.3, 0.15, 0.3, 0.0)
+            level.sendParticles(
+                ParticleTypes.POOF,
+                living.x,
+                living.y + living.bbHeight * 0.5,
+                living.z,
+                6,
+                0.55,
+                0.3,
+                0.55,
+                0.02,
+            )
             level.playSound(
                 null,
                 living.x,
@@ -246,8 +268,8 @@ object PhantomImpactGust {
     }
 
     private fun extinguish(level: ServerLevel, origin: Vec3, fx: Double, fz: Double, radius: Double) {
-        val reach = kotlin.math.ceil(radius).toInt().coerceIn(2, 10)
-        val vertical = kotlin.math.ceil(radius * 0.45).toInt().coerceIn(2, 6)
+        val reach = kotlin.math.ceil(radius).toInt().coerceIn(2, 48)
+        val vertical = kotlin.math.ceil(radius * 0.45).toInt().coerceIn(2, 20)
         val base = BlockPos.containing(origin)
         for (dx in -reach..reach) {
             for (dy in -vertical..vertical) {

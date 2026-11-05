@@ -515,6 +515,24 @@ class PhantomFlightModel {
         endCharge()
     }
 
+    /**
+     * Удар или остановка в воде или лаве. Бонус держится, пока фантом в жидкости,
+     * и сбрасывается на выходе: скорость возвращается к крейсерской.
+     */
+    var shedBoostOnLiquidExit: Boolean = false
+
+    fun noteLiquidImpact() {
+        if (rollBoost > 0.05) shedBoostOnLiquidExit = true
+    }
+
+    fun leaveLiquid(cruise: Double) {
+        if (!shedBoostOnLiquidExit) return
+        shedBoostOnLiquidExit = false
+        clearRollBoost()
+        val cap = cruise.coerceAtLeast(0.0)
+        speed = speed.coerceIn(-cap, cap)
+    }
+
     private fun stepHover(input: Input, vc: Double, forward: Float, climb: Float): Output {
         looping = false
         loopTurned = 0f
@@ -635,8 +653,8 @@ class PhantomFlightModel {
         const val ROLL_BOOST_STEP = 0.25
         /** Набор высоты съедает бонус примерно на 0.2 за две секунды. */
         const val CLIMB_DRAIN = 0.2 / 40.0
-        /** В воздухе бонус тает сам, примерно на 0.1 за пять секунд. */
-        const val ROLL_SELF_DECAY = 0.1 / 100.0
+        /** В воздухе бонус тает сам, примерно на 0.1 за две секунды. */
+        const val ROLL_SELF_DECAY = 0.1 / 40.0
         /** Крылья догоняют долю бонуса медленнее, чем складываются в пике. */
         const val BOOST_TUCK = 0.025f
 
