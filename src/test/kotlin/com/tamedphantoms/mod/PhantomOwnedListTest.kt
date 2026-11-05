@@ -23,10 +23,12 @@ class PhantomOwnedListTest {
     @Test
     @DisplayName("Пока чанк не тикает, запись не стираем. Сначала ищем рядом, потом шире")
     fun missingPhantomIsNotDroppedEarly() {
-        assertEquals(0 to false, PhantomOwnedList.afterMiss(0, areaTicking = false))
-        assertEquals(1 to false, PhantomOwnedList.afterMiss(0, areaTicking = true))
-        assertEquals(1 to false, PhantomOwnedList.afterMiss(1, areaTicking = false))
-        assertEquals(0 to true, PhantomOwnedList.afterMiss(1, areaTicking = true))
+        assertEquals(Triple(0, 0, false), PhantomOwnedList.afterMiss(0, 0, areaTicking = false))
+        assertEquals(Triple(1, 0, false), PhantomOwnedList.afterMiss(0, 0, areaTicking = true))
+        assertEquals(Triple(1, 0, false), PhantomOwnedList.afterMiss(1, 12, areaTicking = false))
+        assertEquals(Triple(1, 1, false), PhantomOwnedList.afterMiss(1, 0, areaTicking = true))
+        assertEquals(Triple(1, 39, false), PhantomOwnedList.afterMiss(1, 38, areaTicking = true))
+        assertEquals(Triple(0, 0, true), PhantomOwnedList.afterMiss(1, 39, areaTicking = true))
         assertEquals(PhantomOwnedList.NEAR_RADIUS, PhantomOwnedList.radiusFor(0))
         assertEquals(PhantomOwnedList.WIDE_RADIUS, PhantomOwnedList.radiusFor(1))
     }

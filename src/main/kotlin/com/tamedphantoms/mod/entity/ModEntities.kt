@@ -28,8 +28,8 @@ object ModEntities {
             .fireImmune()
             .passengerAttachments(
                 *arrayOf(
-                    Vec3(0.0, 0.46, -0.1),
-                    Vec3(0.0, 0.46, -0.56),
+                    Vec3(0.0, 0.46, 0.0875),
+                    Vec3(0.0, 0.46, -0.3725),
                 ),
             )
 }

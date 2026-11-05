@@ -147,6 +147,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
         private val DATA_EFFORT: EntityDataAccessor<Float> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
+        private val DATA_ROLL_BOOST: EntityDataAccessor<Float> =
+            SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.FLOAT)
         private val DATA_MANEUVER: EntityDataAccessor<Int> =
             SynchedEntityData.defineId(TamedPhantomEntity::class.java, EntityDataSerializers.INT)
 
@@ -266,6 +268,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         builder.define(DATA_SHAKE_STYLE, SHAKE_WATER)
         builder.define(DATA_TUCK, 0f)
         builder.define(DATA_EFFORT, 0f)
+        builder.define(DATA_ROLL_BOOST, 0f)
         builder.define(DATA_MANEUVER, 0)
     }
 
@@ -313,7 +316,12 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
     /** Огнестойкость фантому не нужна: то же зелье даёт сопротивление урону. */
     override fun addEffect(effectInstance: MobEffectInstance, entity: Entity?): Boolean {
-        return super.addEffect(PhantomTreats.forPhantom(effectInstance), entity)
+        val applied = super.addEffect(PhantomTreats.forPhantom(effectInstance), entity)
+        if (applied && this.tamed && effectInstance.effect == MobEffects.WATER_BREATHING) {
+            val player = (entity as? ServerPlayer) ?: (this.findOwnerPlayer() as? ServerPlayer)
+            if (player != null) ModAdvancements.grantStingray(player)
+        }
+        return applied
     }
 
     /** Ответ на крик хозяина. Новый круг ответов не поднимает. */
@@ -600,6 +608,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.entityData.set(DATA_EFFORT, effort.coerceIn(0f, 1f))
     }
 
+    /** Бонус скорости за бочку. Его слышат и видят все клиенты, не только пилот. */
+    fun setRollBoost(boost: Float) {
+        this.entityData.set(DATA_ROLL_BOOST, boost.coerceAtLeast(0f))
+    }
+
     private var reportedPitch: Float = 0f
 
     /** Клиент пилота: круиз и двойные нажатия, их выставляет обработчик клавиш. */
@@ -607,6 +620,27 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     var clientLoopRequest: Boolean = false
     var clientRollRequest: Int = 0
     var clientZoomRequest: Boolean = false
+    var clientRollBoostRequest: Boolean = false
+
+    /** Во время бочки можно нажать R и начать копить скорость. На потолке подсказки нет. */
+    val rollBoostReady: Boolean
+        get() = this.flightModel.rollBoostReady
+
+    /** Набор уже идёт: повторное R доделывает оборот. */
+    val rollBoostCharging: Boolean
+        get() = this.flightModel.rollBoostCharging
+
+    fun rollBoostAmount(): Float = this.flightModel.rollBoost.toFloat()
+
+    /** Скорость удара о поверхность, пока бонус на потолке. Забирает пакет пилота. */
+    var clientImpactGust: Vec3? = null
+
+    private var impactWasHorizontal = false
+
+    private var impactWasVertical = false
+
+    /** Пауза, чтобы скольжение по стене не сдувало всех каждый тик. */
+    var impactGustCooldown: Int = 0
 
     /** Клиент пилота: в петле можно рвануть вверх. Подсказку и клавишу ведёт обработчик клавиш. */
     val zoomWindowOpen: Boolean
@@ -1063,6 +1097,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         if (level !is ServerLevel) {
             return
         }
+        if (this.impactGustCooldown > 0) this.impactGustCooldown--
 
         this.applyConfiguredSize()
         this.tickWetExit()
@@ -1300,7 +1335,10 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     /** 0..1 — сила встречного ветра для звука: верхом, на скорости выше крейсерской. */
     fun windStrength(): Float {
         if (!this.isVehicle || this.isInWater || this.isUnderWater || this.isOrderedToSit()) return 0f
-        return ((this.airspeedRatio - 0.85f) / 1.1f).coerceIn(0f, 1f)
+        val fromSpeed = ((this.airspeedRatio - 0.85f) / 1.1f).coerceIn(0f, 1f)
+        val cap = ServerConfig.rollBoostLimit().toFloat().coerceAtLeast(0.25f)
+        val fromBoost = (this.entityData.get(DATA_ROLL_BOOST) / cap).coerceIn(0f, 1f)
+        return maxOf(fromSpeed, fromBoost)
     }
 
     /** В воздухе: не сидит, не в воде и не ползёт по земле. Круиз смотрит сюда. */
@@ -1722,7 +1760,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
      * Конец хвоста в мире. Длина и высота — из ванильной сетки: 13 пикселей назад от тела
      * плюс сдвиг рендера, масштаб `1 + 0.15 * размер`. Наклон — корпус и кость хвоста.
      */
-    private fun tailTip(): Vec3 {
+    fun tailTip(): Vec3 {
         val scale = 1.0 + 0.15 * this.phantomSize
         val back = 1.0 * scale
         val lift = 0.28 * scale
@@ -1733,9 +1771,9 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         val cp = Mth.cos(pitch).toDouble()
         val sp = Mth.sin(pitch).toDouble()
         return Vec3(
-            this.x + (-fx * cp) * back + (fx * sp) * lift,
-            this.y + sp * back + cp * lift,
-            this.z + (-fz * cp) * back + (fz * sp) * lift,
+            this.x - fx * cp * back - fx * sp * lift,
+            this.y - sp * back + cp * lift,
+            this.z - fz * cp * back - fz * sp * lift,
         )
     }
 
@@ -1942,7 +1980,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             PhantomFlightPace.waterScale(this.isUnderWater) *
             PhantomEffectSpeed.scale(this) *
             PhantomEffectSpeed.scale(pilot) *
-            PhantomEffectSpeed.dolphin(this)
+            PhantomEffectSpeed.dolphin(this) *
+            PhantomEffectSpeed.waterBreathing(this)
         this.cruiseSpeedUsed = cruiseSpeed
         val inLiquid = this.isInWater || this.isUnderWater || this.isInLava
         val figuring = this.clientLoopRequest || this.clientRollRequest != 0 || this.clientZoomRequest ||
@@ -1966,11 +2005,20 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 rollRequest = this.clientRollRequest,
                 zoomRequest = this.clientZoomRequest,
                 zoomBoost = ServerConfig.zoomBoost(),
+                rollBoostRequest = this.clientRollBoostRequest,
+                rollBoostLimit = ServerConfig.rollBoostLimit(),
+                rollBoostStep = ServerConfig.rollBoostStep(),
+                rollClimbDrain = ServerConfig.rollBoostClimbDrain() / 40.0,
+                rollSpin = ServerConfig.rollBoostSpin(),
+                rollMinTicks = ServerConfig.rollBoostMinTicks(),
+                inLiquid = inLiquid,
             ),
         )
         this.clientLoopRequest = false
         this.clientRollRequest = 0
         this.clientZoomRequest = false
+        this.clientRollBoostRequest = false
+        this.setRollBoost(this.flightModel.rollBoost.toFloat())
         if (this.flightModel.completedLoop && this.isOwnedBy(pilot)) {
             this.loopReadyToReport = true
         }
@@ -2015,7 +2063,17 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         // На большой скорости разворот вписывается дугой: скорость доворачивает за курсом не сразу.
         val grip = if (this.airspeedRatio > 1.4f) 0.3 else 0.55
         this.deltaMovement = this.deltaMovement.lerp(target, grip)
+        val impact = this.deltaMovement
+        val limit = ServerConfig.rollBoostLimit()
+        val atCap = limit > 0.05 && this.flightModel.rollBoost >= limit - 0.08
         this.move(MoverType.SELF, this.deltaMovement)
+        val freshWall = this.horizontalCollision && !this.impactWasHorizontal
+        val freshFloor = this.verticalCollision && !this.impactWasVertical
+        this.impactWasHorizontal = this.horizontalCollision
+        this.impactWasVertical = this.verticalCollision
+        if (atCap && (freshWall || freshFloor) && impact.length() > 0.55) {
+            this.clientImpactGust = impact
+        }
         if (this.horizontalCollision && medium == PhantomFlightModel.Medium.AIR && this.airspeedRatio > 0.6f) {
             this.flightModel.onCollision()
         }

@@ -49,6 +49,20 @@ class PhantomFlightModel {
         val zoomRequest: Boolean = false,
         /** Сила рывка с сервера. 8 — обычная, 0 — рывка нет. */
         val zoomBoost: Double = 1.0,
+        /** R во время бочки: начать набор или закончить его на текущем обороте. */
+        val rollBoostRequest: Boolean = false,
+        /** Потолок бонуса скорости за бочку, блоки за тик. 0 — набора нет. */
+        val rollBoostLimit: Double = 2.0,
+        /** Сколько блоков за тик даёт один полный оборот. 0 — приёма нет. */
+        val rollBoostStep: Double = 0.2,
+        /** Сколько бонуса съедает один тик набора высоты. */
+        val rollClimbDrain: Double = 0.2 / 40.0,
+        /** Длительность каждого следующего оборота — эта доля от предыдущего. 1 — без ускорения. */
+        val rollSpin: Double = 0.85,
+        /** Самый короткий оборот заряженной бочки, в тиках. */
+        val rollMinTicks: Int = 6,
+        /** Вода или лава: бонус не тает сам и не тает на наборе высоты. */
+        val inLiquid: Boolean = false,
     )
 
     data class Output(
@@ -93,6 +107,21 @@ class PhantomFlightModel {
     val rolling: Boolean
         get() = rollLeft > 0f
 
+    /**
+     * Бонус скорости после заряженных бочек, блоки за тик.
+     * Держится, пока фантом летит вперёд. Набор высоты съедает его понемногу.
+     */
+    var rollBoost: Double = 0.0
+        private set
+
+    /** Во время бочки можно нажать R и начать копить скорость. На потолке приёма уже нет. */
+    val rollBoostReady: Boolean
+        get() = rollLeft > 0f && !rollCharging && chargeOpen()
+
+    /** Бочка уже копится: повторное R доделывает текущий оборот и отпускает фантома. */
+    val rollBoostCharging: Boolean
+        get() = rollCharging
+
     /** Идёт рывок вверх: крылья сложены, нос тянется почти отвесно. */
     var zooming: Boolean = false
         private set
@@ -110,6 +139,14 @@ class PhantomFlightModel {
     private var rollLeft = 0f
     private var rollDirection = 0f
     private var rollTicks = 0
+    private var rollCharging = false
+    private var rollFinish = false
+    private var rollSpan = ROLL_TICKS
+    private var boostLimit = 2.0
+    private var boostStep = 0.2
+    private var climbDrain = 0.2 / 40.0
+    private var rollSpin = 0.85
+    private var rollMinTicks = 6
     private var stalled = false
     private var zoomTicks = 0
     /** Скорость сразу после толчка. За окно рывка она линейно сходится к обычной. */
@@ -130,17 +167,20 @@ class PhantomFlightModel {
         loopTurned = 0f
         rollLeft = 0f
         rollTicks = 0
+        rollCharging = false
+        rollFinish = false
+        rollSpan = ROLL_TICKS
+        rollBoost = 0.0
         stalled = false
         endZoom()
     }
 
-    /** Удар о стену гасит скорость и прерывает фигуры. */
+    /** Удар о стену гасит скорость и прерывает фигуры. Уже набранный бонус остаётся. */
     fun onCollision() {
         speed *= 0.45
         looping = false
         loopTurned = 0f
-        rollLeft = 0f
-        rollTicks = 0
+        abortRoll()
         endZoom()
         pathPitch = wrap(pathPitch).coerceIn(-45f, 45f)
     }
@@ -148,6 +188,11 @@ class PhantomFlightModel {
     fun step(input: Input): Output {
         completedLoop = false
         zoomStarted = false
+        boostLimit = input.rollBoostLimit.coerceIn(0.0, 64.0)
+        boostStep = input.rollBoostStep.coerceIn(0.0, 8.0)
+        climbDrain = input.rollClimbDrain.coerceAtLeast(0.0)
+        rollSpin = input.rollSpin.coerceIn(0.5, 1.0)
+        rollMinTicks = input.rollMinTicks.coerceIn(2, ROLL_TICKS)
         val vc = input.cruiseSpeed.coerceAtLeast(1.0E-4)
         val medium = if (input.medium == Medium.WATER && this.figureAsked(input)) Medium.AIR else input.medium
         return when (medium) {
@@ -168,32 +213,49 @@ class PhantomFlightModel {
         val climb = sign(input.climb)
         val flapping = forward > FORWARD_EPS
         val reversing = forward < -FORWARD_EPS
-
-        val tucking = zooming || (climb < 0f && !flapping && !reversing && speed > vc * 0.4)
-        val tuckRate = when {
-            zooming -> ZOOM_TUCK
-            tucking -> TUCK_IN
-            else -> TUCK_OUT
-        }
-        tuck = approach(tuck, if (tucking) 1f else 0f, tuckRate)
+        val strafeOnly = abs(forward) <= FORWARD_EPS && abs(input.strafe) > FORWARD_EPS
 
         if (input.loopRequest && !looping && !zooming && flapping && speed >= vc * LOOP_ENTRY && abs(wrap(pathPitch)) < 50f) {
             looping = true
             loopTurned = 0f
             loopDirection = 1f
             stalled = false
-            rollLeft = 0f
-            rollTicks = 0
+            abortRoll()
         }
         if (input.rollRequest != 0 && rollTicks == 0 && !looping && !zooming && speed >= vc * ROLL_ENTRY && !reversing) {
             rollDirection = if (input.rollRequest > 0) -1f else 1f
             rollLeft = FULL_TURN
-            rollTicks = ROLL_TICKS
+            rollSpan = ROLL_TICKS
+            rollTicks = rollSpan
         }
+        if (input.rollBoostRequest && rollLeft > 0f) {
+            if (!rollCharging && chargeOpen()) {
+                rollCharging = true
+            } else if (rollCharging) {
+                rollFinish = true
+            }
+        }
+
+        val boostTuck = if (boostLimit > 1.0E-6) (rollBoost / boostLimit).toFloat().coerceIn(0f, 1f) else 0f
+        val diveTuck = climb < 0f && !flapping && !reversing && speed > vc * 0.4
+        val tuckTarget = when {
+            zooming -> 1f
+            diveTuck -> 1f
+            else -> boostTuck
+        }
+        val tuckRate = when {
+            zooming -> ZOOM_TUCK
+            !zooming && !diveTuck && boostTuck > 0f -> BOOST_TUCK
+            tuckTarget > tuck -> TUCK_IN
+            else -> TUCK_OUT
+        }
+        tuck = approach(tuck, tuckTarget, tuckRate)
         if (input.zoomRequest && zoomReady && input.zoomBoost > 0.0 && !reversing) {
             startZoom(vc, input.zoomBoost)
         }
         if (zoomGrace > 0) zoomGrace--
+
+        if (strafeOnly && rollLeft <= 0f && !looping && !zooming) clearRollBoost()
 
         if (reversing || (!flapping && !looping && !zooming && speed < vc * HOVER_SPEED && speed > -vc)) {
             return stepHover(input, vc, forward, climb)
@@ -213,13 +275,16 @@ class PhantomFlightModel {
         if (vertical > 0.0) vertical *= input.lift
         val along = speed * cos(pitchRad)
         val juke = if (rollTicks > 0) {
-            val progress = 1f - rollTicks.toFloat() / ROLL_TICKS
+            val progress = 1f - rollTicks.toFloat() / rollSpan.coerceAtLeast(1)
             -rollDirection * vc * ROLL_JUKE * sin(progress * Math.PI)
         } else {
             0.0
         }
         val lateral = input.strafe.coerceIn(-1f, 1f) * vc * STRAFE_SHARE + juke
         if (rollTicks > 0) rollTicks--
+        if (!input.inLiquid && !looping && !zooming && climb > 0f && vertical > 0.0 && rollBoost > 0.0) {
+            rollBoost = (rollBoost - climbDrain).coerceAtLeast(0.0)
+        }
         return Output(along, lateral, vertical)
     }
 
@@ -234,8 +299,7 @@ class PhantomFlightModel {
         looping = false
         loopTurned = 0f
         stalled = false
-        rollLeft = 0f
-        rollTicks = 0
+        abortRoll()
         zoomGrace = 0
         zooming = true
         zoomStarted = true
@@ -315,7 +379,8 @@ class PhantomFlightModel {
         }
         val pitchRad = Math.toRadians(pathPitch.toDouble())
         speed -= GRAVITY * vc * sin(pitchRad)
-        val wanted = vc * forward.coerceAtLeast(0f)
+        val ceiling = vc + rollBoost
+        val wanted = ceiling * forward.coerceAtLeast(0f)
         var work = 0f
         if (flapping && speed < wanted) {
             val gain = if (pathPitch > 5f) CLIMB_THRUST else THRUST
@@ -324,8 +389,8 @@ class PhantomFlightModel {
         } else if (flapping) {
             work = 0.18f
         }
-        if (speed > vc) {
-            val excess = (speed - vc) / vc
+        if (speed > ceiling) {
+            val excess = (speed - ceiling) / vc
             speed -= HIGH_DRAG * (1.0 - tuck * 0.55) * excess * (1.0 + excess) * vc
         }
         // Раскрытые крылья без взмахов — воздушный тормоз. В пике и в рывке его нет, там держит лобовое сопротивление.
@@ -334,16 +399,35 @@ class PhantomFlightModel {
         }
         speed -= abs(yawDelta) / 90.0 * TURN_COST * speed
         if (looping && pathPitch > 0f) work = max(work, 0.7f)
-        speed = speed.coerceIn(0.0, vc * MAX_SPEED)
+        speed = speed.coerceIn(0.0, max(vc * MAX_SPEED, ceiling))
         effort = approach(effort, work * (1f - tuck), 0.25f)
     }
 
     private fun stepRoll(input: Input, vc: Double) {
         if (rollLeft > 0f) {
-            val step = min(rollLeft, FULL_TURN / ROLL_TICKS)
+            val step = min(rollLeft, FULL_TURN / rollSpan.coerceAtLeast(1))
             roll += step * rollDirection
             rollLeft -= step
-            if (rollLeft <= 0f) roll = wrap(roll)
+            if (rollLeft <= 0f) {
+                roll = wrap(roll)
+                if (rollCharging && chargeOpen()) {
+                    rollBoost = (rollBoost + boostStep).coerceAtMost(boostLimit)
+                    val keep = !rollFinish && chargeOpen()
+                    if (keep) {
+                        rollSpan = fasterSpan()
+                        rollLeft = FULL_TURN
+                        rollTicks = rollSpan
+                    } else {
+                        rollCharging = false
+                        rollFinish = false
+                        rollTicks = 0
+                    }
+                } else if (rollCharging) {
+                    rollCharging = false
+                    rollFinish = false
+                    rollTicks = 0
+                }
+            }
             return
         }
         val strafeBank = -input.strafe.coerceIn(-1f, 1f) * PhantomFlightAttitude.BANK
@@ -351,12 +435,39 @@ class PhantomFlightModel {
         roll = approach(wrap(roll), (strafeBank + turnBank).coerceIn(-MAX_TURN_BANK, MAX_TURN_BANK), 5f)
     }
 
+    /** Потолок или нулевой шаг закрывают приём. Обычная бочка при этом остаётся. */
+    private fun chargeOpen(): Boolean =
+        boostLimit > 1.0E-6 && boostStep > 1.0E-6 && rollBoost < boostLimit - 1.0E-4
+
+    /** Каждый следующий оборот короче предыдущего, но не короче серверного предела. */
+    private fun fasterSpan(): Int {
+        val spun = kotlin.math.floor(rollSpan * rollSpin).toInt()
+        val dropped = if (rollSpin < 0.999 && spun >= rollSpan) rollSpan - 1 else spun
+        return dropped.coerceIn(rollMinTicks, ROLL_TICKS)
+    }
+
+    /** Незаконченный оборот не прибавляет скорость. Уже накопленный бонус остаётся. */
+    private fun abortRoll() {
+        rollLeft = 0f
+        rollTicks = 0
+        rollSpan = ROLL_TICKS
+        rollCharging = false
+        rollFinish = false
+    }
+
+    private fun clearRollBoost() {
+        rollBoost = 0.0
+        rollCharging = false
+        rollFinish = false
+    }
+
     private fun stepHover(input: Input, vc: Double, forward: Float, climb: Float): Output {
         looping = false
         loopTurned = 0f
         stalled = false
-        rollLeft = 0f
-        rollTicks = 0
+        abortRoll()
+        val risingInLiquid = input.inLiquid && climb > 0f && forward >= -FORWARD_EPS
+        if (!risingInLiquid) clearRollBoost()
         endZoom()
         hover = approach(hover, 1f, 0.1f)
         val wanted = if (forward < -FORWARD_EPS) vc * forward * PhantomHover.REVERSE_SPEED else 0.0
@@ -374,8 +485,8 @@ class PhantomFlightModel {
     private fun stepGround(input: Input, vc: Double): Output {
         looping = false
         loopTurned = 0f
-        rollLeft = 0f
-        rollTicks = 0
+        abortRoll()
+        clearRollBoost()
         stalled = false
         endZoom()
         tuck = approach(tuck, 0f, TUCK_OUT)
@@ -396,14 +507,18 @@ class PhantomFlightModel {
     private fun stepWater(input: Input, vc: Double): Output {
         looping = false
         loopTurned = 0f
-        rollLeft = 0f
-        rollTicks = 0
+        abortRoll()
         stalled = false
         endZoom()
-        tuck = approach(tuck, 0f, TUCK_OUT)
         val climb = sign(input.climb)
         val forward = input.forward.coerceIn(-1f, 1f)
-        val wanted = vc * forward * if (forward < 0f) PhantomHover.REVERSE_SPEED else 1.0
+        val reversing = forward < -FORWARD_EPS
+        val strafeOnly = abs(forward) <= FORWARD_EPS && abs(input.strafe) > FORWARD_EPS
+        val halted = abs(forward) <= FORWARD_EPS && speed < vc * HOVER_SPEED && speed > -vc
+        if (reversing || strafeOnly || (halted && climb <= 0f)) clearRollBoost()
+        val boostTuck = if (boostLimit > 1.0E-6) (rollBoost / boostLimit).toFloat().coerceIn(0f, 1f) else 0f
+        tuck = approach(tuck, boostTuck, if (boostTuck > 0f) BOOST_TUCK else TUCK_OUT)
+        val wanted = (vc + rollBoost) * forward * if (forward < 0f) PhantomHover.REVERSE_SPEED else 1.0
         val grip = if (abs(forward) > FORWARD_EPS) WATER_GRIP else WATER_GLIDE
         speed += (wanted - speed) * grip
         val target = when {
@@ -452,6 +567,12 @@ class PhantomFlightModel {
         const val ROLL_ENTRY = 0.5
         const val ROLL_TICKS = 16
         const val ROLL_JUKE = 0.38
+        /** Сколько блоков за тик добавляет один полный оборот заряженной бочки. */
+        const val ROLL_BOOST_STEP = 0.2
+        /** Набор высоты съедает бонус примерно на 0.2 за две секунды. */
+        const val CLIMB_DRAIN = 0.2 / 40.0
+        /** Крылья догоняют долю бонуса медленнее, чем складываются в пике. */
+        const val BOOST_TUCK = 0.025f
 
         /** С этого угла петли (нос смотрит вниз) седоку предлагают рывок вверх. */
         const val ZOOM_WINDOW = 270f

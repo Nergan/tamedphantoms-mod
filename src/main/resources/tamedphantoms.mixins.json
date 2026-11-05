@@ -10,7 +10,8 @@
     "MoveControlMobAccessor",
     "PhantomSpawnerMixin",
     "PhantomInteractMixin",
-    "PhantomRideTeleportMixin"
+    "PhantomRideTeleportMixin",
+    "PhantomPortalRideMixin"
   ],
   "client": [
     "PhantomModelLookMixin",

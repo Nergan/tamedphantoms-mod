@@ -28,6 +28,7 @@ object ModAdvancements {
     private val FILTH_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "what_filth")
     private val NASTY_HEAL_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "nasty_heal")
     private val OVERLOAD_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "sensory_overload")
+    private val STINGRAY_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "stingray")
 
     fun grantTamePhantom(player: ServerPlayer) = grant(player, TAME_PHANTOM_ID, "tamed_phantom")
 
@@ -44,6 +45,8 @@ object ModAdvancements {
     fun grantNastyHeal(player: ServerPlayer) = grant(player, NASTY_HEAL_ID, "fed_harming")
 
     fun grantOverload(player: ServerPlayer) = grant(player, OVERLOAD_ID, "fed_night_vision")
+
+    fun grantStingray(player: ServerPlayer) = grant(player, STINGRAY_ID, "breathed")
 
     private fun grant(player: ServerPlayer, advancementId: ResourceLocation, criterion: String) {
         try {

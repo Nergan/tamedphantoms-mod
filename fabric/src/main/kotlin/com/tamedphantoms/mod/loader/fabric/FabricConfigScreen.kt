@@ -84,6 +84,21 @@ object FabricConfigScreen {
         category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.zoom_boost", server.zoomBoostValue, ServerConfig.DEFAULT_ZOOM_BOOST, 0.0, ServerConfig.MAX_ZOOM_BOOST, remote) {
             server.zoomBoostValue = it
         })
+        category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.roll_boost_limit", server.rollBoostLimitValue, ServerConfig.DEFAULT_ROLL_BOOST_LIMIT, 0.0, ServerConfig.MAX_ROLL_BOOST_LIMIT, remote) {
+            server.rollBoostLimitValue = it
+        })
+        category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.roll_boost_step", server.rollBoostStepValue, ServerConfig.DEFAULT_ROLL_BOOST_STEP, 0.0, ServerConfig.MAX_ROLL_BOOST_STEP, remote) {
+            server.rollBoostStepValue = it
+        })
+        category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.roll_boost_climb_drain", server.rollClimbDrainValue, ServerConfig.DEFAULT_ROLL_CLIMB_DRAIN, 0.0, ServerConfig.MAX_ROLL_CLIMB_DRAIN, remote) {
+            server.rollClimbDrainValue = it
+        })
+        category.addEntry(decimal(entries, "tamedphantoms.configuration.flight.roll_boost_spin", server.rollSpinValue, ServerConfig.DEFAULT_ROLL_SPIN, ServerConfig.MIN_ROLL_SPIN, 1.0, remote) {
+            server.rollSpinValue = it
+        })
+        category.addEntry(whole(entries, "tamedphantoms.configuration.flight.roll_boost_min_ticks", server.rollMinTicksValue, ServerConfig.DEFAULT_ROLL_MIN_TICKS, 2, ServerConfig.MAX_ROLL_MIN_TICKS, remote) {
+            server.rollMinTicksValue = it
+        })
         category.addEntry(slider(entries, "tamedphantoms.configuration.flight.camera_horizon_hold", client.horizonHold, ClientConfig.DEFAULT_HORIZON_HOLD, ClientConfig.MAX_HORIZON_HOLD) {
             client.horizonHold = it
         })

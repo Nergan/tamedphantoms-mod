@@ -24,6 +24,11 @@ data class PhantomServerSettingsPayload(
     val immortalPhantoms: Boolean,
     val stackedScreams: Boolean,
     val zoomBoost: Double = ServerConfig.DEFAULT_ZOOM_BOOST,
+    val rollBoostLimit: Double = ServerConfig.DEFAULT_ROLL_BOOST_LIMIT,
+    val rollBoostStep: Double = ServerConfig.DEFAULT_ROLL_BOOST_STEP,
+    val rollBoostClimbDrain: Double = ServerConfig.DEFAULT_ROLL_CLIMB_DRAIN,
+    val rollBoostSpin: Double = ServerConfig.DEFAULT_ROLL_SPIN,
+    val rollBoostMinTicks: Int = ServerConfig.DEFAULT_ROLL_MIN_TICKS,
 ) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
@@ -47,9 +52,17 @@ data class PhantomServerSettingsPayload(
                 buf.writeVarInt(payload.phantomSize)
                 buf.writeBoolean(payload.immortalPhantoms)
                 buf.writeBoolean(payload.stackedScreams)
-                if (RideExtras.enabled) buf.writeDouble(payload.zoomBoost)
+                if (RideExtras.enabled) {
+                    buf.writeDouble(payload.zoomBoost)
+                    buf.writeDouble(payload.rollBoostLimit)
+                    buf.writeDouble(payload.rollBoostStep)
+                    buf.writeDouble(payload.rollBoostClimbDrain)
+                    buf.writeDouble(payload.rollBoostSpin)
+                    buf.writeVarInt(payload.rollBoostMinTicks)
+                }
             },
             { buf ->
+                val extras = RideExtras.enabled
                 PhantomServerSettingsPayload(
                     buf.readUtf(),
                     buf.readUtf(),
@@ -64,7 +77,12 @@ data class PhantomServerSettingsPayload(
                     buf.readVarInt(),
                     buf.readBoolean(),
                     buf.readBoolean(),
-                    if (RideExtras.enabled) buf.readDouble() else ServerConfig.DEFAULT_ZOOM_BOOST,
+                    if (extras) buf.readDouble() else ServerConfig.DEFAULT_ZOOM_BOOST,
+                    if (extras) buf.readDouble() else ServerConfig.DEFAULT_ROLL_BOOST_LIMIT,
+                    if (extras) buf.readDouble() else ServerConfig.DEFAULT_ROLL_BOOST_STEP,
+                    if (extras) buf.readDouble() else ServerConfig.DEFAULT_ROLL_CLIMB_DRAIN,
+                    if (extras) buf.readDouble() else ServerConfig.DEFAULT_ROLL_SPIN,
+                    if (extras) buf.readVarInt() else ServerConfig.DEFAULT_ROLL_MIN_TICKS,
                 )
             },
         )

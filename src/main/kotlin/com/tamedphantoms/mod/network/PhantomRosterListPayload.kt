@@ -31,6 +31,7 @@ data class PhantomRosterListPayload(val rows: List<PhantomRosterRow>) : CustomPa
                     buf.writeInt(row.bodyDye)
                     buf.writeInt(row.saddleDye)
                     buf.writeBoolean(row.luminous)
+                    buf.writeUtf(row.id.take(64))
                 }
             },
             { buf ->
@@ -48,6 +49,7 @@ data class PhantomRosterListPayload(val rows: List<PhantomRosterRow>) : CustomPa
                             buf.readInt(),
                             buf.readInt(),
                             buf.readBoolean(),
+                            buf.readUtf(64),
                         ),
                     )
                 }

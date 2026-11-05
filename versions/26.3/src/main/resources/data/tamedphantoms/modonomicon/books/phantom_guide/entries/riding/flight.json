@@ -31,6 +31,24 @@
       "id": "p4",
       "title": "",
       "text": "tamedphantoms.guide.page.flight.4"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p5",
+      "title": "",
+      "text": "tamedphantoms.guide.page.flight.5"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p6",
+      "title": "",
+      "text": "tamedphantoms.guide.page.flight.6"
+    },
+    {
+      "type": "modonomicon:text",
+      "id": "p7",
+      "title": "",
+      "text": "tamedphantoms.guide.page.flight.7"
     }
   ]
 }

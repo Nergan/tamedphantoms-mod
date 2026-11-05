@@ -97,6 +97,11 @@ object FabricSettings {
         server.immortal,
         server.stackedScreams,
         server.zoomBoostValue,
+        server.rollBoostLimitValue,
+        server.rollBoostStepValue,
+        server.rollClimbDrainValue,
+        server.rollSpinValue,
+        server.rollMinTicksValue,
     )
 
     fun apply(payload: PhantomServerSettingsPayload) {
@@ -114,6 +119,11 @@ object FabricSettings {
         server.immortal = payload.immortalPhantoms
         server.stackedScreams = payload.stackedScreams
         server.zoomBoostValue = payload.zoomBoost
+        server.rollBoostLimitValue = payload.rollBoostLimit
+        server.rollBoostStepValue = payload.rollBoostStep
+        server.rollClimbDrainValue = payload.rollBoostClimbDrain
+        server.rollSpinValue = payload.rollBoostSpin
+        server.rollMinTicksValue = payload.rollBoostMinTicks
     }
 
     private fun clientFile(): Path = FabricLoader.getInstance().configDir.resolve("tamedphantoms-client.toml")
@@ -182,6 +192,11 @@ object FabricSettings {
         var immortal: Boolean = false
         var stackedScreams: Boolean = true
         var zoomBoostValue: Double = ServerConfig.DEFAULT_ZOOM_BOOST
+        var rollBoostLimitValue: Double = ServerConfig.DEFAULT_ROLL_BOOST_LIMIT
+        var rollBoostStepValue: Double = ServerConfig.DEFAULT_ROLL_BOOST_STEP
+        var rollClimbDrainValue: Double = ServerConfig.DEFAULT_ROLL_CLIMB_DRAIN
+        var rollSpinValue: Double = ServerConfig.DEFAULT_ROLL_SPIN
+        var rollMinTicksValue: Int = ServerConfig.DEFAULT_ROLL_MIN_TICKS
 
         override fun tameItemId() = tameItem
         override fun releaseItemId() = releaseItem
@@ -197,6 +212,11 @@ object FabricSettings {
         override fun immortalPhantoms() = immortal
         override fun stackedScreams() = stackedScreams
         override fun zoomBoost() = zoomBoostValue
+        override fun rollBoostLimit() = rollBoostLimitValue
+        override fun rollBoostStep() = rollBoostStepValue
+        override fun rollBoostClimbDrain() = rollClimbDrainValue
+        override fun rollBoostSpin() = rollSpinValue
+        override fun rollBoostMinTicks() = rollMinTicksValue
 
         fun read(values: Map<String, String>) {
             tameItem = values["taming.tame_item"] ?: tameItem
@@ -207,7 +227,14 @@ object FabricSettings {
             size = values.int("taming.phantom_size", size)
             immortal = values.bool("taming.immortal_phantoms", immortal)
             flightSpeedValue = values.double("flight.flight_speed", flightSpeedValue)
-            if (RideExtras.enabled) zoomBoostValue = values.double("flight.zoom_boost", zoomBoostValue)
+            if (RideExtras.enabled) {
+                zoomBoostValue = values.double("flight.zoom_boost", zoomBoostValue)
+                rollBoostLimitValue = values.double("flight.roll_boost_limit", rollBoostLimitValue)
+                rollBoostStepValue = values.double("flight.roll_boost_step", rollBoostStepValue)
+                rollClimbDrainValue = values.double("flight.roll_boost_climb_drain", rollClimbDrainValue)
+                rollSpinValue = values.double("flight.roll_boost_spin", rollSpinValue)
+                rollMinTicksValue = values.int("flight.roll_boost_min_ticks", rollMinTicksValue)
+            }
             screamRadiusValue = values.double("scream.scream_radius", screamRadiusValue)
             screamCooldown = values.int("scream.scream_cooldown_seconds", screamCooldown)
             stackedScreams = values.bool("scream.stacked_screams", stackedScreams)
@@ -219,7 +246,16 @@ object FabricSettings {
 
         fun write(): String {
             val flight = "flight_speed = $flightSpeedValue\n" +
-                if (RideExtras.enabled) "zoom_boost = $zoomBoostValue\n" else ""
+                if (RideExtras.enabled) {
+                    "zoom_boost = $zoomBoostValue\n" +
+                        "roll_boost_limit = $rollBoostLimitValue\n" +
+                        "roll_boost_step = $rollBoostStepValue\n" +
+                        "roll_boost_climb_drain = $rollClimbDrainValue\n" +
+                        "roll_boost_spin = $rollSpinValue\n" +
+                        "roll_boost_min_ticks = $rollMinTicksValue\n"
+                } else {
+                    ""
+                }
             return """
                 [taming]
                 tame_item = "$tameItem"

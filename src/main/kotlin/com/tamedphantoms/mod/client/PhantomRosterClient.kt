@@ -2,6 +2,7 @@ package com.tamedphantoms.mod.client
 
 import com.tamedphantoms.mod.entity.PhantomRosterRow
 import com.tamedphantoms.mod.network.PhantomRosterPayload
+import com.tamedphantoms.mod.network.PhantomRosterSummonPayload
 import com.tamedphantoms.mod.platform.ModNetwork
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.MutableComponent
@@ -28,6 +29,11 @@ object PhantomRosterClient {
         ModNetwork.sendToServer(PhantomRosterPayload)
     }
 
+    fun summon(id: String) {
+        if (id.isBlank()) return
+        ModNetwork.sendToServer(PhantomRosterSummonPayload(id))
+    }
+
     fun accept(rows: List<PhantomRosterRow>) {
         this.rows = rows
         ready = true
@@ -40,8 +46,14 @@ object PhantomRosterClient {
         } else {
             Component.literal(row.name)
         }
+        val dyed = dye(row.bodyDye)
+        val titled = if (dyed == null) {
+            name.copy()
+        } else {
+            name.copy().append(Component.literal(" (")).append(dyed).append(Component.literal(")"))
+        }
         val where = row.dimension.substringAfter(':')
-        return name.copy().append(Component.literal(" — $where"))
+        return titled.append(Component.literal(" — $where"))
     }
 
     fun details(row: PhantomRosterRow): Component {

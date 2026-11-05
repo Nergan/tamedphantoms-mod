@@ -7,8 +7,11 @@ import com.tamedphantoms.mod.event.PhantomRoster
 import com.tamedphantoms.mod.client.PhantomRosterClient
 import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
+import com.tamedphantoms.mod.network.PhantomRosterSummonPayload
 import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import com.tamedphantoms.mod.util.PhantomImpactGust
+import com.tamedphantoms.mod.util.PhantomRollTrail
 import com.tamedphantoms.mod.util.PhantomZoomBurst
 import net.minecraft.server.level.ServerPlayer
 import net.neoforged.bus.api.IEventBus
@@ -22,7 +25,7 @@ object ModNetworking {
 
     private fun onRegisterPayloadHandlers(event: RegisterPayloadHandlersEvent) {
         // У сборки с рывком из петли свой канал: версия отличает её от старых клиентов и серверов.
-        val registrar = event.registrar(if (RideExtras.enabled) "8" else "7")
+        val registrar = event.registrar(if (RideExtras.enabled) "9" else "7")
 
         if (RideExtras.enabled) {
             registrar.playToServer(
@@ -42,6 +45,15 @@ object ModNetworking {
                 if (vehicle is TamedPhantomEntity && vehicle.isOwnedBy(player)) {
                     vehicle.setPilotInput(payload.ascending, payload.descending, payload.forward, payload.strafe)
                     vehicle.setPilotAttitude(payload.pitch, payload.roll, payload.tuck, payload.effort, payload.acrobatic)
+                    vehicle.setRollBoost(payload.boost)
+                    PhantomRollTrail.spawn(vehicle, payload.boost, payload.tuck)
+                    if (payload.impactGust) {
+                        PhantomImpactGust.tryBlast(
+                            vehicle,
+                            net.minecraft.world.phys.Vec3(payload.impactX.toDouble(), payload.impactY.toDouble(), payload.impactZ.toDouble()),
+                            payload.boost,
+                        )
+                    }
                 }
             }
         }
@@ -59,6 +71,14 @@ object ModNetworking {
         ) { _, context ->
             val player = context.player() as? net.minecraft.server.level.ServerPlayer ?: return@playToServer
             PhantomRoster.report(player)
+        }
+
+        registrar.playToServer(
+            PhantomRosterSummonPayload.TYPE,
+            PhantomRosterSummonPayload.STREAM_CODEC,
+        ) { payload, context ->
+            val player = context.player() as? net.minecraft.server.level.ServerPlayer ?: return@playToServer
+            com.tamedphantoms.mod.entity.PhantomOwnerRecall.requestSummon(player, payload.id)
         }
 
         registrar.playToServer(

@@ -48,14 +48,22 @@ object ClientPhantomInputSender {
         }
         val pilot = phantom != null && phantom.isOwnedBy(player) && phantom.controllingPassenger === player
         val zoomOpen = phantom != null && pilot && phantom.zoomWindowOpen && ServerConfig.zoomBoost() > 0.0
+        val rollOpen = phantom != null && pilot && phantom.rollBoostReady
+        val rollCharging = phantom != null && pilot && phantom.rollBoostCharging
         if (phantom != null && screamPressed && phantom.isOwnedBy(player)) {
-            if (zoomOpen) {
-                phantom.clientZoomRequest = true
-            } else {
-                ModNetwork.sendToServer(PhantomScreamPayload)
+            when {
+                zoomOpen -> phantom.clientZoomRequest = true
+                rollOpen || rollCharging -> phantom.clientRollBoostRequest = true
+                else -> ModNetwork.sendToServer(PhantomScreamPayload)
             }
         }
-        showZoomPrompt(player, zoomOpen && phantom?.clientZoomRequest != true)
+        val prompt = when {
+            zoomOpen && phantom?.clientZoomRequest != true -> "zoom"
+            rollCharging -> "finish"
+            rollOpen -> "roll"
+            else -> ""
+        }
+        showManeuverPrompt(player, prompt)
         if (phantom != null && phantom.loopReadyToReport && phantom.isOwnedBy(player)) {
             phantom.loopReadyToReport = false
             ModNetwork.sendToServer(PhantomLoopPayload)
@@ -108,21 +116,29 @@ object ClientPhantomInputSender {
                 tuck = phantom.flightTuck,
                 effort = phantom.flightEffort,
                 acrobatic = phantom.acrobatic,
+                boost = phantom.rollBoostAmount(),
+                impactGust = phantom.clientImpactGust != null,
+                impactX = phantom.clientImpactGust?.x?.toFloat() ?: 0f,
+                impactY = phantom.clientImpactGust?.y?.toFloat() ?: 0f,
+                impactZ = phantom.clientImpactGust?.z?.toFloat() ?: 0f,
             ),
         )
+        phantom.clientImpactGust = null
     }
 
     private val flightKeys = PhantomFlightKeys()
 
-    private var zoomPromptShown = false
+    private var promptKey = ""
 
-    private fun showZoomPrompt(player: Player, open: Boolean) {
-        if (open == zoomPromptShown) return
-        zoomPromptShown = open
-        val text = if (open) {
-            Component.translatable("tamedphantoms.zoom.prompt", ModKeyMappings.SCREAM.translatedKeyMessage)
-        } else {
-            Component.empty()
+    private fun showManeuverPrompt(player: Player, key: String) {
+        if (key == promptKey) return
+        promptKey = key
+        val keyName = ModKeyMappings.SCREAM.translatedKeyMessage
+        val text = when (key) {
+            "zoom" -> Component.translatable("tamedphantoms.zoom.prompt", keyName)
+            "roll" -> Component.translatable("tamedphantoms.roll.prompt", keyName)
+            "finish" -> Component.translatable("tamedphantoms.roll.finish", keyName)
+            else -> Component.empty()
         }
         player.sendOverlayMessage(text)
     }

@@ -16,7 +16,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                               | Required | What it is                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `tamedphantoms-neoforge-1.21.1-1.0.23.jar` | Yes | this mod, NeoForge 1.21.1 |
+| `tamedphantoms-neoforge-1.21.1-1.0.24.jar` | Yes | this mod, NeoForge 1.21.1 |
 | `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
@@ -24,7 +24,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                                      | Required | What it is                                                                                         |
 | ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
-| `tamedphantoms-fabric-1.21.1-1.0.23.jar` | Yes | this mod, Fabric 1.21.1 |
+| `tamedphantoms-fabric-1.21.1-1.0.24.jar` | Yes | this mod, Fabric 1.21.1 |
 | `fabric-api-0.116.17+1.21.1.jar`          | Yes      | [Fabric API](https://modrinth.com/mod/fabric-api)                                                  |
 | `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                    |
 | `cloth-config-15.0.140-fabric.jar`        | Yes      | [Cloth Config](https://modrinth.com/mod/cloth-config), the config screen                           |
@@ -48,6 +48,7 @@ The release workflow builds both jars and fetches the companion jars from Modrin
 - **Flight.** The phantom keeps its speed: climbing spends it, diving builds it, and wingbeats push only up to cruising speed. Without forward it glides, slowly losing height and speed, until it hovers; back brakes harder. Flying into or out of a cloud puffs steam off the phantom and plays a soft wool sound. The body banks into turns, and a sharp turn at speed bleeds a little speed. A dive without forward folds the wings back like a falcon's, and the extra speed lasts a few seconds after leveling out. Wing sweep, the tail, and an elytra-like wind sound follow the speed; the wind fades out smoothly. On the ground the phantom walks on its wings, and in water it swims with ray-like strokes.
 - **Maneuvers.** Double-tap Dead Loop (Space by default) while flying fast enough: the phantom flies a whole loop. Too slow, and it stalls before the top and drops its nose. Double-tap Barrel Roll Left or Barrel Roll Right (A and D by default) for a quick barrel roll that also slips aside. The same double-tap works underwater and in lava. These keys are in the controls menu. In third person the camera follows part of a climb or dive and all of a loop.
 - **Zoom out of a loop (1.21.1).** Once a loop points the nose straight down, the hotbar shows a hint. Press Scream (R by default) then, and the phantom pulls out of the loop straight up instead of leveling off: it folds its wings as in a dive, a gust of wind bursts around it, and it shoots upward until the speed runs out, then flies on as usual. The loop still counts. At any other moment the key screams as before. The server option `zoom_boost` sets the kick: `8.0` is usual, up to `64` starts faster, and the climb lasts the same time at every setting. `0` turns it off.
+- **Charged barrel roll.** During a barrel roll the scream key charges the turn. A full turn adds speed (`roll_boost_step`, usually `0.2`), the next turn is shorter (`roll_boost_spin`), and the wings fold gradually. The cap is `roll_boost_limit` (`2.0`, from `0` to `8`; `0` disables the charge and ordinary rolls remain). At the cap the phantom can still roll, but R no longer charges it. Climbing in air spends the bonus (`roll_boost_climb_drain`, `0.2` per two seconds), except during a loop and the zoom out of one. Hovering, reversing, or strafing without forward clears it at once. Underwater and in lava the bonus does not fade, the move works the same way, and the trail is bubbles or sparks. Hitting a wall, the ground, or a ceiling at the maximum blows away anyone nearby who is not behind a block, farther when the impact is faster. The rider and passengers are not blown.
 - **First person (1.21.1).** You sit on the phantom's back instead of hovering above it: when it climbs, dives, or banks, your eyes turn with the body around its center. Your view keeps the horizon level while the phantom tilts less than `camera_horizon_hold` (30° by default). Past that, the phantom turns your view with it, so a loop or a barrel roll carries you along, and the view levels out smoothly afterwards. `0` fixes the view to the phantom; `camera_smoothing` sets how soft it is. The crosshair aims where the camera looks.
 - **Cruise.** Double-tap forward while flying: the phantom flies on by itself and still turns with the camera. Any movement key, jump, descend, or Shift hands control back. Both changes are shown above the hotbar.
 - **Immortal phantoms.** With the server option `immortal_phantoms` on, a full loop grants the secret advancement “Dead Loop!”, and that phantom glows permanently and cannot die. The option is off by default. While it is off, loops grant nothing, and phantoms that are already immortal become ordinary tamed phantoms. The change applies without a restart.
@@ -83,19 +84,19 @@ NeoForge:
 
 1. Install NeoForge 1.21.1.
 2. Download the NeoForge jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
-3. Put `tamedphantoms-neoforge-1.21.1-1.0.23.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
+3. Put `tamedphantoms-neoforge-1.21.1-1.0.24.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
 4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
 Fabric:
 
 1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1. Loader 0.19.x is fine. Do not look for loader version 0.100.3: that number is not a loader.
 2. Download the Fabric jars from the same release. The release replaces its file list on each push, so old names such as `tamedphantoms-1.0.0.jar` and `tamedphantoms-fabric-1.0.0.jar` are not part of the current set.
-3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.23.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
+3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.24.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
 4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
 
 If the game says Patchouli requires **fabric** 0.100.3 or that Tamed Phantoms requires **fabric-api**, the `fabric-api-0.116.17+1.21.1.jar` file is missing. Fabric API’s id is `fabric-api`, and it also provides the id `fabric`. That is the jar from this release, not a newer Fabric Loader.
 
-The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.23-fabric`.
+The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.24-fabric`.
 
 ## Flight controls
 
@@ -142,6 +143,11 @@ Fabric keeps a template at `config/tamedphantoms-server.toml`. A new world copie
 | `immortal_phantoms`      | `false`                      | a full loop makes the phantom immortal; off also takes immortality away |
 | `flight_speed`           | `1.25`                       | flight speed of tamed and released phantoms relative to a wild one |
 | `zoom_boost`             | `8.0`                        | kick out of a loop, 0 to 64: higher starts faster, the climb takes the same time; `0` turns it off |
+| `roll_boost_limit`       | `2.0`                        | cap of the charged barrel-roll bonus, 0 to 8; `0` disables the charge |
+| `roll_boost_step`        | `0.2`                        | speed added by a full turn, 0 to 2 |
+| `roll_boost_climb_drain` | `0.2`                        | bonus spent by climbing in air over two seconds, 0 to 4 |
+| `roll_boost_spin`        | `0.85`                       | how much shorter the next turn is, 0.5 to 1 |
+| `roll_boost_min_ticks`   | `6`                          | shortest turn in ticks, 2 to 16 |
 | `insomnia_days`          | `1`                          | days awake before vanilla phantoms can spawn |
 | `phantom_group_multiplier` | `2.0`                      | how many times a vanilla phantom group is multiplied |
 

@@ -3,6 +3,7 @@ package com.tamedphantoms.mod.event
 import com.tamedphantoms.mod.TamedPhantomsMod
 import com.tamedphantoms.mod.api.TamedPhantomsApi
 import com.tamedphantoms.mod.config.ServerConfig
+import com.tamedphantoms.mod.entity.PhantomOwnerRecall
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.util.PhantomHeldLook
 import com.tamedphantoms.mod.util.PhantomHitParts
@@ -250,11 +251,20 @@ object PhantomInteractionHandler {
             return
         }
 
+        if (isOwner && stack.`is`(Items.NAME_TAG)) {
+            val name = stack.get(DataComponents.CUSTOM_NAME) ?: return
+            phantom.setCustomName(name)
+            phantom.setCustomNameVisible(true)
+            if (!player.abilities.instabuild) stack.shrink(1)
+            PhantomOwnerRecall.remember(player, phantom)
+            return
+        }
+
         if (PhantomTreats.tryMilk(player, phantom, stack)) return
         if (PhantomTreats.tryPotion(player, phantom, stack)) return
         if (stack.get(DataComponents.FOOD) != null || stack.get(DataComponents.SUSPICIOUS_STEW_EFFECTS) != null) {
-            PhantomTreats.tryFood(player, phantom, stack)
-            return
+            if (PhantomTreats.tryFood(player, phantom, stack)) return
+            if (PhantomTreats.hasBonus(stack) || phantom.health < phantom.maxHealth) return
         }
 
         if (player.vehicle === phantom) {

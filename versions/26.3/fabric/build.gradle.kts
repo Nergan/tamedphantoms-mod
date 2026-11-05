@@ -68,6 +68,7 @@ val sharedJava by tasks.registering(Sync::class) {
     exclude(
         "com/tamedphantoms/mod/mixin/RideHungerMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomRideTeleportMixin.java",
+        "com/tamedphantoms/mod/mixin/PhantomPortalRideMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",

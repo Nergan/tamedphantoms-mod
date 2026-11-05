@@ -9,6 +9,7 @@ import com.tamedphantoms.mod.event.PhantomOwnerRecallHandler
 import com.tamedphantoms.mod.event.PhantomSpawnScaler
 import com.tamedphantoms.mod.event.PhantomTemptHandler
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import com.tamedphantoms.mod.util.PhantomImpactGust
 import com.tamedphantoms.mod.util.PhantomScream
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.InteractionHand
@@ -107,6 +108,7 @@ object NeoForgeGameEvents {
 
     private fun onServerTick(event: ServerTickEvent.Post) {
         PhantomScream.flush(event.server)
+        PhantomImpactGust.tick(event.server)
     }
 
     private fun onLogout(event: PlayerEvent.PlayerLoggedOutEvent) {

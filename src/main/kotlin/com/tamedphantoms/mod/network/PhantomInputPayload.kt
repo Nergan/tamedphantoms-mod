@@ -21,6 +21,13 @@ data class PhantomInputPayload(
     val tuck: Float = 0f,
     val effort: Float = 0f,
     val acrobatic: Boolean = false,
+    /** Бонус скорости за бочку, блоки за тик. Сервер рисует по нему шлейф. */
+    val boost: Float = 0f,
+    /** Пилот врезался в поверхность на полном бонусе. Вектор — скорость удара. */
+    val impactGust: Boolean = false,
+    val impactX: Float = 0f,
+    val impactY: Float = 0f,
+    val impactZ: Float = 0f,
 ) : CustomPacketPayload {
 
     override fun type(): CustomPacketPayload.Type<out CustomPacketPayload> = TYPE
@@ -40,6 +47,11 @@ data class PhantomInputPayload(
                 buf.writeFloat(payload.tuck)
                 buf.writeFloat(payload.effort)
                 buf.writeBoolean(payload.acrobatic)
+                buf.writeFloat(payload.boost)
+                buf.writeBoolean(payload.impactGust)
+                buf.writeFloat(payload.impactX)
+                buf.writeFloat(payload.impactY)
+                buf.writeFloat(payload.impactZ)
             },
             { buf ->
                 PhantomInputPayload(
@@ -52,6 +64,11 @@ data class PhantomInputPayload(
                     buf.readFloat(),
                     buf.readFloat(),
                     buf.readBoolean(),
+                    buf.readFloat(),
+                    buf.readBoolean(),
+                    buf.readFloat(),
+                    buf.readFloat(),
+                    buf.readFloat(),
                 )
             },
         )

@@ -287,4 +287,139 @@ class PhantomFlightModelTest {
         repeat(4) { roll.step(Input(1f, 0f, 0f, vc, medium = water)) }
         assertTrue(roll.rolling, "вода оборвала бочку")
     }
+
+    @Test
+    @DisplayName("Заряженная бочка копится по 0.2 за оборот, крылья прижимаются по доле бонуса")
+    fun rollBoostBuildsAndTucks() {
+        val model = PhantomFlightModel()
+        cruise(model, 40)
+        model.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
+        repeat(PhantomFlightModel.ROLL_TICKS + 8) {
+            model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        }
+        assertEquals(0.2, model.rollBoost, 0.05)
+        assertTrue(model.tuck > 0.04f, "tuck ${model.tuck}")
+        assertTrue(model.tuck < 0.35f, "tuck ${model.tuck}")
+    }
+
+    @Test
+    @DisplayName("Повторное R доделывает оборот, потолок останавливает бочку, крылья доходят до сложенных")
+    fun rollBoostStopsAtLimitAndSecondPress() {
+        val capped = PhantomFlightModel()
+        cruise(capped, 40)
+        capped.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
+        var guard = 0
+        while (capped.rolling && guard++ < 500) {
+            capped.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        }
+        assertFalse(capped.rolling)
+        assertEquals(2.0, capped.rollBoost, 0.01)
+        repeat(50) { capped.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0)) }
+        assertTrue(capped.tuck > 0.85f, "tuck ${capped.tuck}")
+        assertTrue(capped.speed > vc + 1.4, "speed ${capped.speed}")
+
+        val early = PhantomFlightModel()
+        cruise(early, 40)
+        early.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
+        repeat(20) { early.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0)) }
+        assertTrue(early.rolling)
+        early.step(Input(1f, 0f, 0f, vc, rollBoostRequest = true, rollBoostLimit = 2.0))
+        guard = 0
+        while (early.rolling && guard++ < 40) {
+            early.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        }
+        assertFalse(early.rolling)
+        assertTrue(early.rollBoost > 0.3 && early.rollBoost < 0.7, "boost ${early.rollBoost}")
+    }
+
+    @Test
+    @DisplayName("Набор высоты съедает бонус, петля и зависание ведут себя по своим правилам")
+    fun rollBoostClimbDrainAndClears() {
+        val climbing = charged(1.0)
+        val before = climbing.rollBoost
+        repeat(50) { climbing.step(Input(1f, 0f, 1f, vc, rollBoostLimit = 2.0)) }
+        assertTrue(climbing.rollBoost < before - 0.15, "boost ${climbing.rollBoost}")
+        assertTrue(climbing.rollBoost > 0.4, "boost ${climbing.rollBoost}")
+
+        val loop = charged(0.6)
+        val kept = loop.rollBoost
+        loop.step(Input(1f, 0f, 0f, vc, loopRequest = true, rollBoostLimit = 2.0))
+        var ticks = 0
+        while (loop.looping && ticks++ < 90) {
+            loop.step(Input(1f, 0f, 1f, vc, rollBoostLimit = 2.0))
+        }
+        assertEquals(kept, loop.rollBoost, 0.02)
+
+        val hovering = charged(0.4)
+        repeat(80) { hovering.step(Input(0f, 0f, 0f, vc, rollBoostLimit = 2.0)) }
+        assertEquals(0.0, hovering.rollBoost, 0.001)
+
+        val reverse = charged(0.4)
+        reverse.step(Input(-1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        assertEquals(0.0, reverse.rollBoost, 0.001)
+
+        val strafe = charged(0.4)
+        strafe.step(Input(0f, 1f, 0f, vc, rollBoostLimit = 2.0))
+        assertEquals(0.0, strafe.rollBoost, 0.001)
+    }
+
+    @Test
+    @DisplayName("На потолке обычная бочка остаётся, а приём на R ничего не добавляет")
+    fun fullBoostRollDoesNotCharge() {
+        val model = charged(2.0)
+        assertFalse(model.rollBoostReady)
+        model.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
+        var guard = 0
+        while (model.rolling && guard++ < 40) {
+            model.step(Input(1f, 0f, 0f, vc, rollBoostRequest = true, rollBoostLimit = 2.0))
+        }
+        assertEquals(2.0, model.rollBoost, 0.001)
+        assertFalse(model.rolling)
+    }
+
+    @Test
+    @DisplayName("Следующие обороты короче, а в воде и в лаве набор высоты бонус не съедает")
+    fun spinQuickensAndLiquidKeepsBoost() {
+        fun ticksFor(spin: Double): Int {
+            val model = PhantomFlightModel()
+            cruise(model, 40)
+            model.step(
+                Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 8.0, rollSpin = spin, rollMinTicks = 4),
+            )
+            var ticks = 1
+            while (model.rollBoost < 0.59 && ticks < 500) {
+                model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 8.0, rollSpin = spin, rollMinTicks = 4))
+                ticks++
+            }
+            return ticks
+        }
+        assertTrue(ticksFor(0.55) < ticksFor(1.0))
+
+        val swimming = charged(0.4)
+        val kept = swimming.rollBoost
+        repeat(80) {
+            swimming.step(Input(1f, 0f, 1f, vc, medium = PhantomFlightModel.Medium.WATER, inLiquid = true, rollBoostLimit = 2.0))
+        }
+        assertEquals(kept, swimming.rollBoost, 0.001)
+        repeat(80) { swimming.step(Input(1f, 0f, 1f, vc, inLiquid = true, rollBoostLimit = 2.0)) }
+        assertEquals(kept, swimming.rollBoost, 0.02)
+    }
+
+    private fun charged(atLeast: Double): PhantomFlightModel {
+        val model = PhantomFlightModel()
+        cruise(model, 40)
+        model.step(Input(1f, 0f, 0f, vc, rollRequest = 1, rollBoostRequest = true, rollBoostLimit = 2.0))
+        var guard = 0
+        while (model.rollBoost < atLeast - 0.01 && model.rolling && guard++ < 400) {
+            model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        }
+        if (model.rolling) {
+            model.step(Input(1f, 0f, 0f, vc, rollBoostRequest = true, rollBoostLimit = 2.0))
+            guard = 0
+            while (model.rolling && guard++ < 40) model.step(Input(1f, 0f, 0f, vc, rollBoostLimit = 2.0))
+        }
+        assertTrue(model.rollBoost >= atLeast - 0.05, "boost ${model.rollBoost}")
+        assertFalse(model.rolling)
+        return model
+    }
 }

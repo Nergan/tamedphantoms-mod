@@ -78,7 +78,7 @@ class PhantomRosterScreen(private val parent: Screen) : Screen(Component.transla
                 .build(),
         )
         if (!PhantomRosterClient.ready || PhantomRosterClient.rows.isEmpty()) return
-        val boxWidth = (width - 16 - 16 - 78).coerceAtLeast(80)
+        val boxWidth = (width - 16 - 8 - 74 - 78).coerceAtLeast(48)
         for (source in PhantomRosterClient.rows) {
             val box = EditBox(font, 16, 0, boxWidth, 18, Component.translatable("tamedphantoms.roster.copy"))
             box.value = PhantomRosterClient.coordinates(source)
@@ -87,9 +87,14 @@ class PhantomRosterScreen(private val parent: Screen) : Screen(Component.transla
                 minecraft?.keyboardHandler?.setClipboard(box.value)
                 copiedUntil = System.nanoTime() + 1_500_000_000L
             }.bounds(16 + boxWidth + 4, 0, 74, 18).build()
+            val summon = Button.builder(Component.translatable("tamedphantoms.roster.summon")) { _ ->
+                PhantomRosterClient.summon(source.id)
+            }.bounds(16 + boxWidth + 82, 0, 74, 18).build()
+            summon.active = source.id.isNotBlank() && !source.sitting
             addRenderableWidget(box)
             addRenderableWidget(copy)
-            rows.add(PhantomRosterClientRow(source, box, copy, 0))
+            addRenderableWidget(summon)
+            rows.add(PhantomRosterClientRow(source, box, copy, summon, 0))
         }
         place()
     }
@@ -105,10 +110,14 @@ class PhantomRosterScreen(private val parent: Screen) : Screen(Component.transla
             row.box.setY(y + 26)
             row.copy.setX(16 + row.box.getWidth() + 4)
             row.copy.setY(y + 26)
+            row.summon.setX(16 + row.box.getWidth() + 82)
+            row.summon.setY(y + 26)
             row.box.visible = shown
             row.copy.visible = shown
+            row.summon.visible = shown
             row.box.active = shown
             row.copy.active = shown
+            row.summon.active = shown && row.source.id.isNotBlank() && !row.source.sitting
         }
     }
 
@@ -122,6 +131,7 @@ class PhantomRosterScreen(private val parent: Screen) : Screen(Component.transla
         val source: com.tamedphantoms.mod.entity.PhantomRosterRow,
         val box: EditBox,
         val copy: Button,
+        val summon: Button,
         var y: Int,
     )
 

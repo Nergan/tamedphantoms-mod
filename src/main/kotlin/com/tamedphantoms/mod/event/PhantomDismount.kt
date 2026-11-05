@@ -149,19 +149,34 @@ object PhantomDismount {
 
     @JvmStatic
     fun finishTeleport(player: ServerPlayer) {
-        val phantom = carried.remove(player.uuid) ?: return
-        if (!player.isAlive || player.isRemoved || !phantom.isAlive || phantom.isRemoved) return
+        val captured = carried.remove(player.uuid) ?: return
+        val phantom = this.resolveCarried(player, captured) ?: return
+        if (!player.isAlive || player.isRemoved) return
         val dest = player.level() as? ServerLevel ?: return
         val moved = phantom.teleportTo(dest, player.x, player.y, player.z, emptySet<RelativeMovement>(), phantom.yRot, phantom.xRot)
         if (!moved) return
         phantom.fallDistance = 0.0f
         player.fallDistance = 0.0f
         phantom.deltaMovement = Vec3.ZERO
+        phantom.setPortalCooldown()
+        player.setPortalCooldown()
         this.bypass {
             if (player.vehicle != null && player.vehicle !== phantom) player.stopRiding()
             if (player.vehicle !== phantom) player.startRiding(phantom, true)
         }
         this.resync(player, phantom)
+    }
+
+    /** Портал иногда подменяет сущность. Та же UUID в любом измерении — всё ещё этот фантом. */
+    private fun resolveCarried(player: ServerPlayer, captured: TamedPhantomEntity): TamedPhantomEntity? {
+        if (captured.isAlive && !captured.isRemoved) return captured
+        val owner = player
+        val server = owner.server ?: return null
+        for (level in server.allLevels) {
+            val found = level.getEntity(captured.uuid) as? TamedPhantomEntity ?: continue
+            if (found.isAlive && !found.isRemoved) return found
+        }
+        return null
     }
 
     /** Перед настоящим снятием: клиент не должен тут же посадить игрока обратно. */

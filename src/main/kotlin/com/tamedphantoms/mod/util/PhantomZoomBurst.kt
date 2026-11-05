@@ -28,12 +28,13 @@ object PhantomZoomBurst {
         val previous = lastBurst[phantom]
         if (previous != null && now - previous < COOLDOWN_TICKS) return
         lastBurst[phantom] = now
-        level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE, phantom.x, phantom.y + phantom.bbHeight * 0.5, phantom.z, 1, 0.0, 0.0, 0.0, 0.0)
+        val tip = phantom.tailTip()
+        level.sendParticles(ParticleTypes.GUST_EMITTER_LARGE, tip.x, tip.y, tip.z, 1, 0.0, 0.0, 0.0, 0.0)
         level.playSound(
             null,
-            phantom.x,
-            phantom.y,
-            phantom.z,
+            tip.x,
+            tip.y,
+            tip.z,
             SoundEvents.BREEZE_WIND_CHARGE_BURST.value(),
             SoundSource.NEUTRAL,
             1.0f,

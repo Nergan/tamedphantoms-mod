@@ -23,6 +23,16 @@ object PhantomEffectSpeed {
         entity.getEffect(MobEffects.MOVEMENT_SLOWDOWN)?.amplifier,
     )
 
+    /**
+     * Подводное дыхание удваивает скорость в воде на время эффекта.
+     * Вместе с половинной водной скоростью выходит обычный воздушный ход.
+     */
+    fun waterBreathing(entity: LivingEntity): Double {
+        if (!entity.isInWater && !entity.isUnderWater) return 1.0
+        if (!entity.hasEffect(MobEffects.WATER_BREATHING)) return 1.0
+        return 2.0
+    }
+
     /** Под водой грация дельфина удваивает и без того половинную скорость. */
     fun dolphin(entity: LivingEntity): Double {
         if (!entity.isUnderWater) return 1.0

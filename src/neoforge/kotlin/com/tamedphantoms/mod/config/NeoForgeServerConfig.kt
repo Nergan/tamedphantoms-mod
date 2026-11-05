@@ -43,6 +43,11 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 override fun phantomSize() = cfg.phantomSize.get()
                 override fun immortalPhantoms() = if (SPEC.isLoaded) cfg.immortalPhantoms.get() else false
                 override fun zoomBoost() = cfg.zoomBoost?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ZOOM_BOOST
+                override fun rollBoostLimit() = cfg.rollBoostLimit?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_BOOST_LIMIT
+                override fun rollBoostStep() = cfg.rollBoostStep?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_BOOST_STEP
+                override fun rollBoostClimbDrain() = cfg.rollClimbDrain?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_CLIMB_DRAIN
+                override fun rollBoostSpin() = cfg.rollSpin?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_SPIN
+                override fun rollBoostMinTicks() = cfg.rollMinTicks?.takeIf { SPEC.isLoaded }?.get() ?: ServerConfig.DEFAULT_ROLL_MIN_TICKS
             }
         }
     }
@@ -61,6 +66,11 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
     val phantomSize: ModConfigSpec.IntValue
     val immortalPhantoms: ModConfigSpec.BooleanValue
     val zoomBoost: ModConfigSpec.DoubleValue?
+    val rollBoostLimit: ModConfigSpec.DoubleValue?
+    val rollBoostStep: ModConfigSpec.DoubleValue?
+    val rollClimbDrain: ModConfigSpec.DoubleValue?
+    val rollSpin: ModConfigSpec.DoubleValue?
+    val rollMinTicks: ModConfigSpec.IntValue?
 
     init {
         builder.push("taming")
@@ -137,8 +147,8 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             .translation("$KEY_PREFIX.flight.flight_speed")
             .defineInRange("flight_speed", 1.25, 0.25, 4.0)
 
-        zoomBoost = if (RideExtras.enabled) {
-            builder
+        if (RideExtras.enabled) {
+            zoomBoost = builder
                 .comment(
                     "Сила толчка вверх из мёртвой петли. Когда нос в петле смотрит вниз, седоку предлагают",
                     "нажать клавишу крика, и фантом получает один импульс вверх со сложенными крыльями.",
@@ -147,8 +157,52 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 )
                 .translation("$KEY_PREFIX.flight.zoom_boost")
                 .defineInRange("zoom_boost", ServerConfig.DEFAULT_ZOOM_BOOST, 0.0, ServerConfig.MAX_ZOOM_BOOST)
+            rollBoostLimit = builder
+                .comment(
+                    "Потолок бонуса скорости за заряженную бочку, в блоках за тик.",
+                    "Каждый полный оборот, пока седок держит приём, добавляет roll_boost_step, но не выше этого числа.",
+                    "2.0 — обычный потолок. 0 — приёма на клавишу крика нет: бочку сделать можно, ускорения она не даёт.",
+                )
+                .translation("$KEY_PREFIX.flight.roll_boost_limit")
+                .defineInRange("roll_boost_limit", ServerConfig.DEFAULT_ROLL_BOOST_LIMIT, 0.0, ServerConfig.MAX_ROLL_BOOST_LIMIT)
+            rollBoostStep = builder
+                .comment(
+                    "Сколько блоков за тик добавляет один полный оборот заряженной бочки.",
+                    "0.2 — обычная прибавка. 0 — обороты ничего не добавляют.",
+                )
+                .translation("$KEY_PREFIX.flight.roll_boost_step")
+                .defineInRange("roll_boost_step", ServerConfig.DEFAULT_ROLL_BOOST_STEP, 0.0, ServerConfig.MAX_ROLL_BOOST_STEP)
+            rollClimbDrain = builder
+                .comment(
+                    "Сколько бонуса скорости пропадает за две секунды, пока фантом летит вверх.",
+                    "0.2 — за две секунды уходит одна прибавка оборота. 0 — набор высоты бонус не съедает.",
+                    "Мёртвая петля и рывок из неё этот счётчик не трогают.",
+                    "Под водой и в лаве бонус не тает сам, в том числе на всплытии.",
+                    "Зависание, задний ход и полёт только вбок снимают бонус сразу.",
+                )
+                .translation("$KEY_PREFIX.flight.roll_boost_climb_drain")
+                .defineInRange("roll_boost_climb_drain", ServerConfig.DEFAULT_ROLL_CLIMB_DRAIN, 0.0, ServerConfig.MAX_ROLL_CLIMB_DRAIN)
+            rollSpin = builder
+                .comment(
+                    "Во сколько раз короче каждый следующий оборот заряженной бочки.",
+                    "0.85 — каждый оборот примерно на 15% быстрее предыдущего. 1 — все обороты одной длины.",
+                )
+                .translation("$KEY_PREFIX.flight.roll_boost_spin")
+                .defineInRange("roll_boost_spin", ServerConfig.DEFAULT_ROLL_SPIN, ServerConfig.MIN_ROLL_SPIN, 1.0)
+            rollMinTicks = builder
+                .comment(
+                    "Самый короткий оборот заряженной бочки, в тиках. 20 тиков — секунда.",
+                    "Дальше этого обороты не ускоряются. Обычная бочка без приёма всегда длится 16 тиков.",
+                )
+                .translation("$KEY_PREFIX.flight.roll_boost_min_ticks")
+                .defineInRange("roll_boost_min_ticks", ServerConfig.DEFAULT_ROLL_MIN_TICKS, 2, ServerConfig.MAX_ROLL_MIN_TICKS)
         } else {
-            null
+            zoomBoost = null
+            rollBoostLimit = null
+            rollBoostStep = null
+            rollClimbDrain = null
+            rollSpin = null
+            rollMinTicks = null
         }
 
         builder.pop()

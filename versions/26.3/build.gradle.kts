@@ -115,6 +115,8 @@ fun rewriteFor26(line: String): String {
         "MobEffects.JUMP" to "MobEffects.JUMP_BOOST",
         "if (!player.addItem(bottle)) player.drop(bottle, false)" to
             "if (!player.addItem(bottle)) player.drop(bottle, false, net.minecraft.util.Prediction.SERVER_ONLY)",
+        "entity.hurtMarked = true" to "",
+        "entity.hasImpulse = true" to "",
         "MobEffects.HEAL ->" to "MobEffects.INSTANT_HEALTH ->",
         "MobEffects.HARM ->" to "MobEffects.INSTANT_DAMAGE ->",
         "MobEffects.DAMAGE_RESISTANCE" to "MobEffects.RESISTANCE",
@@ -194,6 +196,7 @@ val sharedJava by tasks.registering(Sync::class) {
     exclude(
         "com/tamedphantoms/mod/mixin/RideHungerMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomRideTeleportMixin.java",
+        "com/tamedphantoms/mod/mixin/PhantomPortalRideMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomModelLookMixin.java",
         "com/tamedphantoms/mod/mixin/DataFixerSchemaMixin.java",
         "com/tamedphantoms/mod/mixin/MoonSkyMixin.java",

@@ -11,9 +11,12 @@ import com.tamedphantoms.mod.network.PhantomLoopPayload
 import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
 import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
+import com.tamedphantoms.mod.network.PhantomRosterSummonPayload
 import com.tamedphantoms.mod.network.PhantomScreamPayload
 import com.tamedphantoms.mod.network.PhantomZoomPayload
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
+import com.tamedphantoms.mod.util.PhantomImpactGust
+import com.tamedphantoms.mod.util.PhantomRollTrail
 import com.tamedphantoms.mod.util.PhantomZoomBurst
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking
@@ -26,6 +29,7 @@ object FabricNetworking {
         PayloadTypeRegistry.playC2S().register(PhantomFlightSpeedPayload.TYPE, PhantomFlightSpeedPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomScreamPayload.TYPE, PhantomScreamPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomRosterPayload.TYPE, PhantomRosterPayload.STREAM_CODEC)
+        PayloadTypeRegistry.playC2S().register(PhantomRosterSummonPayload.TYPE, PhantomRosterSummonPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomLoopPayload.TYPE, PhantomLoopPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomZoomPayload.TYPE, PhantomZoomPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomDismountTapPayload.TYPE, PhantomDismountTapPayload.STREAM_CODEC)
@@ -41,6 +45,15 @@ object FabricNetworking {
                 if (vehicle is TamedPhantomEntity && vehicle.isOwnedBy(player)) {
                     vehicle.setPilotInput(payload.ascending, payload.descending, payload.forward, payload.strafe)
                     vehicle.setPilotAttitude(payload.pitch, payload.roll, payload.tuck, payload.effort, payload.acrobatic)
+                    vehicle.setRollBoost(payload.boost)
+                    PhantomRollTrail.spawn(vehicle, payload.boost, payload.tuck)
+                    if (payload.impactGust) {
+                        PhantomImpactGust.tryBlast(
+                            vehicle,
+                            net.minecraft.world.phys.Vec3(payload.impactX.toDouble(), payload.impactY.toDouble(), payload.impactZ.toDouble()),
+                            payload.boost,
+                        )
+                    }
                 }
             }
         }
@@ -52,6 +65,11 @@ object FabricNetworking {
         ServerPlayNetworking.registerGlobalReceiver(PhantomRosterPayload.TYPE) { _, context ->
             context.server().execute {
                 PhantomRoster.report(context.player())
+            }
+        }
+        ServerPlayNetworking.registerGlobalReceiver(PhantomRosterSummonPayload.TYPE) { payload, context ->
+            context.server().execute {
+                com.tamedphantoms.mod.entity.PhantomOwnerRecall.requestSummon(context.player(), payload.id)
             }
         }
         ServerPlayNetworking.registerGlobalReceiver(PhantomScreamPayload.TYPE) { _, context ->

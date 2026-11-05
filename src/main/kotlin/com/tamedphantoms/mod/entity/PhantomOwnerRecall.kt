@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.entity
 
+import com.tamedphantoms.mod.event.PhantomRoster
 import com.tamedphantoms.mod.platform.ModAccess
 import com.tamedphantoms.mod.platform.storedData
 import com.tamedphantoms.mod.util.PhantomOwnedList
@@ -36,8 +37,11 @@ object PhantomOwnerRecall {
     /** Фаза поиска пропавшего фантома: 0 рядом, 1 шире. */
     private val loadPhase = HashMap<UUID, Int>()
     private val ticketedAt = HashMap<UUID, Long>()
+    /** Сколько тиков подряд широкая область уже тикала без фантома. */
+    private val tickingSeen = HashMap<UUID, Int>()
+    private val forceBring = HashSet<UUID>()
 
-    fun hasPendingLoads(): Boolean = loadPhase.isNotEmpty() || ticketedAt.isNotEmpty()
+    fun hasPendingLoads(): Boolean = loadPhase.isNotEmpty() || ticketedAt.isNotEmpty() || forceBring.isNotEmpty()
 
     fun remember(player: Player, phantom: TamedPhantomEntity) {
         val list = player.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
@@ -77,6 +81,8 @@ object PhantomOwnerRecall {
     fun forget(player: Player, phantomId: UUID) {
         loadPhase.remove(phantomId)
         ticketedAt.remove(phantomId)
+        tickingSeen.remove(phantomId)
+        forceBring.remove(phantomId)
         val list = player.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
         val next = ListTag()
         for (i in 0 until list.size) {
@@ -89,18 +95,23 @@ object PhantomOwnerRecall {
         player.storedData.put(TAG_OWNED, next)
     }
 
-    fun tryTeleportToOwner(phantom: TamedPhantomEntity, owner: Player): Boolean {
-        val sameLevel = phantom.level() === owner.level()
-        val distanceSq = if (sameLevel) phantom.distanceToSqr(owner) else Double.MAX_VALUE
-        if (!PhantomOwnerTeleport.shouldTryTeleport(
-                distanceSq,
-                owner.isAlive,
-                phantom.isOrderedToSit(),
-                phantom.isLeashed,
-                phantom.isVehicle,
-            )
-        ) {
-            return false
+    fun tryTeleportToOwner(phantom: TamedPhantomEntity, owner: Player, force: Boolean = false): Boolean {
+        if (force) {
+            if (!owner.isAlive || !phantom.isAlive || phantom.isOrderedToSit()) return false
+            if (phantom.isLeashed) phantom.dropLeash(true, true)
+        } else {
+            val sameLevel = phantom.level() === owner.level()
+            val distanceSq = if (sameLevel) phantom.distanceToSqr(owner) else Double.MAX_VALUE
+            if (!PhantomOwnerTeleport.shouldTryTeleport(
+                    distanceSq,
+                    owner.isAlive,
+                    phantom.isOrderedToSit(),
+                    phantom.isLeashed,
+                    phantom.isVehicle,
+                )
+            ) {
+                return false
+            }
         }
         val dest = owner.level() as? ServerLevel ?: return false
         val pos = findSafePosition(dest, phantom, owner) ?: return false
@@ -164,7 +175,7 @@ object PhantomOwnerRecall {
             val dim = ResourceLocation.tryParse(tag.getString("D")) ?: continue
             val level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dim)) ?: continue
             val pos = BlockPos.containing(tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"))
-            val phantom = level.getEntity(id) as? TamedPhantomEntity
+            val phantom = findLive(owner, id)
             if (phantom == null) {
                 if (miss(level, id, pos)) forget(owner, id)
                 continue
@@ -174,7 +185,6 @@ object PhantomOwnerRecall {
     }
 
     fun roster(owner: ServerPlayer): List<PhantomRosterRow> {
-        val server = owner.server ?: return emptyList()
         val stored = owner.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
         val rows = ArrayList<PhantomRosterRow>()
         val seen = HashSet<UUID>()
@@ -183,16 +193,13 @@ object PhantomOwnerRecall {
             val id = PhantomIdTag.read(tag) ?: continue
             if (!seen.add(id)) continue
             val dimName = tag.getString("D")
-            val dim = ResourceLocation.tryParse(dimName) ?: continue
-            val level = server.getLevel(ResourceKey.create(Registries.DIMENSION, dim))
             val pos = BlockPos.containing(tag.getDouble("X"), tag.getDouble("Y"), tag.getDouble("Z"))
-            val live = if (level != null && level.hasChunk(pos.x shr 4, pos.z shr 4)) {
-                level.getEntity(id) as? TamedPhantomEntity
-            } else {
-                null
+            val live = findLive(owner, id)
+            if (live != null && (!live.isAlive || !live.tamed || !live.isOwnedBy(owner))) {
+                forget(owner, id)
+                continue
             }
             if (live != null) {
-                if (!live.isAlive || !live.tamed || !live.isOwnedBy(owner)) continue
                 rows.add(
                     PhantomRosterRow(
                         liveName(live),
@@ -200,10 +207,11 @@ object PhantomOwnerRecall {
                         live.blockPosition().x,
                         live.blockPosition().y,
                         live.blockPosition().z,
-                        dimName,
+                        live.level().dimension().location().toString(),
                         live.bodyDye,
                         live.saddleDye,
                         live.luminous,
+                        id.toString(),
                     ),
                 )
             } else {
@@ -218,6 +226,7 @@ object PhantomOwnerRecall {
                         storedInt(tag, "B"),
                         storedInt(tag, "A"),
                         storedGlow(tag),
+                        id.toString(),
                     ),
                 )
             }
@@ -232,19 +241,62 @@ object PhantomOwnerRecall {
     private fun bring(phantom: TamedPhantomEntity, owner: Player) {
         loadPhase.remove(phantom.uuid)
         ticketedAt.remove(phantom.uuid)
+        tickingSeen.remove(phantom.uuid)
+        val forced = forceBring.contains(phantom.uuid)
         if (!phantom.isAlive || !phantom.tamed || !phantom.isOwnedBy(owner)) {
             forget(owner, phantom.uuid)
             return
         }
         if (phantom.isOrderedToSit()) {
+            forceBring.remove(phantom.uuid)
             remember(owner, phantom)
             return
         }
         val same = phantom.level() === owner.level()
         val near = same && phantom.distanceToSqr(owner) <= PhantomOwnerTeleport.DISTANCE * PhantomOwnerTeleport.DISTANCE
-        if (near) return
+        if (near && !forced) return
         if (phantom.isLeashed) phantom.dropLeash(true, true)
-        tryTeleportToOwner(phantom, owner)
+        if (tryTeleportToOwner(phantom, owner, forced)) forceBring.remove(phantom.uuid)
+    }
+
+    /** Пока хозяин ещё тикает после смерти, записать загруженных фантомов, чтобы чанк смерти не стёр учёт. */
+    fun snapshotLoaded(owner: Player) {
+        val server = owner.server ?: return
+        for (level in server.allLevels) {
+            for (phantom in loadedOwned(level, owner)) {
+                remember(owner, phantom)
+            }
+        }
+    }
+
+    /** Кнопка «Призвать»: даже рядом и даже из выгруженного чанка. Сидящего не трогаем. */
+    fun requestSummon(owner: ServerPlayer, raw: String) {
+        val id = runCatching { UUID.fromString(raw) }.getOrNull() ?: return
+        val live = findLive(owner, id)
+        if (live != null) {
+            if (!live.isAlive || !live.tamed || !live.isOwnedBy(owner) || live.isOrderedToSit()) return
+            tryTeleportToOwner(live, owner, true)
+            PhantomRoster.report(owner)
+            return
+        }
+        val stored = owner.storedData.getList(TAG_OWNED, Tag.TAG_COMPOUND.toInt())
+        for (i in 0 until stored.size) {
+            val tag = stored.getCompound(i)
+            if (PhantomIdTag.read(tag) != id) continue
+            if (tag.getBoolean("S")) return
+            forceBring.add(id)
+            PhantomRoster.report(owner)
+            return
+        }
+    }
+
+    private fun findLive(owner: Player, id: UUID): TamedPhantomEntity? {
+        val server = owner.server ?: return null
+        for (level in server.allLevels) {
+            val found = level.getEntity(id) as? TamedPhantomEntity ?: continue
+            if (!found.isRemoved) return found
+        }
+        return null
     }
 
     /**
@@ -255,13 +307,19 @@ object PhantomOwnerRecall {
     private fun miss(level: ServerLevel, id: UUID, pos: BlockPos): Boolean {
         val phase = loadPhase[id] ?: 0
         val radius = PhantomOwnedList.radiusFor(phase)
-        val (next, drop) = PhantomOwnedList.afterMiss(phase, areaEntityTicking(level, pos, radius))
+        val (next, seen, drop) = PhantomOwnedList.afterMiss(
+            phase,
+            tickingSeen[id] ?: 0,
+            areaEntityTicking(level, pos, radius),
+        )
         if (drop) {
             loadPhase.remove(id)
             ticketedAt.remove(id)
+            tickingSeen.remove(id)
             return true
         }
         if (next != phase) loadPhase[id] = next
+        if (seen == 0) tickingSeen.remove(id) else tickingSeen[id] = seen
         val useRadius = PhantomOwnedList.radiusFor(loadPhase[id] ?: 0)
         val now = level.gameTime
         val last = ticketedAt[id]
@@ -369,4 +427,5 @@ data class PhantomRosterRow(
     val bodyDye: Int,
     val saddleDye: Int,
     val luminous: Boolean,
+    val id: String = "",
 )

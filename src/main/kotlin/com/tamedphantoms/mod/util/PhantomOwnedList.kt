@@ -10,16 +10,25 @@ object PhantomOwnedList {
     const val NEAR_RADIUS = 1
     const val WIDE_RADIUS = 6
 
+    /** Широкая область должна тикать столько тиков подряд, прежде чем запись стереть. */
+    const val CONFIRM_TICKS = 40
+
     fun radiusFor(phase: Int): Int = if (phase <= 0) NEAR_RADIUS else WIDE_RADIUS
 
     /**
      * Область уже тикает, а сущности в ней нет.
-     * Фаза 0 расширяет поиск. Фаза 1 — записи больше нет, фантом уничтожен.
+     * Фаза 0 сразу расширяет поиск и обнуляет счётчик.
+     * Фаза 1 стирает запись только после [CONFIRM_TICKS] тиков подряд.
+     * Пока область не тикает, счётчик снова с нуля.
+     *
+     * @return фаза, сколько тиков область уже тикала, стирать ли запись
      */
-    fun afterMiss(phase: Int, areaTicking: Boolean): Pair<Int, Boolean> {
-        if (!areaTicking) return phase to false
-        if (phase <= 0) return 1 to false
-        return 0 to true
+    fun afterMiss(phase: Int, seenTicks: Int, areaTicking: Boolean): Triple<Int, Int, Boolean> {
+        if (!areaTicking) return Triple(phase, 0, false)
+        if (phase <= 0) return Triple(1, 0, false)
+        val next = seenTicks + 1
+        if (next >= CONFIRM_TICKS) return Triple(0, 0, true)
+        return Triple(phase, next, false)
     }
 
     /** Убирает пустые id, текущую сущность и повтор одного и того же id. */
