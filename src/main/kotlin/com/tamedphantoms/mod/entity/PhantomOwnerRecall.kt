@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.entity
 
+import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomRoster
 import com.tamedphantoms.mod.platform.ModAccess
 import com.tamedphantoms.mod.platform.storedData
@@ -96,6 +97,7 @@ object PhantomOwnerRecall {
     }
 
     fun tryTeleportToOwner(phantom: TamedPhantomEntity, owner: Player, force: Boolean = false): Boolean {
+        if (PhantomDismount.carryingPortal(phantom)) return false
         if (force) {
             if (!owner.isAlive || !phantom.isAlive || phantom.isOrderedToSit()) return false
             if (phantom.isLeashed) phantom.dropLeash(true, true)

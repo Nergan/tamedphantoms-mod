@@ -148,18 +148,20 @@ class TamedPhantomModel(root: ModelPart) : PhantomModel<Phantom>(root) {
             rightTipZ -= fold * TUCK_TIP_DOWN
         }
 
-        if (swim > 0.01f) {
+        val swimPose = swim * (1f - fold)
+        if (swimPose > 0.01f) {
             // Под водой крыло идёт волной, как у ската: корень почти не машет, кончик отстаёт,
             // а плоскость крыла поворачивается вслед за взмахом, и волна бежит к задней кромке.
+            // Сложенные крылья (бонус или одно снижение) эту волну гасят.
             val stroke = amplitude.coerceIn(0.05f, 0.8f)
             val ripple = time * SWIM_STROKE
             val baseWave = Mth.sin(ripple) * (0.06f + stroke * 0.38f)
             val tipWave = Mth.sin(ripple - 1.4f) * (0.12f + stroke * 0.62f)
-            leftBaseZ = Mth.lerp(swim, leftBaseZ, baseWave)
-            rightBaseZ = Mth.lerp(swim, rightBaseZ, -baseWave)
-            leftTipZ = Mth.lerp(swim, leftTipZ, tipWave - baseWave)
-            rightTipZ = Mth.lerp(swim, rightTipZ, -(tipWave - baseWave))
-            twist = Mth.cos(ripple) * (0.08f + stroke * 0.3f) * swim
+            leftBaseZ = Mth.lerp(swimPose, leftBaseZ, baseWave)
+            rightBaseZ = Mth.lerp(swimPose, rightBaseZ, -baseWave)
+            leftTipZ = Mth.lerp(swimPose, leftTipZ, tipWave - baseWave)
+            rightTipZ = Mth.lerp(swimPose, rightTipZ, -(tipWave - baseWave))
+            twist = Mth.cos(ripple) * (0.08f + stroke * 0.3f) * swimPose
         }
 
         leftWingBase.zRot = Mth.lerp(crawl, leftBaseZ, -lift)

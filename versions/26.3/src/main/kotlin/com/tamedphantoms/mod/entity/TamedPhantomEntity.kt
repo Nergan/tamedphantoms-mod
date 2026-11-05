@@ -67,7 +67,9 @@ import net.minecraft.world.effect.MobEffects
 import net.minecraft.world.damagesource.DamageSource
 import net.minecraft.world.DifficultyInstance
 import net.minecraft.world.entity.Entity
+import net.minecraft.world.entity.EntityReference
 import net.minecraft.world.entity.EntityType
+import net.minecraft.world.entity.OwnableEntity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.Mob
 import net.minecraft.world.entity.EntitySpawnReason
@@ -100,7 +102,8 @@ import kotlin.math.sqrt
  */
 class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: Level) :
     Phantom(entityType, level),
-    PhantomCockpit {
+    PhantomCockpit,
+    OwnableEntity {
 
     companion object {
         private val DATA_TAMED: EntityDataAccessor<Boolean> =
@@ -578,6 +581,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private set(value) = this.entityData.set(DATA_SADDLED, value)
 
     fun isOwnedBy(entity: LivingEntity): Boolean = entity.uuid == this.ownerUUID
+
+    override fun getOwnerReference(): EntityReference<LivingEntity>? {
+        val id = this.ownerUUID ?: return null
+        return EntityReference.of(id)
+    }
 
     /** Вызывается из обработчика сетевого пакета на сервере (только для владельца-пилота). */
     fun setPilotInput(ascending: Boolean, descending: Boolean, forward: Float = 0f, strafe: Float = 0f) {
@@ -1632,7 +1640,11 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
             else -> (this.swimBlend - 0.05f).coerceAtLeast(0f)
         }
         val fastSweep = ((this.airspeedRatio - 1.2f) / 0.8f).coerceIn(0f, 1f) * 0.35f
-        this.wingSweep = PhantomFlightModel.approach(this.wingSweep, maxOf(this.flightTuck, fastSweep) * (1f - this.swimBlend), 0.12f)
+        this.wingSweep = PhantomFlightModel.approach(
+            this.wingSweep,
+            maxOf(this.flightTuck, fastSweep * (1f - this.swimBlend)),
+            0.12f,
+        )
     }
 
     private fun cruiseReference(): Double =
@@ -1820,16 +1832,28 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         PhantomDismount.bypassNow { super.ejectPassengers() }
     }
 
+    override fun remove(reason: Entity.RemovalReason) {
+        if (reason == Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
+            PhantomDismount.protectRiders(this)
+        }
+        super.remove(reason)
+    }
+
     /** Портал и /tp везут седоков вместе с фантомом. Если ваниль не посадила их на копию, сажаем сами. */
     override fun teleport(transition: TeleportTransition): Entity? {
         val riders = this.passengers.toList()
-        for (rider in riders) {
-            if (rider is Player) PhantomDismount.lockSeat(rider)
+        PhantomDismount.beginPortalCarry(this)
+        try {
+            for (rider in riders) {
+                if (rider is Player) PhantomDismount.lockSeat(rider)
+            }
+            val arrived = super.teleport(transition)
+            val live = (arrived as? TamedPhantomEntity) ?: if (this.isAlive && !this.isRemoved) this else null
+            if (live != null) PhantomDismount.reseat(riders, live)
+            return arrived
+        } finally {
+            PhantomDismount.endPortalCarry(this)
         }
-        val arrived = super.teleport(transition)
-        val live = (arrived as? TamedPhantomEntity) ?: if (this.isAlive && !this.isRemoved) this else null
-        if (live != null) PhantomDismount.reseat(riders, live)
-        return arrived
     }
 
     override fun removePassenger(passenger: Entity) {

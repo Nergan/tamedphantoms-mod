@@ -145,7 +145,7 @@ object ClientPhantomInputSender {
         promptKey = key
         promptShownFlash = flash
         val keyName = ModKeyMappings.SCREAM.translatedKeyMessage
-        val shown = if (flash) keyName.copy().withStyle(ChatFormatting.RED) else keyName
+        val shown = if (flash) keyName.copy().withStyle(ChatFormatting.GREEN) else keyName
         val text = when (key) {
             "zoom" -> Component.translatable("tamedphantoms.zoom.prompt", shown)
             "roll" -> Component.translatable("tamedphantoms.roll.prompt", shown)

@@ -11,7 +11,8 @@
     "PhantomSpawnerMixin",
     "PhantomInteractMixin",
     "PhantomRideTeleportMixin",
-    "PhantomPortalRideMixin"
+    "PhantomPortalRideMixin",
+    "PhantomLogoutMixin"
   ],
   "client": [
     "PhantomModelLookMixin",

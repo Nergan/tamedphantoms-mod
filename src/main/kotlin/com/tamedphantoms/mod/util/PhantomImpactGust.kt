@@ -2,6 +2,7 @@ package com.tamedphantoms.mod.util
 
 import com.tamedphantoms.mod.config.ServerConfig
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.ParticleTypes
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.level.ServerLevel
@@ -12,6 +13,8 @@ import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.level.ClipContext
 import net.minecraft.world.level.Level
+import net.minecraft.world.level.block.Blocks
+import net.minecraft.world.level.block.CampfireBlock
 import net.minecraft.world.phys.HitResult
 import net.minecraft.world.phys.Vec3
 import net.minecraft.resources.ResourceKey
@@ -157,8 +160,9 @@ object PhantomImpactGust {
     }
 
     /**
-     * Резкая остановка с любым бонусом. Взрыв вспыхивает перед фантомом, чуть ниже корпуса,
-     * и сносит тех, кто впереди и под ним, ещё и подкидывая. Чем выше скорость, тем сильнее.
+     * Резкая остановка с любым бонусом. Взрыв вспыхивает чуть впереди фантома, ниже корпуса.
+     * Область растёт со скоростью, к краю толчок сходит на нет. От фантома толкает сильнее, чем вверх.
+     * Огонь и костры в этой зоне гаснут. Седока и пассажиров не сносит.
      */
     fun trySharpStop(phantom: TamedPhantomEntity, preSpeed: Float, boost: Float) {
         if (phantom.impactGustCooldown > 0) return
@@ -168,18 +172,18 @@ object PhantomImpactGust {
         val limit = ServerConfig.rollBoostLimit().coerceAtLeast(0.0)
         val full = (0.9 + limit * 1.35).coerceAtLeast(1.2)
         val share = (speed / full).coerceIn(0.2, 1.5)
-        val distance = blowDistance(full) * (1.6 + share * 2.4)
         phantom.impactGustCooldown = 16
         val yaw = Math.toRadians(phantom.yRot.toDouble())
         val fx = -kotlin.math.sin(yaw)
         val fz = kotlin.math.cos(yaw)
-        val ahead = 1.05 + phantom.bbWidth * 0.35
-        val origin = Vec3(phantom.x + fx * ahead, phantom.y + phantom.bbHeight * 0.18, phantom.z + fz * ahead)
-        val lift = (0.55 + share * 0.95).coerceIn(0.45, 1.8)
-        val dir = Vec3(fx, lift, fz).normalize()
+        val ahead = phantom.bbWidth * 0.55 + 0.85
+        val origin = Vec3(phantom.x + fx * ahead, phantom.y + phantom.bbHeight * 0.22, phantom.z + fz * ahead)
+        val horizontal = 0.95 + share * 0.12
+        val lift = 0.18 + share * 0.06
+        val dir = Vec3(fx * horizontal, lift, fz * horizontal)
         val gusts = (5 + speed * 1.8).toInt().coerceIn(5, 16)
         repeat(gusts) { index ->
-            val along = index * 0.28
+            val along = 0.35 + index * 0.28
             val side = (index - gusts / 2.0) * 0.12
             level.sendParticles(
                 ParticleTypes.GUST,
@@ -197,32 +201,36 @@ object PhantomImpactGust {
         val volume = (0.8 + (speed / full).coerceAtMost(1.0) * 0.5).toFloat()
         level.playSound(
             null,
-            phantom.x,
-            phantom.y,
-            phantom.z,
+            origin.x,
+            origin.y,
+            origin.z,
             SoundEvents.BREEZE_WIND_CHARGE_BURST.value(),
             SoundSource.NEUTRAL,
             volume,
             0.85f + phantom.random.nextFloat() * 0.1f,
         )
-        val radius = (3.4 + speed * 0.55).coerceIn(3.4, 9.0)
-        val box = phantom.boundingBox.inflate(radius, 3.2, radius)
+        val radius = (3.2 + speed * 1.15).coerceIn(3.2, 14.0)
+        extinguish(level, origin, fx, fz, radius)
+        val box = phantom.boundingBox.inflate(radius, radius * 0.45, radius)
         val victims = level.getEntitiesOfClass(LivingEntity::class.java, box) { living ->
             living.isAlive && !living.isRemoved && living !== phantom &&
                 !phantom.hasPassenger(living) && living.vehicle == null &&
                 (living !is Player || !living.isSpectator)
         }
+        val reach = blowDistance(full) * (1.0 + share * 1.15)
         for (living in victims) {
             val body = Vec3(living.x, living.y + living.bbHeight * 0.5, living.z)
             val offset = body.subtract(origin)
             val distanceTo = offset.length()
             if (distanceTo < 0.2 || distanceTo > radius) continue
-            val ahead = offset.x * fx + offset.z * fz
+            val forward = offset.x * fx + offset.z * fz
             val below = origin.y + 0.6 - body.y
-            if (ahead < -0.35 && below < 0.15) continue
+            if (forward < -0.35 && below < 0.15) continue
             if (!clearAir(level, origin, body, phantom)) continue
-            val closeness = (1.0 - distanceTo / radius).coerceIn(0.35, 1.0)
-            startCarry(living, level, dir, distance * closeness, strong = true)
+            val closeness = (1.0 - distanceTo / radius).coerceIn(0.0, 1.0)
+            val falloff = closeness * closeness
+            if (falloff < 0.04) continue
+            startCarry(living, level, dir, reach * falloff, strong = true)
             level.sendParticles(ParticleTypes.GUST, living.x, living.y + living.bbHeight * 0.5, living.z, 4, 0.3, 0.15, 0.3, 0.0)
             level.playSound(
                 null,
@@ -234,6 +242,32 @@ object PhantomImpactGust {
                 0.85f,
                 0.85f + living.random.nextFloat() * 0.12f,
             )
+        }
+    }
+
+    private fun extinguish(level: ServerLevel, origin: Vec3, fx: Double, fz: Double, radius: Double) {
+        val reach = kotlin.math.ceil(radius).toInt().coerceIn(2, 10)
+        val vertical = kotlin.math.ceil(radius * 0.45).toInt().coerceIn(2, 6)
+        val base = BlockPos.containing(origin)
+        for (dx in -reach..reach) {
+            for (dy in -vertical..vertical) {
+                for (dz in -reach..reach) {
+                    if (dx * dx + dz * dz > reach * reach) continue
+                    val pos = base.offset(dx, dy, dz)
+                    val ox = pos.x + 0.5 - origin.x
+                    val oy = pos.y + 0.5 - origin.y
+                    val oz = pos.z + 0.5 - origin.z
+                    if (ox * ox + oy * oy + oz * oz > radius * radius) continue
+                    if (ox * fx + oz * fz < -0.75) continue
+                    val state = level.getBlockState(pos)
+                    val block = state.block
+                    if (block == Blocks.FIRE || block == Blocks.SOUL_FIRE) {
+                        level.removeBlock(pos, false)
+                    } else if (block is CampfireBlock && state.getValue(CampfireBlock.LIT)) {
+                        level.setBlock(pos, state.setValue(CampfireBlock.LIT, false), 3)
+                    }
+                }
+            }
         }
     }
 

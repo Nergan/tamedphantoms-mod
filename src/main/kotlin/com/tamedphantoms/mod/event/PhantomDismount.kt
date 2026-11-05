@@ -54,6 +54,9 @@ object PhantomDismount {
     private val bypassDepth = ThreadLocal.withInitial { 0 }
     private val travelDepth = ThreadLocal.withInitial { 0 }
 
+    /** Фантом уже проходит портал. Повторный отзыв в этот момент создаёт вторую копию с тем же UUID. */
+    private val portalCarry = ThreadLocal.withInitial { HashMap<UUID, Int>() }
+
     private val forceRide = run {
         val type = Entity::class.java
         val three = type.methods.firstOrNull { it.name == "startRiding" && it.parameterTypes.size == 3 }
@@ -95,6 +98,26 @@ object PhantomDismount {
     fun endTravel() {
         travelDepth.set((travelDepth.get() - 1).coerceAtLeast(0))
     }
+
+    @JvmStatic
+    fun beginPortalCarry(phantom: TamedPhantomEntity) {
+        val map = portalCarry.get()
+        val id = phantom.uuid
+        map[id] = (map[id] ?: 0) + 1
+        beginTravel()
+    }
+
+    @JvmStatic
+    fun endPortalCarry(phantom: TamedPhantomEntity) {
+        val map = portalCarry.get()
+        val id = phantom.uuid
+        val next = (map[id] ?: 1) - 1
+        if (next <= 0) map.remove(id) else map[id] = next
+        endTravel()
+    }
+
+    @JvmStatic
+    fun carryingPortal(phantom: TamedPhantomEntity): Boolean = (portalCarry.get()[phantom.uuid] ?: 0) > 0
 
     /** Короткий замок после переноса: чужой пакет снятия не высаживает седока у выхода из портала. */
     @JvmStatic
@@ -351,9 +374,15 @@ object PhantomDismount {
         }
     }
 
+    @JvmStatic
     fun onLogout(player: Player) {
         val ridden = player.vehicle as? TamedPhantomEntity
-        if (ridden != null) this.protectRiders(ridden)
+        if (ridden != null && ridden.isOwnedBy(player)) {
+            this.protectRiders(ridden)
+            // Ваниль забирает ездовое с игроком, только если на нём остался один игрок.
+            // Пассажира снимаем заранее, иначе фантом останется в мире вместе с ним.
+            this.releaseOtherRiders(ridden, player)
+        }
         val id = player.uuid
         val task = Runnable {
             windows.remove(id)
@@ -505,13 +534,26 @@ object PhantomDismount {
     }
 
     /** Пять минут медленного падения и огнестойкости тем, кто был в седле в момент выхода. */
-    private fun protectRiders(phantom: TamedPhantomEntity) {
+    fun protectRiders(phantom: TamedPhantomEntity) {
         val ticks = 5 * 60 * 20
         for (passenger in phantom.passengers.toList()) {
             val living = passenger as? LivingEntity ?: continue
             if (!living.isAlive || living.isRemoved) continue
             living.addEffect(MobEffectInstance(MobEffects.SLOW_FALLING, ticks, 0, false, true, true))
             living.addEffect(MobEffectInstance(MobEffects.FIRE_RESISTANCE, ticks, 0, false, true, true))
+        }
+    }
+
+    private fun releaseOtherRiders(phantom: TamedPhantomEntity, owner: Player) {
+        val others = phantom.passengers.filter { it !== owner }
+        if (others.isEmpty()) return
+        this.bypass {
+            for (rider in others) {
+                rider.fallDistance = 0.0f
+                if (rider.vehicle === phantom || phantom.passengers.contains(rider)) {
+                    rider.stopRiding()
+                }
+            }
         }
     }
 
