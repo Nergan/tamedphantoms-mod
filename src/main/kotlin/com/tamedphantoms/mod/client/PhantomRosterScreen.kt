@@ -44,7 +44,9 @@ class PhantomRosterScreen(private val parent: Screen) : Screen(Component.transla
     }
 
     override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
-        this.renderBackground(graphics, mouseX, mouseY, partialTick)
+        // Screen.render сам рисует фон и в этот момент размывает уже готовый кадр.
+        // Надписи после виджетов остаются резкими: второй проход их уже не задевает.
+        super.render(graphics, mouseX, mouseY, partialTick)
         graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF)
         if (!PhantomRosterClient.ready) {
             graphics.drawCenteredString(font, Component.translatable("tamedphantoms.roster.waiting"), width / 2, 40, 0xA0A0A0)
@@ -60,7 +62,6 @@ class PhantomRosterScreen(private val parent: Screen) : Screen(Component.transla
         if (System.nanoTime() < copiedUntil) {
             graphics.drawCenteredString(font, Component.translatable("tamedphantoms.roster.copied"), width / 2, height - 46, 0x55FF55)
         }
-        super.render(graphics, mouseX, mouseY, partialTick)
     }
 
     private fun rebuild() {
