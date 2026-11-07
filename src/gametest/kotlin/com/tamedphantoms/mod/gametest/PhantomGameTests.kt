@@ -36,16 +36,21 @@ object PhantomGameTests {
         return pet
     }
 
-    @GameTest(template = TEMPLATE)
+    @GameTest(template = TEMPLATE, batch = "tamedphantoms-immortal-off")
     @JvmStatic
     fun immortalityWearsOffWhileDisabled(helper: GameTestHelper) {
-        helper.assertTrue(ServerConfig.immortalPhantoms(), "immortal_phantoms should be on by default")
         val pet = tamedBy(helper, helper.makeMockPlayer(GameType.SURVIVAL), BlockPos(2, 2, 2))
         pet.isNoAi = false
         pet.immortal = true
+        pet.setGlowingTag(true)
+        val saved = ServerConfig.settings
+        ServerConfig.settings = object : ServerConfig.Settings by saved {
+            override fun immortalPhantoms() = false
+        }
         helper.succeedWhen {
             helper.assertTrue(!pet.immortal, "an immortal phantom should become ordinary while the option is off")
             helper.assertTrue(!pet.isCurrentlyGlowing, "the immortal glow should go away")
+            ServerConfig.settings = saved
         }
     }
 

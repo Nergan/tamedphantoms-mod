@@ -16,7 +16,8 @@ permissions:
 
 # Пуш в main (и тег v<mod_version> / ручной запуск) пересобирает 1.21.1 и 26.3
 # и обновляет четыре страницы GitHub Release: версия Minecraft и загрузчик.
-# Гайдбук: Patchouli на страницах 1.21.1, Modonomicon на 26.3. CDN публикует только NeoForge 1.21.1.
+# Гайдбук: Patchouli на страницах 1.21.1, Modonomicon на 26.3.
+# McnCDN из репозитория мода не публикуется: пакеты CDN заливает только modpacks.
 
 jobs:
   release:
@@ -351,39 +352,3 @@ jobs:
             exit 0
           fi
           python3 .github/scripts/update-modrinth-body.py tamed-phantoms modrinth.md
-
-      - name: Set up Node.js
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Publish jars to McnCDN
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-        env:
-          MCNS_WORKER_ID: ${{ secrets.MCNS_WORKER_ID }}
-          MCNS_WORKER_KEY: ${{ secrets.MCNS_WORKER_KEY }}
-          MCNS_MOD_VERSION: ${{ steps.versions.outputs.mod_version }}
-          MCNS_COMMIT: ${{ github.sha }}
-          MCNS_REF: ${{ github.ref }}
-        run: |
-          set -euo pipefail
-          one() {
-            local pattern="$1"
-            shopt -s nullglob
-            local matches=( $pattern )
-            if [[ ${#matches[@]} -ne 1 ]]; then
-              echo "Expected exactly one file for ${pattern}, found ${#matches[@]}: ${matches[*]}" >&2
-              exit 1
-            fi
-            printf '%s\n' "${matches[0]}"
-          }
-          mod_jar="release-assets/tamedphantoms-neoforge-1.21.1-${{ steps.versions.outputs.mod_version }}.jar"
-          kff_jar="$(one 'release-assets/kotlinforforge-*.jar')"
-          patchouli_jar="$(one 'release-assets/Patchouli-*-NEOFORGE.jar')"
-          node scripts/mcns-release.mjs tamedphantoms-mod auto \
-            "mod=${mod_jar}" \
-            "kotlinforforge=${kff_jar}" \
-            "patchouli=${patchouli_jar}"
-          node scripts/mcns-release.mjs tamedphantoms auto \
-            "jar=${mod_jar}"

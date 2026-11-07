@@ -16,7 +16,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                               | Required | What it is                                                                      |
 | ---------------------------------- | -------- | ------------------------------------------------------------------------------- |
-| `tamedphantoms-neoforge-1.21.1-1.0.31.jar` | Yes | this mod, NeoForge 1.21.1 |
+| `tamedphantoms-neoforge-1.21.1-1.0.32.jar` | Yes | this mod, NeoForge 1.21.1 |
 | `kotlinforforge-5.8.0-all.jar`     | Yes      | [Kotlin for Forge](https://modrinth.com/mod/kotlin-for-forge)                   |
 | `Patchouli-1.21.1-93-NEOFORGE.jar` | No       | [Patchouli](https://modrinth.com/mod/patchouli), only if you want the guidebook |
 
@@ -24,7 +24,7 @@ Download one set and put those files in the `mods` folder.
 
 | File                                      | Required | What it is                                                                                         |
 | ----------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
-| `tamedphantoms-fabric-1.21.1-1.0.31.jar` | Yes | this mod, Fabric 1.21.1 |
+| `tamedphantoms-fabric-1.21.1-1.0.32.jar` | Yes | this mod, Fabric 1.21.1 |
 | `fabric-api-0.116.17+1.21.1.jar`          | Yes      | [Fabric API](https://modrinth.com/mod/fabric-api)                                                  |
 | `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar` | Yes | [Fabric Language Kotlin](https://modrinth.com/mod/fabric-language-kotlin)                    |
 | `cloth-config-15.0.140-fabric.jar`        | Yes      | [Cloth Config](https://modrinth.com/mod/cloth-config), the config screen                           |
@@ -51,7 +51,7 @@ The release workflow builds both jars and fetches the companion jars from Modrin
 - **Charged barrel roll.** During a barrel roll the scream key charges the turn: once on the first turn, twice on the second, three times on the third, and so on. Enough presses add speed (`roll_boost_step`, usually `0.25`), pop a small air burst at the tail with the same sound as the climb out of a loop, only quieter, and start the next turn shorter than the last (`roll_boost_spin`). Presses past the quota add nothing. Too few, and the charge ends; speed already gained stays. The key letter in the prompt flashes light green. The cap is `roll_boost_limit` (`2.0`, from `0` to `8`; `0` disables the charge and ordinary rolls remain). At the cap the phantom can still roll, but R no longer charges it. The wings fold with the bonus, underwater as well, and also when the phantom drops on descend alone. Climbing in air spends the bonus (`roll_boost_climb_drain`, `0.2` per two seconds), descending in air builds it at the same rate, and in ordinary flight it also fades by about `0.1` every two seconds. During a loop, the zoom out of one, underwater, and in lava it does not fade on its own and climbing does not spend it. A crash or a hard stop in water or lava clears the bonus when the phantom leaves the liquid, and speed returns to an ordinary cruise. Hovering, reversing, or strafing without forward clears it at once. The bonus itself leaves no lasting trail. A barrel roll can also start during the climb out of a loop: if the charge starts then, that chain's cap is one higher, and the first time it is filled grants Lord of the Western Winds. Hitting a wall, the ground, or a ceiling at the maximum blows away anyone nearby who is not behind a block, farther when the impact is faster. Braking from any speed bonus, for example by pressing back, stops the phantom sharply. A wide cloud of wind puffs (`poof`) appears a little ahead of it, below the body, about three times as far as before. It reaches farther when the phantom was faster, fades with distance, pushes away from the phantom more than it lifts, and puts out fire, campfires, and any burning entity it reaches across that wider area. Hitting a surface still uses the impact burst. The rider and passengers are not blown.
 - **First person (1.21.1).** You sit on the phantom's back instead of hovering above it: when it climbs, dives, or banks, your eyes turn with the body around its center. Your view keeps the horizon level while the phantom tilts less than `camera_horizon_hold` (30° by default). Past that, the phantom turns your view with it, so a loop or a barrel roll carries you along, and the view levels out smoothly afterwards. `0` fixes the view to the phantom; `camera_smoothing` sets how soft it is. The crosshair aims where the camera looks.
 - **Cruise.** Double-tap forward while flying: the phantom flies on by itself and still turns with the camera. Any movement key, jump, descend, or Shift hands control back. Both changes are shown above the hotbar.
-- **Immortal phantoms.** With the server option `immortal_phantoms` on, the advancement Lord of the Western Winds makes that phantom glow permanently and unable to die. The advancement itself is granted even when the option is off. It is on by default. While it is off, phantoms that are already immortal become ordinary tamed phantoms. The change applies without a restart. An ordinary dead loop grants nothing by itself.
+- **Immortal phantoms.** With the server option `immortal_phantoms` on, the advancement Lord of the Western Winds makes that phantom glow permanently and unable to die. The advancement itself is granted even when the option is off. It is on by default. While it is off, phantoms that are already immortal become ordinary tamed phantoms and their immortal glow goes away. The change applies without a restart. An ordinary dead loop grants nothing by itself.
 - **Leash.** A tamed phantom can be leashed and unleashed with an empty hand. Click a fence to tie it: every phantom on your lead within 12 blocks is tied, a sitting one too. A click that lands on the phantom with the fence right behind it also ties it. A released phantom drifts aside and snaps the lead.
 - **Behavior.** A tamed phantom keeps a comfortable distance from its owner, neither far away nor in your face, and sometimes plays around them. A released phantom has its own temperament and flies loops, rolls, wingovers, and stoops. It reacts to terrain, biome, time of day, moon phase, and weather. Like a dolphin, it comes to play with players: it flies alongside and a little ahead of someone who is running or flying, circles someone who stands still, swoops past, and shows off tricks. Now and then, when Tamed Phantoms: Scream is installed, it screams at a mob nearby just to watch it run; that cry does not blind. After leaving water a phantom shakes itself dry, but not in rain; in snowfall or in a desert it shakes as usual.
 - **Stats.** Tamed and released phantoms have 40 health, 12 attack damage, and fly faster than a vanilla phantom (1.25 times by default, the server option `flight_speed`). They do not burn in sunlight and do not drown. On death they drop 1–12 phantom membranes.
@@ -84,19 +84,19 @@ NeoForge:
 
 1. Install NeoForge 1.21.1.
 2. Download the NeoForge jars from [the latest Release](https://github.com/Nergan/tamedphantoms-mod/releases/latest).
-3. Put `tamedphantoms-neoforge-1.21.1-1.0.31.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
+3. Put `tamedphantoms-neoforge-1.21.1-1.0.32.jar` and `kotlinforforge-5.8.0-all.jar` in `mods`.
 4. Optionally add `Patchouli-1.21.1-93-NEOFORGE.jar` from the same release.
 
 Fabric:
 
 1. Install Fabric Loader 0.16.10 or newer for Minecraft 1.21.1. Loader 0.19.x is fine. Do not look for loader version 0.100.3: that number is not a loader.
 2. Download the Fabric jars from the same release. The release replaces its file list on each push, so old names such as `tamedphantoms-1.0.0.jar` and `tamedphantoms-fabric-1.0.0.jar` are not part of the current set.
-3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.31.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
+3. Put all of these in `mods`: `tamedphantoms-fabric-1.21.1-1.0.32.jar`, `fabric-api-0.116.17+1.21.1.jar`, `fabric-language-kotlin-1.13.2+kotlin.2.1.20.jar`, and `cloth-config-15.0.140-fabric.jar`.
 4. Optionally add Mod Menu, Placeholder API, and `Patchouli-1.21.1-93-FABRIC.jar`.
 
 If the game says Patchouli requires **fabric** 0.100.3 or that Tamed Phantoms requires **fabric-api**, the `fabric-api-0.116.17+1.21.1.jar` file is missing. Fabric API’s id is `fabric-api`, and it also provides the id `fabric`. That is the jar from this release, not a newer Fabric Loader.
 
-The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.31-fabric`.
+The mod is required on both client and server. Companion mods can also be installed from Modrinth; the Fabric version there is `1.0.32-fabric`.
 
 ## Flight controls
 

@@ -112,6 +112,7 @@ neoForge {
         create("gameTestServer") {
             type = "gameTestServer"
             systemProperty("neoforge.enabledGameTestNamespaces", modId)
+            jvmArguments.addAll(listOf("-Xms128m", "-Xmx512m", "-XX:+UseSerialGC"))
         }
         create("data") {
             data()

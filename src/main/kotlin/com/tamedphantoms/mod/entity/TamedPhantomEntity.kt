@@ -1122,6 +1122,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         }
         if (this.immortal && !ServerConfig.immortalPhantoms()) {
             this.immortal = false
+            this.setGlowingTag(false)
         }
         if (this.immortal) {
             this.setGlowingTag(true)
