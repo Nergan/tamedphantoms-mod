@@ -35,10 +35,6 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
                 override fun repelRadius() = cfg.repelRadius.get()
                 override fun defendDurationTicks() = cfg.defendDurationTicks.get()
                 override fun flightSpeed() = cfg.flightSpeed.get()
-                override fun screamRadius() = cfg.screamRadius.get()
-                override fun screamCooldownSeconds() = cfg.screamCooldownSeconds.get()
-                override fun stackedScreams() = if (SPEC.isLoaded) cfg.stackedScreams.get() else true
-                override fun riderScream() = if (SPEC.isLoaded) cfg.riderScream.get() else false
                 override fun insomniaDays() = cfg.insomniaDays.get()
                 override fun phantomGroupMultiplier() = cfg.phantomGroupMultiplier.get()
                 override fun phantomSize() = cfg.phantomSize.get()
@@ -59,10 +55,6 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
     val repelRadius: ModConfigSpec.DoubleValue
     val defendDurationTicks: ModConfigSpec.IntValue
     val flightSpeed: ModConfigSpec.DoubleValue
-    val screamRadius: ModConfigSpec.DoubleValue
-    val screamCooldownSeconds: ModConfigSpec.IntValue
-    val stackedScreams: ModConfigSpec.BooleanValue
-    val riderScream: ModConfigSpec.BooleanValue
     val insomniaDays: ModConfigSpec.IntValue
     val phantomGroupMultiplier: ModConfigSpec.DoubleValue
     val phantomSize: ModConfigSpec.IntValue
@@ -206,39 +198,6 @@ class NeoForgeServerConfig(builder: ModConfigSpec.Builder) {
             rollSpin = null
             rollMinTicks = null
         }
-
-        builder.pop()
-
-        builder.push("scream")
-
-        screamRadius = builder
-            .comment("Радиус крика в блоках: мобы в этом радиусе разбегаются.")
-            .translation("$KEY_PREFIX.scream.scream_radius")
-            .defineInRange("scream_radius", 32.0, 4.0, 128.0)
-
-        screamCooldownSeconds = builder
-            .comment("Перезарядка крика в секундах. Общая для хозяина, самозащиты и полнолуния.")
-            .translation("$KEY_PREFIX.scream.scream_cooldown_seconds")
-            .defineInRange("scream_cooldown_seconds", 4, 1, 600)
-
-        stackedScreams = builder
-            .comment(
-                "Несколько криков сразу усиливают друг друга.",
-                "Два крика — слепота вдвое дольше. С трёх добавляется урон, ближе к фантому — сильнее.",
-                "Девять криков — потолок: 8 секунд слепоты и 10 урона. Страх мобов длится так же дольше.",
-                "Выключено — каждый крик слепит на одну секунду, как раньше, и урона нет.",
-            )
-            .translation("$KEY_PREFIX.scream.stacked_screams")
-            .define("stacked_screams", true)
-
-        riderScream = builder
-            .comment(
-                "Крик хозяина с клавиши, пока он сидит на фантоме.",
-                "Выключено — эта клавиша не кричит. Самозащита, игра и полнолуние кричат по-прежнему.",
-                "Включено — после набора скорости бочкой та же клавиша молчит пять секунд.",
-            )
-            .translation("$KEY_PREFIX.scream.rider_scream")
-            .define("rider_scream", false)
 
         builder.pop()
 

@@ -16,13 +16,10 @@ data class PhantomServerSettingsPayload(
     val repelRadius: Double,
     val defendDurationTicks: Int,
     val flightSpeed: Double,
-    val screamRadius: Double,
-    val screamCooldownSeconds: Int,
     val insomniaDays: Int,
     val phantomGroupMultiplier: Double,
     val phantomSize: Int,
     val immortalPhantoms: Boolean,
-    val stackedScreams: Boolean,
     val zoomBoost: Double = ServerConfig.DEFAULT_ZOOM_BOOST,
     val rollBoostLimit: Double = ServerConfig.DEFAULT_ROLL_BOOST_LIMIT,
     val rollBoostStep: Double = ServerConfig.DEFAULT_ROLL_BOOST_STEP,
@@ -45,13 +42,10 @@ data class PhantomServerSettingsPayload(
                 buf.writeDouble(payload.repelRadius)
                 buf.writeVarInt(payload.defendDurationTicks)
                 buf.writeDouble(payload.flightSpeed)
-                buf.writeDouble(payload.screamRadius)
-                buf.writeVarInt(payload.screamCooldownSeconds)
                 buf.writeVarInt(payload.insomniaDays)
                 buf.writeDouble(payload.phantomGroupMultiplier)
                 buf.writeVarInt(payload.phantomSize)
                 buf.writeBoolean(payload.immortalPhantoms)
-                buf.writeBoolean(payload.stackedScreams)
                 if (RideExtras.enabled) {
                     buf.writeDouble(payload.zoomBoost)
                     buf.writeDouble(payload.rollBoostLimit)
@@ -70,12 +64,9 @@ data class PhantomServerSettingsPayload(
                     buf.readDouble(),
                     buf.readVarInt(),
                     buf.readDouble(),
-                    buf.readDouble(),
-                    buf.readVarInt(),
                     buf.readVarInt(),
                     buf.readDouble(),
                     buf.readVarInt(),
-                    buf.readBoolean(),
                     buf.readBoolean(),
                     if (extras) buf.readDouble() else ServerConfig.DEFAULT_ZOOM_BOOST,
                     if (extras) buf.readDouble() else ServerConfig.DEFAULT_ROLL_BOOST_LIMIT,

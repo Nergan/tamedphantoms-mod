@@ -31,7 +31,6 @@ object FabricConfigScreen {
         val entries = builder.entryBuilder()
         addServer(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.taming")), entries, server, remote)
         addFlight(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.flight")), entries, server, client, remote)
-        addScream(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.scream")), entries, server, remote)
         addSpawning(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.spawning")), entries, server, remote)
         addSound(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.sound")), entries, client)
         addRoster(builder.getOrCreateCategory(Component.translatable("tamedphantoms.configuration.roster")), entries)
@@ -105,29 +104,6 @@ object FabricConfigScreen {
         category.addEntry(slider(entries, "tamedphantoms.configuration.flight.camera_smoothing", client.smoothing, ClientConfig.DEFAULT_CAMERA_SMOOTHING, ClientConfig.MAX_CAMERA_SMOOTHING) {
             client.smoothing = it
         })
-    }
-
-    private fun addScream(category: ConfigCategory, entries: ConfigEntryBuilder, server: FabricSettings.ServerValues, remote: Boolean) {
-        category.addEntry(decimal(entries, "tamedphantoms.configuration.scream.scream_radius", server.screamRadiusValue, 32.0, 4.0, 128.0, remote) {
-            server.screamRadiusValue = it
-        })
-        category.addEntry(whole(entries, "tamedphantoms.configuration.scream.scream_cooldown_seconds", server.screamCooldown, 4, 1, 600, remote) {
-            server.screamCooldown = it
-        })
-        category.addEntry(
-            entries.startBooleanToggle(Component.translatable("tamedphantoms.configuration.scream.stacked_screams"), server.stackedScreams)
-                .setDefaultValue(true)
-                .setTooltip(Component.translatable("tamedphantoms.configuration.scream.stacked_screams.tooltip"))
-                .setSaveConsumer { if (!remote) server.stackedScreams = it }
-                .build(),
-        )
-        category.addEntry(
-            entries.startBooleanToggle(Component.translatable("tamedphantoms.configuration.scream.rider_scream"), server.riderScream)
-                .setDefaultValue(false)
-                .setTooltip(Component.translatable("tamedphantoms.configuration.scream.rider_scream.tooltip"))
-                .setSaveConsumer { if (!remote) server.riderScream = it }
-                .build(),
-        )
     }
 
     private fun addSpawning(category: ConfigCategory, entries: ConfigEntryBuilder, server: FabricSettings.ServerValues, remote: Boolean) {

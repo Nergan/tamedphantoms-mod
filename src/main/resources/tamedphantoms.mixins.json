@@ -18,14 +18,12 @@
     "PhantomModelLookMixin",
     "VanillaPhantomBufferMixin",
     "PlayerRideBankMixin",
-    "MoonSkyMixin",
     "NightInvertMixin",
     "KeyMappingFields",
     "SharedPhysicalKeyMixin",
     "PhantomCockpitEyeMixin",
     "PhantomCockpitAimMixin",
-    "CloudTickAccessor",
-    "RideHungerMixin"
+    "CloudTickAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

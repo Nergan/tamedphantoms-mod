@@ -19,7 +19,8 @@
   },
   "mixins": [
     "tamedphantoms.mixins.json",
-    "tamedphantoms.fabric.mixins.json"
+    "tamedphantoms.fabric.mixins.json",
+    "tamedphantoms.hud.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=0.16.10",

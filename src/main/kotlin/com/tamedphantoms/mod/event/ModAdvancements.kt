@@ -22,9 +22,7 @@ object ModAdvancements {
 
     private val TAME_PHANTOM_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "tame_phantom")
     private val RELEASE_PHANTOM_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "release_phantom")
-    private val WINGED_BEAST_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "winged_beast")
     private val WEST_WIND_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "west_wind")
-    private val SICK_MOON_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "sick_moon")
     private val FILTH_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "what_filth")
     private val NASTY_HEAL_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "nasty_heal")
     private val OVERLOAD_ID = ResourceLocation.fromNamespaceAndPath(TamedPhantomsMod.MOD_ID, "sensory_overload")
@@ -34,11 +32,7 @@ object ModAdvancements {
 
     fun grantReleasePhantom(player: ServerPlayer) = grant(player, RELEASE_PHANTOM_ID, "released_phantom")
 
-    fun grantWingedBeast(player: ServerPlayer) = grant(player, WINGED_BEAST_ID, "screamed")
-
     fun grantWestWind(player: ServerPlayer) = grant(player, WEST_WIND_ID, "charged")
-
-    fun grantSickMoon(player: ServerPlayer) = grant(player, SICK_MOON_ID, "heard_moon")
 
     fun grantFilth(player: ServerPlayer) = grant(player, FILTH_ID, "fed_healing")
 

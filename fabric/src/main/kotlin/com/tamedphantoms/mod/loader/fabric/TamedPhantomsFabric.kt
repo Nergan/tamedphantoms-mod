@@ -161,7 +161,7 @@ class TamedPhantomsFabric : ModInitializer {
                 PhantomDismount.onPlayerTick(player)
                 PhantomOwnerRecallHandler.onPlayerTick(player)
             }
-            com.tamedphantoms.mod.util.PhantomScream.flush(server)
+            com.tamedphantoms.mod.api.TamedPhantomsApi.flushCry(server)
             com.tamedphantoms.mod.util.PhantomImpactGust.tick(server)
             if (server.tickCount % SETTINGS_CHECK_TICKS == 0 && FabricSettings.reloadIfChanged()) {
                 for (player in server.playerList.players) {

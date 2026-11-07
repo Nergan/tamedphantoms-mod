@@ -10,7 +10,7 @@ import com.tamedphantoms.mod.event.PhantomSpawnScaler
 import com.tamedphantoms.mod.event.PhantomTemptHandler
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import com.tamedphantoms.mod.util.PhantomImpactGust
-import com.tamedphantoms.mod.util.PhantomScream
+import com.tamedphantoms.mod.api.TamedPhantomsApi
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.Mob
@@ -107,7 +107,7 @@ object NeoForgeGameEvents {
     }
 
     private fun onServerTick(event: ServerTickEvent.Post) {
-        PhantomScream.flush(event.server)
+        TamedPhantomsApi.flushCry(event.server)
         PhantomImpactGust.tick(event.server)
     }
 

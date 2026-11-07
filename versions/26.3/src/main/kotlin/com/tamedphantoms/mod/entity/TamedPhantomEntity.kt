@@ -26,7 +26,6 @@ import com.tamedphantoms.mod.entity.ai.TamedPhantomMoveControl
 import com.tamedphantoms.mod.entity.ai.TamedPhantomRefuseGoal
 import com.tamedphantoms.mod.entity.ai.TamedPhantomWanderGoal
 import com.tamedphantoms.mod.input.PilotInputAccess
-import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
 import com.tamedphantoms.mod.util.PhantomAcrobatics
 import com.tamedphantoms.mod.util.PhantomAngerLogic
 import com.tamedphantoms.mod.util.PhantomPack
@@ -36,7 +35,6 @@ import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.util.PhantomCrawl
 import com.tamedphantoms.mod.util.PhantomEffectSpeed
 import com.tamedphantoms.mod.util.PhantomFlightAttitude
-import com.tamedphantoms.mod.util.PhantomScream
 import com.tamedphantoms.mod.util.PhantomGroundSkim
 import com.tamedphantoms.mod.util.PhantomHeadLook
 import com.tamedphantoms.mod.util.PhantomHeldLook
@@ -51,12 +49,9 @@ import com.tamedphantoms.mod.util.PhantomTreats
 import net.minecraft.core.BlockPos
 import net.minecraft.core.particles.BlockParticleOption
 import net.minecraft.core.particles.ParticleTypes
-import com.tamedphantoms.mod.platform.ModNetwork
 import net.minecraft.network.syncher.EntityDataAccessor
 import net.minecraft.network.syncher.EntityDataSerializers
 import net.minecraft.network.syncher.SynchedEntityData
-import net.minecraft.network.chat.Component
-import net.minecraft.ChatFormatting
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.server.level.ServerPlayer
 import net.minecraft.sounds.SoundEvents
@@ -174,7 +169,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         private const val TAG_WET_TRACKED = "WetTracked"
         private const val TAG_IN_WATER = "InWater"
         private const val TAG_IN_RAIN = "InRain"
-        private const val TAG_SCREAM_COOLDOWN = "ScreamCooldown"
         private const val TAG_IMMORTAL = "Immortal"
         private const val TAG_BODY_DYE = "BodyDye"
         private const val TAG_SADDLE_DYE = "SaddleDye"
@@ -216,11 +210,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
 
         /** Самый быстрый поворот верхом, градусы за тик. */
         private const val MAX_TURN_STEP = 16f
-
-        /** Шанс за секунду, что освобождённый фантом крикнет на моба рядом, и пауза после этого. */
-        private const val PLAY_SCREAM_CHANCE = 0.08f
-        private const val PLAY_SCREAM_RANGE = 12.0
-        private const val PLAY_SCREAM_PAUSE = 600
     }
 
     init {
@@ -325,13 +314,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         return applied
     }
 
-    /** Ответ на крик хозяина. Новый круг ответов не поднимает. */
-    fun answerScream() {
-        val level = this.level() as? ServerLevel ?: return
-        if (!this.isAlive || !this.tamed) return
-        this.beginScream(level, redEyes = true, blindness = true, awardOwner = null)
-    }
-
     /** Взмах крыльев в этом кадре виден у пилота: тугость сложенных крыльев и сила взмаха. */
     var flightTuck: Float = 0f
     var flightTuckO: Float = 0f
@@ -363,15 +345,14 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         get() = this.entityData.get(DATA_SHAKE)
         set(value) = this.entityData.set(DATA_SHAKE, value)
 
-    /** Сколько тиков глаза ещё горят красным от крика. 0 — обычный цвет. */
+    /**
+     * Сколько тиков глаза ещё горят красным. Ставит аддон крика.
+     * Этот мод только уменьшает счётчик, чтобы вспышка сама погасла.
+     */
     var screamEyeTicks: Int
         get() = this.entityData.get(DATA_SCREAM_EYES)
         set(value) = this.entityData.set(DATA_SCREAM_EYES, value)
 
-    private var screamCooldown: Int = 0
-    private var riderScreamLock: Int = 0
-    private var screamTicks: Int = 0
-    private var screamFears: Boolean = false
     var trackingLook: Boolean
         get() = this.entityData.get(DATA_TRACKING)
         set(value) = this.entityData.set(DATA_TRACKING, value)
@@ -698,7 +679,7 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         output.putBoolean(TAG_WET_TRACKED, this.wetMemory.tracked)
         output.putBoolean(TAG_IN_WATER, this.wetMemory.inWater)
         output.putBoolean(TAG_IN_RAIN, this.wetMemory.inRain)
-        output.putInt(TAG_SCREAM_COOLDOWN, this.screamCooldown)
+        TamedPhantomsApi.exportCry(this)?.let { output.putString("TamedPhantomsCry", it) }
         output.putBoolean(TAG_IMMORTAL, this.immortal)
         output.putInt(TAG_BODY_DYE, this.bodyDye)
         output.putInt(TAG_SADDLE_DYE, this.saddleDye)
@@ -721,7 +702,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
                 inRain = input.getBooleanOr(TAG_IN_RAIN, false),
             )
         }
-        this.screamCooldown = input.getIntOr(TAG_SCREAM_COOLDOWN, 0).coerceAtLeast(0)
+        val cry = input.getString("TamedPhantomsCry").orElse("")
+        if (cry.isNotEmpty()) TamedPhantomsApi.importCry(this, cry)
         this.immortal = input.getBooleanOr(TAG_IMMORTAL, false)
         this.bodyDye = input.getIntOr(TAG_BODY_DYE, NO_DYE)
         this.saddleDye = input.getIntOr(TAG_SADDLE_DYE, NO_DYE)
@@ -1110,7 +1092,8 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
         this.tickLavaExit()
         this.tickRideHead()
         this.tickAngerTimer()
-        this.tickScream(level)
+        if (this.screamEyeTicks > 0) this.screamEyeTicks--
+        TamedPhantomsApi.tickCry(this, level)
         this.tickAcrobatics()
         if (this.takeoffHoldTicks > 0) {
             this.takeoffHoldTicks--
@@ -1425,102 +1408,6 @@ class TamedPhantomEntity(entityType: EntityType<out TamedPhantomEntity>, level: 
     private fun tickAngerTimer() {
         this.angerState = PhantomAngerLogic.tick(this.angerState)
         this.setDefending(this.angerState.isActive)
-    }
-
-    /** После набора скорости бочкой крик с той же клавиши молчит пять секунд. */
-    fun lockRiderScream(ticks: Int) {
-        if (ticks > this.riderScreamLock) this.riderScreamLock = ticks
-    }
-
-    fun tryOwnerScream(player: Player) {
-        if (!ServerConfig.riderScream()) return
-        if (player.vehicle !== this || !this.isOwnedBy(player)) return
-        val serverPlayer = player as? ServerPlayer ?: return
-        if (this.riderScreamLock > 0) {
-            val seconds = (this.riderScreamLock + 19) / 20
-            serverPlayer.sendSystemMessage(
-                Component.translatable("tamedphantoms.scream.cooldown", seconds).withStyle(ChatFormatting.RED),
-                true,
-            )
-            return
-        }
-        if (this.screamCooldown > 0) {
-            val seconds = (this.screamCooldown + 19) / 20
-            serverPlayer.sendSystemMessage(
-                Component.translatable("tamedphantoms.scream.cooldown", seconds).withStyle(ChatFormatting.RED),
-                true,
-            )
-            return
-        }
-        val level = this.level()
-        if (level is ServerLevel) {
-            this.beginScream(level, redEyes = true, blindness = true, awardOwner = serverPlayer)
-            PhantomScream.echo(level, this, serverPlayer)
-        }
-    }
-
-    private fun tickScream(level: ServerLevel) {
-        if (this.riderScreamLock > 0) this.riderScreamLock--
-        if (this.screamCooldown > 0) {
-            this.screamCooldown--
-        }
-        if (this.screamTicks > 0) {
-            PhantomScream.frighten(level, this, this.screamFears)
-            this.screamTicks--
-            if (this.screamTicks <= 0) {
-                this.screamEyeTicks = 0
-                this.screamFears = false
-            }
-            return
-        }
-        if (this.screamCooldown > 0 || !this.isAlive) return
-        if (this.isDefending()) {
-            this.beginScream(level, redEyes = true, blindness = true, awardOwner = null)
-            return
-        }
-        if (!this.tamed && this.tickCount % 20 == 0 &&
-            PhantomScream.isFullMoonNight(level) &&
-            this.random.nextFloat() < 0.12f
-        ) {
-            this.beginScream(level, redEyes = false, blindness = false, awardOwner = null, moonPulse = true)
-            return
-        }
-        if (this.playScreamPause > 0) {
-            this.playScreamPause--
-            return
-        }
-        // Освобождённый пугает мобов криком ради забавы: без слепоты, и потом надолго затихает.
-        if (!this.tamed && !this.isVehicle && this.tickCount % 20 == 0 && this.random.nextFloat() < PLAY_SCREAM_CHANCE) {
-            val prey = level.getEntitiesOfClass(Mob::class.java, this.boundingBox.inflate(PLAY_SCREAM_RANGE)) {
-                it !is Phantom && it.isAlive
-            }.minByOrNull { it.distanceToSqr(this) } ?: return
-            this.glanceTarget = prey
-            this.beginScream(level, redEyes = false, blindness = false, awardOwner = null)
-            this.playScreamPause = PLAY_SCREAM_PAUSE + this.random.nextInt(PLAY_SCREAM_PAUSE)
-        }
-    }
-
-    private var playScreamPause = PLAY_SCREAM_PAUSE
-
-    private fun beginScream(level: ServerLevel, redEyes: Boolean, blindness: Boolean, awardOwner: ServerPlayer?, moonPulse: Boolean = false) {
-        val seconds = ServerConfig.screamCooldownSeconds().coerceAtLeast(1)
-        this.screamCooldown = seconds * 20
-        this.screamTicks = PhantomScream.EFFECT_TICKS
-        this.screamFears = blindness
-        this.screamEyeTicks = if (redEyes) PhantomScream.EFFECT_TICKS else 0
-        this.addEffect(MobEffectInstance(MobEffects.GLOWING, PhantomScream.EFFECT_TICKS, 0, false, false, false))
-        PhantomScream.play(level, this)
-        PhantomScream.note(level, this, blindness)
-        PhantomScream.frighten(level, this, blindness)
-        if (moonPulse) {
-            ModNetwork.sendToDimension(level, PhantomMoonPulsePayload)
-            for (listener in PhantomScream.listeners(level, this)) {
-                ModAdvancements.grantSickMoon(listener)
-            }
-        }
-        if (awardOwner != null) {
-            ModAdvancements.grantWingedBeast(awardOwner)
-        }
     }
 
     /** Верхом позу присылает пилот. Без всадника счёт петли пилота сбрасывается. */

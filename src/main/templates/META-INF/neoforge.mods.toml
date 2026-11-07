@@ -40,6 +40,9 @@ config = "${mod_id}.mixins.json"
 [[mixins]]
 config = "${mod_id}.neoforge.mixins.json"
 
+[[mixins]]
+config = "${mod_id}.neoforge.hud.mixins.json"
+
 # Явная зависимость от NeoForge нужной версии.
 [[dependencies.${mod_id}]] #optional
 modId = "neoforge"

@@ -35,7 +35,6 @@ object ClientModEvents {
         bus.addListener { _: ClientTickEvent.Post ->
             ClientPhantomInputSender.onClientTick()
             ClientFlightSpeedSender.onClientTick()
-            PhantomMoonLight.onTick()
         }
         bus.addListener { event: PlaySoundEvent ->
             val next = ClientPhantomSoundHandler.adjust(event.sound)
@@ -56,12 +55,6 @@ object ClientModEvents {
                 ?: return@addListener
             event.pitch = angles.pitch
             event.roll = angles.roll
-        }
-        bus.addListener { event: ViewportEvent.ComputeFogColor ->
-            val tint = PhantomMoonLight.tint(event.red, event.green, event.blue) ?: return@addListener
-            event.red = tint.red
-            event.green = tint.green
-            event.blue = tint.blue
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
             PhantomDiveWind.update(phantom)

@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.loader.fabric
 
+import com.tamedphantoms.mod.api.TamedPhantomsApi
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.event.PhantomRoster
@@ -8,7 +9,6 @@ import com.tamedphantoms.mod.network.PhantomDismountTapPayload
 import com.tamedphantoms.mod.network.PhantomFlightSpeedPayload
 import com.tamedphantoms.mod.network.PhantomInputPayload
 import com.tamedphantoms.mod.network.PhantomLoopPayload
-import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
 import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.network.PhantomRosterSummonPayload
@@ -32,7 +32,6 @@ object FabricNetworking {
         PayloadTypeRegistry.playC2S().register(PhantomLoopPayload.TYPE, PhantomLoopPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomZoomPayload.TYPE, PhantomZoomPayload.STREAM_CODEC)
         PayloadTypeRegistry.playC2S().register(PhantomDismountTapPayload.TYPE, PhantomDismountTapPayload.STREAM_CODEC)
-        PayloadTypeRegistry.playS2C().register(PhantomMoonPulsePayload.TYPE, PhantomMoonPulsePayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomDismountAllowPayload.TYPE, PhantomDismountAllowPayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomRosterListPayload.TYPE, PhantomRosterListPayload.STREAM_CODEC)
         PayloadTypeRegistry.playS2C().register(PhantomServerSettingsPayload.TYPE, PhantomServerSettingsPayload.STREAM_CODEC)
@@ -56,7 +55,7 @@ object FabricNetworking {
                         PhantomImpactGust.trySharpStop(vehicle, payload.sharpSpeed, payload.boost)
                     }
                     if (payload.rollBurst) {
-                        vehicle.lockRiderScream(5 * 20)
+                        TamedPhantomsApi.rollBurst(vehicle)
                         PhantomZoomBurst.onRoll(vehicle)
                     }
                 }
@@ -81,7 +80,7 @@ object FabricNetworking {
             context.server().execute {
                 val player = context.player()
                 val vehicle = player.vehicle
-                if (vehicle is TamedPhantomEntity) vehicle.tryOwnerScream(player)
+                if (vehicle is TamedPhantomEntity) TamedPhantomsApi.riderCry(vehicle, player)
             }
         }
         ServerPlayNetworking.registerGlobalReceiver(PhantomLoopPayload.TYPE) { _, context ->

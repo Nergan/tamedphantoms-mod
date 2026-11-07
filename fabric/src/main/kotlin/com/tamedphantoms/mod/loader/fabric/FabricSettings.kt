@@ -89,13 +89,10 @@ object FabricSettings {
         server.repelRadiusValue,
         server.defendTicks,
         server.flightSpeedValue,
-        server.screamRadiusValue,
-        server.screamCooldown,
         server.insomnia,
         server.groupMultiplier,
         server.size,
         server.immortal,
-        server.stackedScreams,
         server.zoomBoostValue,
         server.rollBoostLimitValue,
         server.rollBoostStepValue,
@@ -111,13 +108,10 @@ object FabricSettings {
         server.repelRadiusValue = payload.repelRadius
         server.defendTicks = payload.defendDurationTicks
         server.flightSpeedValue = payload.flightSpeed
-        server.screamRadiusValue = payload.screamRadius
-        server.screamCooldown = payload.screamCooldownSeconds
         server.insomnia = payload.insomniaDays
         server.groupMultiplier = payload.phantomGroupMultiplier
         server.size = payload.phantomSize
         server.immortal = payload.immortalPhantoms
-        server.stackedScreams = payload.stackedScreams
         server.zoomBoostValue = payload.zoomBoost
         server.rollBoostLimitValue = payload.rollBoostLimit
         server.rollBoostStepValue = payload.rollBoostStep
@@ -184,14 +178,10 @@ object FabricSettings {
         var repelRadiusValue: Double = 64.0
         var defendTicks: Int = 200
         var flightSpeedValue: Double = 1.25
-        var screamRadiusValue: Double = 32.0
-        var screamCooldown: Int = 4
         var insomnia: Int = 1
         var groupMultiplier: Double = 2.0
         var size: Int = 4
         var immortal: Boolean = true
-        var stackedScreams: Boolean = true
-        var riderScream: Boolean = false
         var zoomBoostValue: Double = ServerConfig.DEFAULT_ZOOM_BOOST
         var rollBoostLimitValue: Double = ServerConfig.DEFAULT_ROLL_BOOST_LIMIT
         var rollBoostStepValue: Double = ServerConfig.DEFAULT_ROLL_BOOST_STEP
@@ -205,14 +195,10 @@ object FabricSettings {
         override fun repelRadius() = repelRadiusValue
         override fun defendDurationTicks() = defendTicks
         override fun flightSpeed() = flightSpeedValue
-        override fun screamRadius() = screamRadiusValue
-        override fun screamCooldownSeconds() = screamCooldown
         override fun insomniaDays() = insomnia
         override fun phantomGroupMultiplier() = groupMultiplier
         override fun phantomSize() = size
         override fun immortalPhantoms() = immortal
-        override fun stackedScreams() = stackedScreams
-        override fun riderScream() = riderScream
         override fun zoomBoost() = zoomBoostValue
         override fun rollBoostLimit() = rollBoostLimitValue
         override fun rollBoostStep() = rollBoostStepValue
@@ -237,10 +223,6 @@ object FabricSettings {
                 rollSpinValue = values.double("flight.roll_boost_spin", rollSpinValue)
                 rollMinTicksValue = values.int("flight.roll_boost_min_ticks", rollMinTicksValue)
             }
-            screamRadiusValue = values.double("scream.scream_radius", screamRadiusValue)
-            screamCooldown = values.int("scream.scream_cooldown_seconds", screamCooldown)
-            stackedScreams = values.bool("scream.stacked_screams", stackedScreams)
-            riderScream = values.bool("scream.rider_scream", riderScream)
             insomnia = values.int("spawning.insomnia_days", insomnia)
             groupMultiplier = values.double("spawning.phantom_group_multiplier", groupMultiplier)
         }
@@ -271,12 +253,6 @@ object FabricSettings {
 
                 [flight]
             """.trimIndent() + "\n" + flight + "\n" + """
-                [scream]
-                scream_radius = $screamRadiusValue
-                scream_cooldown_seconds = $screamCooldown
-                stacked_screams = $stackedScreams
-                rider_scream = $riderScream
-
                 [spawning]
                 insomnia_days = $insomnia
                 phantom_group_multiplier = $groupMultiplier

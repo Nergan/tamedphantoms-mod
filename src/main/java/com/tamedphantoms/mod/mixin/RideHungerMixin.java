@@ -41,7 +41,8 @@ public abstract class RideHungerMixin {
             method = "renderPlayerHealth(Lnet/minecraft/client/gui/GuiGraphics;)V",
             at = @At(
                     value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/GuiGraphics;blitSprite(Lnet/minecraft/resources/ResourceLocation;IIII)V"
+                    target = "Lnet/minecraft/client/gui/GuiGraphics;blitSprite(Lnet/minecraft/resources/ResourceLocation;IIII)V",
+                    remap = false
             ),
             index = 2
     )

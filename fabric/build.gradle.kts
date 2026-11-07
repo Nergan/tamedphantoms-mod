@@ -151,6 +151,8 @@ loom {
         }
         named("server") {
             programArg("--nogui")
+            programArg("--port")
+            programArg("25567")
             vmArg("-Xms128m")
             vmArg("-Xmx512m")
             vmArg("-XX:+UseSerialGC")

@@ -2,6 +2,8 @@ package com.tamedphantoms.mod.api
 
 import com.tamedphantoms.mod.TamedPhantomsMod
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
+import net.minecraft.server.MinecraftServer
+import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.InteractionResult
 import net.minecraft.world.entity.player.Player
@@ -84,6 +86,60 @@ object TamedPhantomsApi {
                 listener.onReleased(phantom, previousOwner)
             } catch (error: Throwable) {
                 TamedPhantomsMod.LOGGER.warn("Аддон упал на освобождении фантома.", error)
+            }
+        }
+    }
+
+    /**
+     * Крик и всё, что с ним связано. Без зарегистрированного слушателя
+     * клавиша, самозащита, игра и полнолуние молчат.
+     */
+    interface Cry {
+        fun onRiderKey(phantom: TamedPhantomEntity, player: Player) {}
+        fun tick(phantom: TamedPhantomEntity, level: ServerLevel) {}
+        /** Набор скорости бочкой. Слушатель сам решает, молчать ли после этого. */
+        fun onRollBurst(phantom: TamedPhantomEntity) {}
+        /** Строка для сохранения вместе с фантомом. null — писать нечего. */
+        fun exportState(phantom: TamedPhantomEntity): String? = null
+        fun importState(phantom: TamedPhantomEntity, data: String) {}
+        fun flush(server: MinecraftServer) {}
+    }
+
+    private val cries = CopyOnWriteArrayList<Cry>()
+
+    @JvmStatic
+    fun registerCry(cry: Cry) {
+        cries += cry
+    }
+
+    internal fun riderCry(phantom: TamedPhantomEntity, player: Player) = eachCry("клавише крика") { it.onRiderKey(phantom, player) }
+
+    internal fun tickCry(phantom: TamedPhantomEntity, level: ServerLevel) = eachCry("тике крика") { it.tick(phantom, level) }
+
+    internal fun rollBurst(phantom: TamedPhantomEntity) = eachCry("наборе бочки") { it.onRollBurst(phantom) }
+
+    internal fun exportCry(phantom: TamedPhantomEntity): String? {
+        for (cry in cries) {
+            try {
+                val data = cry.exportState(phantom) ?: continue
+                if (data.isNotEmpty()) return data
+            } catch (error: Throwable) {
+                TamedPhantomsMod.LOGGER.warn("Аддон упал на сохранении крика.", error)
+            }
+        }
+        return null
+    }
+
+    internal fun importCry(phantom: TamedPhantomEntity, data: String) = eachCry("загрузке крика") { it.importState(phantom, data) }
+
+    internal fun flushCry(server: MinecraftServer) = eachCry("сборе криков") { it.flush(server) }
+
+    private inline fun eachCry(where: String, call: (Cry) -> Unit) {
+        for (cry in cries) {
+            try {
+                call(cry)
+            } catch (error: Throwable) {
+                TamedPhantomsMod.LOGGER.warn("Аддон упал на {}.", where, error)
             }
         }
     }

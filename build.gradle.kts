@@ -99,11 +99,15 @@ neoForge {
         create("client") {
             client()
             systemProperty("neoforge.enabledGameTestNamespaces", modId)
+            jvmArguments.addAll(listOf("-Xms256m", "-Xmx768m", "-XX:+UseSerialGC"))
         }
         create("server") {
             server()
             programArgument("--nogui")
+            programArgument("--port")
+            programArgument("25567")
             systemProperty("neoforge.enabledGameTestNamespaces", modId)
+            jvmArguments.addAll(listOf("-Xms128m", "-Xmx512m", "-XX:+UseSerialGC"))
         }
         create("gameTestServer") {
             type = "gameTestServer"

@@ -1,5 +1,6 @@
 package com.tamedphantoms.mod.network
 
+import com.tamedphantoms.mod.api.TamedPhantomsApi
 import com.tamedphantoms.mod.config.RideExtras
 import com.tamedphantoms.mod.entity.TamedPhantomEntity
 import com.tamedphantoms.mod.event.PhantomDismount
@@ -8,7 +9,6 @@ import com.tamedphantoms.mod.client.PhantomRosterClient
 import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.network.PhantomRosterPayload
 import com.tamedphantoms.mod.network.PhantomRosterSummonPayload
-import com.tamedphantoms.mod.util.MoonSickness
 import com.tamedphantoms.mod.util.OwnerFlightSpeed
 import com.tamedphantoms.mod.util.PhantomImpactGust
 import com.tamedphantoms.mod.util.PhantomZoomBurst
@@ -56,7 +56,7 @@ object ModNetworking {
                         PhantomImpactGust.trySharpStop(vehicle, payload.sharpSpeed, payload.boost)
                     }
                     if (payload.rollBurst) {
-                        vehicle.lockRiderScream(5 * 20)
+                        TamedPhantomsApi.rollBurst(vehicle)
                         PhantomZoomBurst.onRoll(vehicle)
                     }
                 }
@@ -93,7 +93,7 @@ object ModNetworking {
             val player = context.player()
             val vehicle = player.vehicle
             if (vehicle is TamedPhantomEntity) {
-                vehicle.tryOwnerScream(player)
+                TamedPhantomsApi.riderCry(vehicle, player)
             }
         }
 
@@ -106,13 +106,6 @@ object ModNetworking {
             if (vehicle is TamedPhantomEntity) {
                 vehicle.tryOwnerLoop(player)
             }
-        }
-
-        registrar.playToClient(
-            PhantomMoonPulsePayload.TYPE,
-            PhantomMoonPulsePayload.STREAM_CODEC,
-        ) { _, context ->
-            context.enqueueWork { MoonSickness.trigger() }
         }
 
         registrar.playToServer(

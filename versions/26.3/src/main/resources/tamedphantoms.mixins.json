@@ -16,7 +16,6 @@
     "PhantomRenderCaptureMixin",
     "PhantomModelLookMixin",
     "PlayerRideBankMixin",
-    "MoonFogMixin",
     "NightInvertMixin",
     "KeyMappingFields",
     "SharedPhysicalKeyMixin",

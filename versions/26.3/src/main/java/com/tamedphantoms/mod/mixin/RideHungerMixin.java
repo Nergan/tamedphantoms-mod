@@ -8,9 +8,8 @@ import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyConstant;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -25,16 +24,21 @@ public abstract class RideHungerMixin {
     private void extractFood(GuiGraphicsExtractor graphics, Player player, int y, int x) {
     }
 
-    @ModifyConstant(
+    @ModifyArg(
             method = "extractVehicleHealth(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V",
-            constant = @Constant(intValue = 39)
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;blitSprite(Lcom/mojang/renderpearl/api/pipeline/RenderPipeline;Lnet/minecraft/resources/Identifier;IIII)V",
+                    remap = false
+            ),
+            index = 3
     )
-    private int tamedphantomsLiftHearts(int baseline) {
+    private int tamedphantomsLiftHearts(int y) {
         Player player = Minecraft.getInstance().player;
         if (player != null && player.getVehicle() instanceof TamedPhantomEntity) {
-            return baseline + 10;
+            return y - 10;
         }
-        return baseline;
+        return y;
     }
 
     @ModifyVariable(method = "getAirBubbleYLine(II)I", at = @At("HEAD"), ordinal = 1, argsOnly = true)

@@ -5,7 +5,6 @@ import com.tamedphantoms.mod.client.ClientFlightSpeedSender
 import com.tamedphantoms.mod.client.PhantomCloudWisp
 import com.tamedphantoms.mod.client.ClientPhantomInputSender
 import com.tamedphantoms.mod.client.ModKeyMappings
-import com.tamedphantoms.mod.client.PhantomMoonLight
 import com.tamedphantoms.mod.client.render.TamedPhantomRenderer
 import com.tamedphantoms.mod.client.render.VanillaPhantomRedEyesLayer
 import com.tamedphantoms.mod.client.texture.PhantomTextureProcessor
@@ -15,10 +14,8 @@ import com.tamedphantoms.mod.event.PhantomDismount
 import com.tamedphantoms.mod.network.PhantomDismountAllowPayload
 import com.tamedphantoms.mod.client.PhantomRosterClient
 import com.tamedphantoms.mod.client.PhantomRosterScreen
-import com.tamedphantoms.mod.network.PhantomMoonPulsePayload
 import com.tamedphantoms.mod.network.PhantomRosterListPayload
 import com.tamedphantoms.mod.platform.ModNetwork
-import com.tamedphantoms.mod.util.MoonSickness
 import me.shedaniel.clothconfig2.gui.ClothConfigScreen
 import net.fabricmc.api.ClientModInitializer
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
@@ -74,7 +71,6 @@ class TamedPhantomsFabricClient : ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register {
             ClientPhantomInputSender.onClientTick()
             ClientFlightSpeedSender.onClientTick()
-            PhantomMoonLight.onTick()
             PhantomRosterOpener.onTick()
         }
         com.tamedphantoms.mod.entity.TamedPhantomEntity.clientAfterTick = { phantom ->
@@ -82,9 +78,6 @@ class TamedPhantomsFabricClient : ClientModInitializer {
             PhantomCloudWisp.afterClientTick(phantom)
         }
 
-        ClientPlayNetworking.registerGlobalReceiver(PhantomMoonPulsePayload.TYPE) { _, context ->
-            context.client().execute { MoonSickness.trigger() }
-        }
         ClientPlayNetworking.registerGlobalReceiver(PhantomDismountAllowPayload.TYPE) { _, context ->
             context.client().execute { PhantomDismount.grantClientDismount() }
         }

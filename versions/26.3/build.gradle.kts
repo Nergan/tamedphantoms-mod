@@ -194,8 +194,9 @@ val sharedJava by tasks.registering(Sync::class) {
     from(file("../../src/main/java"))
     from(file("../../src/neoforge/java"))
     into(layout.buildDirectory.dir("shared-java"))
-    inputs.property("sharedJavaStamp", "hunger-tp-1")
+    inputs.property("sharedJavaStamp", "hunger-nf-1")
     exclude(
+        "com/tamedphantoms/mod/mixin/NeoForgeRideHungerMixin.java",
         "com/tamedphantoms/mod/mixin/RideHungerMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomRideTeleportMixin.java",
         "com/tamedphantoms/mod/mixin/PhantomPortalRideMixin.java",
@@ -257,7 +258,7 @@ neoForge {
         create("client") {
             client()
             systemProperty("neoforge.enabledGameTestNamespaces", modId)
-            jvmArguments.addAll(listOf("-Xms256m", "-Xmx1024m", "-XX:+UseSerialGC"))
+            jvmArguments.addAll(listOf("-Xms256m", "-Xmx768m", "-XX:+UseSerialGC"))
         }
         create("server") {
             server()
