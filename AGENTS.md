@@ -31,7 +31,7 @@
 ## Правила
 
 - Прежде чем писать своё или декомпилировать, поищи готовое решение, в первую очередь на GitHub.
-- Код — Kotlin. Новый Java-файл не добавляй. Уже лежащий Java переписывай на Kotlin, когда трогаешь этот мод, не меняя поведение. Kotlin-миксин на Fabric 1.21.1 требует своих строк в `patchKotlinRefmap` (`fabric/build.gradle.kts`): Java-процессор refmap не видит Kotlin, и без них сервер ищет имя Mojmap.
+- Код — Kotlin. Новый Java-файл не добавляй. Уже лежащий Java переписывай на Kotlin, когда трогаешь этот мод, не меняя поведение. `RideHungerMixin` остаётся Java: процессор Loom видит его и пишет в refmap вызов Minecraft. Kotlin-миксин на Fabric 1.21.1 требует своих строк в `patchKotlinRefmap` (`fabric/build.gradle.kts`): Java-процессор refmap не видит Kotlin, и без них сервер ищет имя Mojmap. У цели внутри метода Minecraft `remap = false` нельзя: выпущенный Fabric-jar на intermediary, и миксин сканирует 0 вызовов. `remap = false` только у метода не из Minecraft, как `ILivingEntityExtension` в `TamedPhantomFluidMixin`. Сборки 26.3 делят один `RideHungerMixin`, и у `blitSprite` remap включён: свой refmap пишет Fabric и свой — NeoForge. Отдельный `NeoForgeRideHungerMixin` 1.21.1 работает на Mojmap, поэтому у его `blitSprite` `remap = false`.
 - Имя jar: `<mod_id>-<loader>-<minecraft_version>-<mod_version>.jar`. В Prism и в чужую папку модов его не клади. Игрок качает GitHub Release, ту же сборку.
 - Issues: чинить только дефект. На каждый issue ответить и закрыть, включая те, где правки нет.
 - Коммит и пуш — только когда владелец прямо просит. Для пуша человек запускает `add-commit-push.cmd`. Теги `minecraft-*` двигает workflow релиза.
