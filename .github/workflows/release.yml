@@ -71,7 +71,7 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.11"
+          gradle-version: "8.14.7"
 
       - name: Build and test
         run: gradle build --stacktrace
@@ -92,7 +92,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           # services.gradle.org publishes 9.7.0, not the short form 9.7.
-          gradle-version: "9.7.0"
+          gradle-version: "9.9.1"
 
       - name: Build 26.3
         working-directory: versions/26.3
